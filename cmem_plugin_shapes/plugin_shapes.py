@@ -1,9 +1,9 @@
 """Generate SHACL node and property shapes from a data graph"""
 
+from io import BytesIO
 from json import load, loads
 from os import environ
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 from urllib.request import urlopen
 from uuid import NAMESPACE_URL, uuid5
 
@@ -240,14 +240,13 @@ class ShapesPlugin(WorkflowPlugin):
         shapes_graph = self.init_shapes_graph()
         shapes_graph = self.make_shapes(shapes_graph, context)
 
-        with NamedTemporaryFile(suffix=".nt") as temp:
-            shapes_graph.serialize(temp.name, format="nt", encoding="utf-8")
-            res = post_streamed(
-                self.shapes_graph_iri,
-                temp.name,
-                replace=self.overwrite,
-                content_type="application/n-triples",
-            )
+        res = post_streamed(
+            self.shapes_graph_iri,
+            BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8")),
+            replace=self.overwrite,
+            content_type="application/n-triples",
+        )
+
         if res.status_code != 204:  # noqa: PLR2004
             raise OSError(f"Error posting SHACL validation graph (status code {res.status_code}).")
         if self.import_shapes:

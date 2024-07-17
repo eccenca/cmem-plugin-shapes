@@ -3,7 +3,7 @@
 from contextlib import suppress
 
 import pytest
-from cmem.cmempy.dp.proxy.graph import delete
+from cmem.cmempy.dp.proxy.graph import delete, get
 from cmem.cmempy.dp.proxy.update import post
 from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
 
@@ -48,3 +48,5 @@ def test_workflow_execution(_setup: pytest.FixtureRequest) -> None:  # noqa: PT0
         overwrite=False,
         import_shapes=True,
     ).execute(inputs=(), context=TestExecutionContext(project_id=PROJECT_NAME))
+
+    get(GRAPH_IRI, owl_imports_resolution=False)
