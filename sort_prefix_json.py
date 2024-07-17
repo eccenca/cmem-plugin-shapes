@@ -1,4 +1,4 @@
-"""Helper script to sort prefixes in task custom:sort_prefixes"""
+"""Helper script to sort prefixes in task custom:update_prefixes"""
 
 from json import dump, load
 from pathlib import Path
