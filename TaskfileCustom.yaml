@@ -7,3 +7,4 @@ tasks:
     desc: Update the prefix list from prefix.cc.
     cmds:
       - curl -L -o cmem_plugin_shapes/prefix.cc.json http://prefix.cc/popular/all.file.json
+      - python sort_prefix_json.py
