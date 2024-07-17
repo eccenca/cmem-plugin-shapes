@@ -239,14 +239,13 @@ class ShapesPlugin(WorkflowPlugin):
             raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists")
         shapes_graph = self.init_shapes_graph()
         shapes_graph = self.make_shapes(shapes_graph, context)
-
+        nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
         res = post_streamed(
             self.shapes_graph_iri,
-            BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8")),
+            nt_file,
             replace=self.overwrite,
             content_type="application/n-triples",
         )
-
         if res.status_code != 204:  # noqa: PLR2004
             raise OSError(f"Error posting SHACL validation graph (status code {res.status_code}).")
         if self.import_shapes:

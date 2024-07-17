@@ -1,7 +1,6 @@
 # cmem-plugin-shapes
 
 Generate SHACL node and property shapes from a data graph
-<<<<<<< before updating
 
 ## Parameters
 
@@ -26,8 +25,7 @@ If enabled, the resulting SHACL shapes graph is imported with `owl:imports` in t
 
 If enabled, attempt to fetch namespace prefixes from [http://prefix.cc](http://prefix.cc) instead of from the local database.
 If this fails, fall back on local database.
-=======
->>>>>>> after updating
+
 
 [![eccenca Corporate Memory](https://img.shields.io/badge/eccenca-Corporate%20Memory-orange)](https://documentation.eccenca.com)   
 
