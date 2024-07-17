@@ -1,4 +1,4 @@
-"""Generate SHACL node and property Shapes from a data graph"""
+"""Generate SHACL node and property shapes from a data graph"""
 
 from json import load, loads
 from os import environ

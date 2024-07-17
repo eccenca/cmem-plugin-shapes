@@ -1,6 +1,6 @@
 # cmem-plugin-shapes
 
-Generate SHACL node and property Shapes from a data graph
+Generate SHACL node and property shapes from a data graph
 
 This is a plugin for [eccenca](https://eccenca.com) [Corporate Memory](https://documentation.eccenca.com).
 

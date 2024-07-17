@@ -1,6 +1,6 @@
 # cmem-plugin-shapes
 
-Generate SHACL node and property Shapes from a data graph
+Generate SHACL node and property shapes from a data graph
 <<<<<<< before updating
 
 ## Parameters
