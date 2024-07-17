@@ -1,0 +1,10 @@
+# Changes here will be overwritten by Copier
+_commit: v6.3.1
+_src_path: gh:eccenca/cmem-plugin-template
+author_mail: info@eccenca.com
+author_name: eccenca GmbH
+github_page: ''
+project_description: Create SHACL shapes for CMEM EasyNav from a data graph
+project_slug: shapes
+pypi: false
+

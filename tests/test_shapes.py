@@ -1,0 +1,50 @@
+"""Plugin tests."""
+
+from contextlib import suppress
+
+import pytest
+from cmem.cmempy.dp.proxy.graph import delete
+from cmem.cmempy.dp.proxy.update import post
+from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
+
+from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
+from tests.utils import TestExecutionContext, needs_cmem
+
+UUID = "5072e1e3e96c40389116a6833d9a3867"
+PROJECT_NAME = f"shapes_plugin_test_{UUID}"
+GRAPH_IRI = f"https://eccenca.com/shapes_plugin/{UUID}"
+
+
+@pytest.fixture()
+def _setup(request: pytest.FixtureRequest) -> None:
+    """Create DI project"""
+
+    def remove_import() -> None:
+        query = f"""
+        PREFIX owl: <http://www.w3.org/2002/07/owl#>
+        DELETE DATA {{
+            GRAPH <https://vocab.eccenca.com/shacl/> {{
+                <https://vocab.eccenca.com/shacl/> owl:imports <{GRAPH_IRI}> .
+            }}
+        }}
+        """
+        post(query=query)
+
+    with suppress(Exception):
+        delete_project(PROJECT_NAME)
+    make_new_project(PROJECT_NAME)
+
+    request.addfinalizer(lambda: delete_project(PROJECT_NAME))
+    request.addfinalizer(lambda: remove_import)
+    request.addfinalizer(lambda: delete(GRAPH_IRI))  # noqa: PT021
+
+
+@needs_cmem
+def test_workflow_execution(_setup: pytest.FixtureRequest) -> None:  # noqa: PT019
+    """Test plugin execution"""
+    ShapesPlugin(
+        data_graph_iri="https://vocab.eccenca.com/shacl/",
+        shapes_graph_iri=GRAPH_IRI,
+        overwrite=False,
+        import_shapes=True,
+    ).execute(inputs=(), context=TestExecutionContext(project_id=PROJECT_NAME))
