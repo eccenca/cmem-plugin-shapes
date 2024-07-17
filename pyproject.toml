@@ -2,7 +2,7 @@
 name = "cmem-plugin-shapes"
 version = "0.0.0.post1.dev0+c63d24f"
 license = "Apache-2.0"
-description = "Create SHACL shapes for CMEM EasyNav from a data graph"
+description = "Generate SHACL node and property Shapes from a data graph"
 authors = ["eccenca GmbH <info@eccenca.com>"]
 classifiers = [
     "Development Status :: 4 - Beta",
