@@ -19,7 +19,7 @@ overwritten with the result. If disabled and such a graph exists, the plugin exe
 
 ### Import shapes graph in CMEM Shapes Catalog
 
-If enabled, the resulting SHACL shapes graph is imported with `owl:import` in the CMEM Shapes Catalog.
+If enabled, the resulting SHACL shapes graph is imported with `owl:imports` in the CMEM Shapes Catalog.
 
 ### Fetch namespace prefixes from prefix.cc
 
