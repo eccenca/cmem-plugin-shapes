@@ -192,16 +192,18 @@ class ShapesPlugin(WorkflowPlugin):
     def make_shapes(self, shapes_graph: Graph) -> Graph:
         """Make shapes"""
         prop_uuids = []
+        class_uuids = []
         class_dict = self.get_class_dict()
         for cls, props in class_dict.items():
-            node_shape_uri = URIRef(
-                f"{format_namespace(self.shapes_graph_iri)}{uuid5(NAMESPACE_URL, cls)}"
-            )
-            shapes_graph.add((node_shape_uri, RDF.type, SH.NodeShape))
-            shapes_graph.add((node_shape_uri, SH.targetClass, URIRef(cls)))
-            name = self.get_name(cls)
-            shapes_graph.add((node_shape_uri, SH.name, Literal(name, lang="en")))
-            shapes_graph.add((node_shape_uri, RDFS.label, Literal(name, lang="en")))
+            class_uuid = uuid5(NAMESPACE_URL, cls)
+            node_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{class_uuid}")
+            if class_uuid not in class_uuids:
+                shapes_graph.add((node_shape_uri, RDF.type, SH.NodeShape))
+                shapes_graph.add((node_shape_uri, SH.targetClass, URIRef(cls)))
+                name = self.get_name(cls)
+                shapes_graph.add((node_shape_uri, SH.name, Literal(name, lang="en")))
+                shapes_graph.add((node_shape_uri, RDFS.label, Literal(name, lang="en")))
+                class_uuids.append(class_uuid)
             for prop in props:
                 if prop["inverse"]:
                     prop_uuid = uuid5(NAMESPACE_URL, f'{prop["property"]}inverse')

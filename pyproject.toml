@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cmem-plugin-shapes"
-version = "0.0.0"
+version = "0.0.1.dev26+f86fdd9.dirty"
 license = "Apache-2.0"
 description = "Generate SHACL node and property shapes from a data graph"
 authors = ["eccenca GmbH <info@eccenca.com>"]
@@ -42,7 +42,7 @@ requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
 build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.poetry-dynamic-versioning]
-enable = true
+enable = false
 vcs = "git"
 dirty = true
 bump = true
