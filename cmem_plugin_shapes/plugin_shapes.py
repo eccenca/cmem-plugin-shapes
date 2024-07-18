@@ -92,8 +92,6 @@ class ShapesPlugin(WorkflowPlugin):
         self.overwrite = overwrite
         self.import_shapes = import_shapes
 
-        self.dp_api_endpoint = get_dp_api_endpoint()
-
     def get_prefixes(self) -> dict:
         """Get list of prefixes from prefix.cc or use local copy"""
         prefixes = {}
@@ -240,6 +238,7 @@ class ShapesPlugin(WorkflowPlugin):
         """Execute plugin"""
         self.context = context
         setup_cmempy_user_access(context.user)
+        self.dp_api_endpoint = get_dp_api_endpoint()
         self.prefixes: dict[str, str] = self.get_prefixes()
         if not self.overwrite and self.shapes_graph_iri in [i["iri"] for i in get_graphs_list()]:
             raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists")
