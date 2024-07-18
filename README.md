@@ -21,11 +21,6 @@ overwritten with the result. If disabled and such a graph exists, the plugin exe
 
 If enabled, the resulting SHACL shapes graph is imported with `owl:imports` in the CMEM Shapes Catalog.
 
-### Fetch namespace prefixes from prefix.cc
-
-If enabled, attempt to fetch namespace prefixes from [http://prefix.cc](http://prefix.cc) instead of from the local database.
-If this fails, fall back on local database.
-
 
 [![eccenca Corporate Memory](https://img.shields.io/badge/eccenca-Corporate%20Memory-orange)](https://documentation.eccenca.com)   
 

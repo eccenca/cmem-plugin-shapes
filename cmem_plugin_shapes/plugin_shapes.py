@@ -127,16 +127,12 @@ class ShapesPlugin(WorkflowPlugin):
         )
         title_json = loads(response)
         title: str = title_json["title"]
-
         try:
             namespace, resource = split_uri(iri)
         except ValueError:
-            self.log.warning(f"Cannot split URI <{iri}>.")
             namespace = iri
-
         if namespace in self.prefixes:
             title += f" ({self.prefixes[namespace]}:)"
-
         return title
 
     def init_shapes_graph(self) -> Graph:
