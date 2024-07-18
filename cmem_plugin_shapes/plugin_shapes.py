@@ -17,10 +17,7 @@ from cmem.cmempy.workspace.projects.project import get_prefixes
 from cmem_plugin_base.dataintegration.context import ExecutionContext
 from cmem_plugin_base.dataintegration.description import Icon, Plugin, PluginParameter
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
-from cmem_plugin_base.dataintegration.types import (
-    BoolParameterType,
-    StringParameterType,
-)
+from cmem_plugin_base.dataintegration.types import BoolParameterType, StringParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
 from rdflib import RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
@@ -73,17 +70,27 @@ def format_namespace(iri: str) -> str:
             description="",
             default_value=False,
         ),
+        PluginParameter(
+            param_type=BoolParameterType(),
+            name="prefix_cc",
+            label="Fetch namespace prefixes from prefix.cc.",
+            description="""If enabled, attempt to fetch namespace prefixes from http://prefix.cc
+            instead of from the local database. If this fails, fall back on local database.""",
+            default_value=True,
+            advanced=True,
+        ),
     ],
 )
 class ShapesPlugin(WorkflowPlugin):
     """SHACL shapes EasyNav plugin"""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         data_graph_iri: str = "",
         shapes_graph_iri: str = "",
         overwrite: bool = False,
         import_shapes: bool = False,
+        prefix_cc: bool = True,
     ) -> None:
         if not url(data_graph_iri):
             raise ValueError("Data graph IRI parameter is invalid.")
@@ -93,23 +100,26 @@ class ShapesPlugin(WorkflowPlugin):
         self.data_graph_iri = data_graph_iri
         self.overwrite = overwrite
         self.import_shapes = import_shapes
+        self.prefix_cc = prefix_cc
 
     def get_prefixes(self) -> dict:
         """Get list of prefixes from prefix.cc or use local copy"""
         err = None
-        try:
-            res = urlopen("http://prefix.cc/popular/all.file.json")
-            if res.status == 200:  # noqa: PLR2004
-                self.log.info("prefixes fetched from http://prefix.cc")
-                prefixes = {v: k for k, v in loads(res.read()).items()}
-            else:
-                err = res.status
-        except Exception as exc:  # noqa: BLE001
-            err = exc
-        if err:
-            self.log.warning(
-                f"failed to fetch prefixes from http://prefix.cc ({err}) - using local file"
-            )
+        if self.prefix_cc:
+            try:
+                res = urlopen("http://prefix.cc/popular/all.file.json")
+                if res.status == 200:  # noqa: PLR2004
+                    self.log.info("prefixes fetched from http://prefix.cc")
+                    prefixes = {v: k for k, v in loads(res.read()).items()}
+                else:
+                    err = res.status
+            except Exception as exc:  # noqa: BLE001
+                err = exc
+            if err:
+                self.log.warning(
+                    f"failed to fetch prefixes from http://prefix.cc ({err}) - using local file"
+                )
+        elif not self.prefix_cc or err:
             with (Path(__path__[0]) / "prefix.cc.json").open("r") as json_file:
                 prefixes = {v: k for k, v in load(json_file).items()}
         prefixes_project = {v: k for k, v in get_prefixes(self.context.task.project_id()).items()}
