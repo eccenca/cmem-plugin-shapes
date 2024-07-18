@@ -85,8 +85,10 @@ class ShapesPlugin(WorkflowPlugin):
         overwrite: bool = False,
         import_shapes: bool = False,
     ) -> None:
+        if not url(data_graph_iri):
+            raise ValueError("Data graph IRI parameter is invalid.")
         if not url(shapes_graph_iri):
-            raise ValueError("shapes graph IRI parameter is invalid")
+            raise ValueError("Shapes graph IRI parameter is invalid.")
         self.shapes_graph_iri = shapes_graph_iri
         self.data_graph_iri = data_graph_iri
         self.overwrite = overwrite
