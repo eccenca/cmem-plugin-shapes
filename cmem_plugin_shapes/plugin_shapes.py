@@ -96,7 +96,6 @@ class ShapesPlugin(WorkflowPlugin):
 
     def get_prefixes(self) -> dict:
         """Get list of prefixes from prefix.cc or use local copy"""
-        prefixes = {}
         err = None
         try:
             res = urlopen("http://prefix.cc/popular/all.file.json")
@@ -241,7 +240,7 @@ class ShapesPlugin(WorkflowPlugin):
         self.context = context
         setup_cmempy_user_access(context.user)
         self.dp_api_endpoint = get_dp_api_endpoint()
-        self.prefixes: dict[str, str] = self.get_prefixes()
+        self.prefixes = self.get_prefixes()
         if not self.overwrite and self.shapes_graph_iri in [i["iri"] for i in get_graphs_list()]:
             raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists")
         shapes_graph = self.init_shapes_graph()
