@@ -119,7 +119,7 @@ class ShapesPlugin(WorkflowPlugin):
                 self.log.warning(
                     f"failed to fetch prefixes from http://prefix.cc ({err}) - using local file"
                 )
-        elif not self.prefix_cc or err:
+        if not self.prefix_cc or err:
             with (Path(__path__[0]) / "prefix.cc.json").open("r") as json_file:
                 prefixes = {v: k for k, v in load(json_file).items()}
         prefixes_project = {v: k for k, v in get_prefixes(self.context.task.project_id()).items()}
