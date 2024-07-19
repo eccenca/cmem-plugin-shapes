@@ -147,9 +147,9 @@ class ShapesPlugin(WorkflowPlugin):
                         title = title[len(prefix) :]
                     else:
                         title = title.split("_", 1)[1]
+                title += f" ({prefix})"
             else:
                 title = prefix
-            title += f" ({prefix})"
         return title
 
     def init_shapes_graph(self) -> Graph:
@@ -244,10 +244,9 @@ class ShapesPlugin(WorkflowPlugin):
     def import_shapes_graph(self) -> None:
         """Add shapes IRI to owl:imports in CMEM Shapes Catalog"""
         query = f"""
-        PREFIX owl: <http://www.w3.org/2002/07/owl#>
         INSERT DATA {{
             GRAPH <https://vocab.eccenca.com/shacl/> {{
-                <https://vocab.eccenca.com/shacl/> owl:imports
+                <https://vocab.eccenca.com/shacl/> <http://www.w3.org/2002/07/owl#imports>
                     <{self.shapes_graph_iri}> .
             }}
         }}
