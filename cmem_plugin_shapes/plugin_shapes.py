@@ -140,12 +140,13 @@ class ShapesPlugin(WorkflowPlugin):
             namespace, resource = split_uri(iri)
         except ValueError:
             namespace = iri
+            resource =  None
         if namespace in self.prefixes:
             prefix = self.prefixes[namespace] + ":"
             if title_json["fromIri"]:
                 if title.startswith(prefix):
                     title = title[len(prefix) :]
-                else:
+                elif resource:
                     title = "_".join(title.split("_")[1:])
             title += f" ({prefix})"
         return title
