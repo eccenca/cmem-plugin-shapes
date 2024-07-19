@@ -141,7 +141,10 @@ class ShapesPlugin(WorkflowPlugin):
         except ValueError:
             namespace = iri
         if namespace in self.prefixes:
-            title += f" ({self.prefixes[namespace]}:)"
+            prefix = self.prefixes[namespace]
+            if title_json["fromIri"]:
+                title = title[len(prefix) + 1 :]
+            title += f" ({prefix}:)"
         return title
 
     def init_shapes_graph(self) -> Graph:
