@@ -128,9 +128,8 @@ class ShapesPlugin(WorkflowPlugin):
 
     def get_name(self, iri: str) -> str:
         """Get shape name."""
-        url = f"{self.dp_api_endpoint}/api/explore/title?resource={quote_plus(iri)}"
         response = send_request(
-            url,
+            uri=f"{self.dp_api_endpoint}/api/explore/title?resource={quote_plus(iri)}",
             method="GET",
             headers={"Content-Type": "application/json", "Accept": "application/json"},
         )
@@ -142,11 +141,14 @@ class ShapesPlugin(WorkflowPlugin):
             namespace, resource = (iri, None)
         if namespace in self.prefixes:
             prefix = self.prefixes[namespace] + ":"
-            if title_json["fromIri"]:
-                if title.startswith(prefix):
-                    title = title[len(prefix) :]
-                elif resource:
-                    title = "_".join(title.split("_")[1:])
+            if resource:
+                if title_json["fromIri"]:
+                    if title.startswith(prefix):
+                        title = title[len(prefix) :]
+                    else:
+                        title = title.split("_", 1)[1]
+            else:
+                title = prefix
             title += f" ({prefix})"
         return title
 
