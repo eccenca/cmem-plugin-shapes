@@ -900,6 +900,7 @@
   "fhir": "http://hl7.org/fhir/",
   "fiaf": "https://ontology.fiafcore.org/",
   "fibo": "https://spec.edmcouncil.org/fibo/ontology/master/latest/",
+  "fideo": "http://purl.obolibrary.org/obo/FIDEO_",
   "figigii": "http://www.omg.org/spec/FIGI/GlobalInstrumentIdentifiers/",
   "film": "http://semantics.id/ns/example/film/",
   "fincaselaw": "http://purl.org/finlex/schema/oikeus/",
