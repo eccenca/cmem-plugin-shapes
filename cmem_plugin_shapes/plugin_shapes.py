@@ -193,10 +193,9 @@ class ShapesPlugin(WorkflowPlugin):
 
     def make_shapes(self, shapes_graph: Graph) -> Graph:
         """Make shapes"""
-        prop_uuids = []
         class_uuids = []
-        class_dict = self.get_class_dict()
-        for cls, props in class_dict.items():
+        prop_uuids = []
+        for cls, props in self.get_class_dict().items():
             class_uuid = uuid5(NAMESPACE_URL, cls)
             node_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{class_uuid}")
             if class_uuid not in class_uuids:
@@ -250,12 +249,12 @@ class ShapesPlugin(WorkflowPlugin):
 
     def execute(self, inputs: tuple, context: ExecutionContext) -> None:  # noqa: ARG002
         """Execute plugin"""
-        self.context = context
         setup_cmempy_user_access(context.user)
-        self.dp_api_endpoint = get_dp_api_endpoint()
-        self.prefixes = self.get_prefixes()
         if not self.overwrite and self.shapes_graph_iri in [i["iri"] for i in get_graphs_list()]:
             raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists")
+        self.context = context
+        self.dp_api_endpoint = get_dp_api_endpoint()
+        self.prefixes = self.get_prefixes()
         shapes_graph = self.init_shapes_graph()
         shapes_graph = self.make_shapes(shapes_graph)
         nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
