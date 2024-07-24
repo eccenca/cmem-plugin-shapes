@@ -1,6 +1,6 @@
 # cmem-plugin-shapes
 
-A [eccenca](https://eccenca.com) [Corporate Memory](https://documentation.eccenca.com) workflow plugin generating SHACL node and property shapes from data graphs.
+An [eccenca](https://eccenca.com) [Corporate Memory](https://documentation.eccenca.com) workflow plugin generating SHACL node and property shapes from data graphs.
 
 [![eccenca Corporate Memory](https://img.shields.io/badge/eccenca-Corporate%20Memory-orange)](https://documentation.eccenca.com) [![workflow](https://github.com/eccenca/cmem-plugin-shapes/actions/workflows/check.yml/badge.svg)](https://github.com/eccenca/cmem-plugin-pyshacl/actions) [![pypi version](https://img.shields.io/pypi/v/cmem-plugin-shapes)](https://pypi.org/project/cmem-plugin-shapes/) [![license](https://img.shields.io/pypi/l/cmem-plugin-shapes)](https://pypi.org/project/cmem-plugin-shapes)
 

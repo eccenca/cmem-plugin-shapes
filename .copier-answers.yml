@@ -3,7 +3,7 @@ _commit: v6.3.1
 _src_path: gh:eccenca/cmem-plugin-template
 author_mail: info@eccenca.com
 author_name: eccenca GmbH
-github_page: ''
+github_page: https://github.com/eccenca/cmem-plugin-shapes
 project_description: Generate SHACL node and property shapes from a data graph
 project_slug: shapes
 pypi: false
