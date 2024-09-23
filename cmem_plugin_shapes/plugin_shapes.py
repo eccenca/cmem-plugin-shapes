@@ -133,7 +133,7 @@ class ShapesPlugin(WorkflowPlugin):
                     f"failed to fetch prefixes from http://prefix.cc ({err}) - using local file"
                 )
         if err or not self.prefix_cc:
-            with (Path(__path__[0]) / "prefix.cc.json").open("r") as json_file:
+            with (Path(__path__[0]) / "prefix_cc.json").open("r", encoding="utf-8") as json_file:
                 prefixes = {v: k for k, v in load(json_file).items()}
         prefixes_project = {v: k for k, v in get_prefixes(self.context.task.project_id()).items()}
         prefixes.update(prefixes_project)
