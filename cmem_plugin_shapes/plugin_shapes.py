@@ -48,7 +48,7 @@ def format_namespace(iri: str) -> str:
     documentation="",
     parameters=[
         PluginParameter(
-            param_type=GraphParameterType(allow_only_autocompleted_values=True),
+            param_type=GraphParameterType(),
             name="data_graph_iri",
             label="Input data graph.",
             description="",
