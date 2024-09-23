@@ -62,5 +62,4 @@ def test_workflow_execution(_setup: pytest.FixtureRequest) -> None:  # noqa: PT0
 
     result = Graph().parse(data=get(RESULT_IRI, owl_imports_resolution=False).text)
     test = Graph().parse(Path(__path__[0]) / "test_shapes.ttl", format="turtle")
-
     assert to_isomorphic(result) == to_isomorphic(test)
