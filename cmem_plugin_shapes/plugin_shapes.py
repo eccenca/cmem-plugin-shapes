@@ -28,6 +28,8 @@ from str2bool import str2bool
 from urllib3.exceptions import InsecureRequestWarning
 from validators import url
 
+from cmem_plugin_shapes.doc import SHAPES_DOC
+
 from . import __path__
 
 environ["SSL_VERIFY"] = "false"
@@ -44,14 +46,14 @@ def format_namespace(iri: str) -> str:
 @Plugin(
     label="Generate SHACL shapes from data",
     icon=Icon(file_name="shacl.jpg", package=__package__),
-    description="Generates SHACL node and property shapes from a data graph",
-    documentation="",
+    description="Generate SHACL node and property shapes from a data graph",
+    documentation=SHAPES_DOC,
     parameters=[
         PluginParameter(
             param_type=GraphParameterType(),
             name="data_graph_iri",
             label="Input data graph.",
-            description="",
+            description="The input data graph to be analyzed for the SHACL shapes generation.",
         ),
         PluginParameter(
             param_type=GraphParameterType(
@@ -60,28 +62,30 @@ def format_namespace(iri: str) -> str:
             ),
             name="shapes_graph_iri",
             label="Output SHACL shapes graph.",
-            description="",
+            description="The output SHACL shapes graph.",
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="overwrite",
-            label="Overwrite shapes graph if it exists.",
-            description="",
+            label="Overwrite output graph.",
+            description="""Overwrite the output SHACL shapes graph if it exists. If disabled and
+            the graph exists, the plugin execution fails.""",
             default_value=False,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="import_shapes",
-            label="Import shapes graph in CMEM Shapes Catalog.",
-            description="",
+            label="Import SHACL shapes graph in CMEM Shapes Catalog.",
+            description="""Import the SHACL shapes graph in the CMEM Shapes catalog by adding an
+            `owl:imports` triple to the CMEM Shapes Catalog.""",
             default_value=False,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="prefix_cc",
-            label="Fetch namespace prefixes from prefix.cc.",
-            description="""If enabled, attempt to fetch namespace prefixes from http://prefix.cc
-            instead of from the local database. If this fails, fall back on local database.""",
+            label="Fetch namespace prefixes from prefix.cc",
+            description="""IAttempt to fetch namespace prefixes from http://prefix.cc instead of
+            from the local database. If this fails, fall back on local database.""",
             default_value=True,
             advanced=True,
         ),
