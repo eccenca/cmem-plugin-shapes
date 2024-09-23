@@ -17,16 +17,16 @@ from cmem.cmempy.dp.proxy.update import post
 from cmem.cmempy.workspace.projects.project import get_prefixes
 from cmem_plugin_base.dataintegration.context import ExecutionContext
 from cmem_plugin_base.dataintegration.description import Icon, Plugin, PluginParameter
+from cmem_plugin_base.dataintegration.parameter.graph import GraphParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
-from cmem_plugin_base.dataintegration.types import BoolParameterType, StringParameterType
+from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
+from cmem_plugin_base.dataintegration.types import BoolParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
 from rdflib import RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
 from str2bool import str2bool
 from urllib3.exceptions import InsecureRequestWarning
 from validators import url
-
-from cmem_plugin_shapes.parameter_types import GraphParameterTypeNew
 
 from . import __path__
 
@@ -48,13 +48,16 @@ def format_namespace(iri: str) -> str:
     documentation="",
     parameters=[
         PluginParameter(
-            param_type=GraphParameterTypeNew(),
+            param_type=GraphParameterType(allow_only_autocompleted_values=True),
             name="data_graph_iri",
             label="Input data graph.",
             description="",
         ),
         PluginParameter(
-            param_type=StringParameterType(),
+            param_type=GraphParameterType(
+                classes=["https://vocab.eccenca.com/shui/ShapeCatalog"],
+                allow_only_autocompleted_values=False,
+            ),
             name="shapes_graph_iri",
             label="Output SHACL shapes graph.",
             description="",
@@ -104,6 +107,9 @@ class ShapesPlugin(WorkflowPlugin):
         self.overwrite = overwrite
         self.import_shapes = import_shapes
         self.prefix_cc = prefix_cc
+
+        self.input_ports = FixedNumberOfInputs([])
+        self.output_port = None
 
     def get_prefixes(self) -> dict:
         """Get list of prefixes from prefix.cc or use local copy"""
@@ -250,7 +256,7 @@ class ShapesPlugin(WorkflowPlugin):
         setup_cmempy_user_access(self.context.user)
         post(query)
 
-    def execute(self, inputs: tuple, context: ExecutionContext) -> None:  # noqa: ARG002
+    def execute(self, inputs: None, context: ExecutionContext) -> None:  # noqa: ARG002
         """Execute plugin"""
         setup_cmempy_user_access(context.user)
         if not self.overwrite and self.shapes_graph_iri in [i["iri"] for i in get_graphs_list()]:

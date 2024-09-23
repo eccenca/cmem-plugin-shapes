@@ -18,7 +18,7 @@ homepage = "https://github.com/eccenca/cmem-plugin-shapes"
 [tool.poetry.dependencies]
 # if you need to change python version here, change it also in .python-version
 python = "^3.11"
-validators = "^0.33.0"
+validators = "^0.34.0"
 str2bool = "^1.1"
 urllib3 = "^2.2.2"
 
