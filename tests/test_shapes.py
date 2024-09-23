@@ -8,7 +8,7 @@ from cmem.cmempy.dp.proxy.graph import delete, get, post
 from cmem.cmempy.dp.proxy.update import post as post_update
 from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
 from rdflib import Graph
-from rdflib.compare import to_isomorphic
+from rdflib.compare import isomorphic
 
 from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
 from tests.utils import TestExecutionContext, needs_cmem
@@ -62,4 +62,4 @@ def test_workflow_execution(_setup: pytest.FixtureRequest) -> None:  # noqa: PT0
 
     result = Graph().parse(data=get(RESULT_IRI, owl_imports_resolution=False).text)
     test = Graph().parse(Path(__path__[0]) / "test_shapes.ttl", format="turtle")
-    assert to_isomorphic(result) == to_isomorphic(test)
+    assert isomorphic(result, test)
