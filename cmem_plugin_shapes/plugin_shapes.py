@@ -94,7 +94,7 @@ def format_namespace(iri: str) -> str:
 class ShapesPlugin(WorkflowPlugin):
     """SHACL shapes EasyNav plugin"""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         data_graph_iri: str = "",
         shapes_graph_iri: str = "",

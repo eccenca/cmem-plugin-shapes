@@ -21,7 +21,7 @@ RESULT_IRI = f"https://eccenca.com/shapes_plugin/{UUID}/shapes/"
 DATA_IRI = f"https://eccenca.com/shapes_plugin/{UUID}/data/"
 
 
-@pytest.fixture()
+@pytest.fixture
 def _setup(request: pytest.FixtureRequest) -> None:
     """Create DI project"""
 
