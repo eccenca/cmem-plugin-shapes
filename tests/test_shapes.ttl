@@ -1,0 +1,145 @@
+@prefix ns1: <https://vocab.eccenca.com/shui/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/> a ns1:ShapeCatalog ;
+    rdfs:label "Shapes for https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/data/" .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/76fed008-e683-5ff1-8778-2e74539c1e67> a sh:NodeShape ;
+    rdfs:label "Entity (prov:)"@en ;
+    sh:name "Entity (prov:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/1170f50d-e0e6-5793-85c0-92314cb7c01d>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741> ;
+    sh:targetClass prov:Entity .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7c625aa6-4dc6-5913-aa24-3eec953889d2> a sh:NodeShape ;
+    rdfs:label "vocab_Price"@en ;
+    sh:name "vocab_Price"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/0daa737f-bcf6-58ef-873b-d083d96181d9>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/88ff35ee-e5b8-51e7-b25a-ec3bbd550493>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/bee2a79a-5486-5f1f-ace2-cb3df6ed92c3>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/c2a4ab16-87cd-51de-978a-b6b591607095>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741> ;
+    sh:targetClass <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/Price> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/dc04b8e1-7bc4-5467-9b8b-e605f4f17c5f> a sh:NodeShape ;
+    rdfs:label "vocab_ProductCategory"@en ;
+    sh:name "vocab_ProductCategory"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/629d5eaa-cee3-540c-884a-1ad36b06d393>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/bee2a79a-5486-5f1f-ace2-cb3df6ed92c3>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741> ;
+    sh:targetClass <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/ProductCategory> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/f3ee9328-d5d1-5260-9736-ef083efd9362> a sh:NodeShape ;
+    rdfs:label "Dataset (eccdi:)"@en ;
+    sh:name "Dataset (eccdi:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b> ;
+    sh:targetClass <https://vocab.eccenca.com/di/Dataset> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/fddb2f8c-da7e-5ec8-9f01-6d00454aaaeb> a sh:NodeShape ;
+    rdfs:label "vocab_Service"@en ;
+    sh:name "vocab_Service"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/33c1e518-66f9-5e70-ad80-4327084bdb06>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/4ce2a035-0d6d-5e73-92a9-66b18067b7ca>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/86367dc0-37d5-5e8e-8df9-bb6f6ae5147c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/8b744040-caa6-526b-9d4a-09cee43acf36>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/b35a3c36-f175-583a-8e9e-b5e9264efa9e>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/bee2a79a-5486-5f1f-ace2-cb3df6ed92c3>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/c0fd25c7-b625-56c2-ba67-5a60943c7f8f>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741> ;
+    sh:targetClass <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/Service> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/0daa737f-bcf6-58ef-873b-d083d96181d9> a sh:PropertyShape ;
+    rdfs:label "vocab_currency"@en ;
+    sh:name "vocab_currency"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/currency> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/1170f50d-e0e6-5793-85c0-92314cb7c01d> a sh:PropertyShape ;
+    rdfs:label "← was derived from (prov:)"@en ;
+    sh:name "← was derived from (prov:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path prov:wasDerivedFrom ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/33c1e518-66f9-5e70-ad80-4327084bdb06> a sh:PropertyShape ;
+    rdfs:label "vocab_eligibleFor"@en ;
+    sh:name "vocab_eligibleFor"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/eligibleFor> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/4ce2a035-0d6d-5e73-92a9-66b18067b7ca> a sh:PropertyShape ;
+    rdfs:label "vocab_hasCategory"@en ;
+    sh:name "vocab_hasCategory"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/hasCategory> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/629d5eaa-cee3-540c-884a-1ad36b06d393> a sh:PropertyShape ;
+    rdfs:label "← vocab_hasCategory"@en ;
+    sh:name "← vocab_hasCategory"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/hasCategory> ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/86367dc0-37d5-5e8e-8df9-bb6f6ae5147c> a sh:PropertyShape ;
+    rdfs:label "vocab_hasProductManager"@en ;
+    sh:name "vocab_hasProductManager"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/hasProductManager> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/88ff35ee-e5b8-51e7-b25a-ec3bbd550493> a sh:PropertyShape ;
+    rdfs:label "← vocab_price"@en ;
+    sh:name "← vocab_price"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/price> ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/8b744040-caa6-526b-9d4a-09cee43acf36> a sh:PropertyShape ;
+    rdfs:label "vocab_id"@en ;
+    sh:name "vocab_id"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/id> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/b35a3c36-f175-583a-8e9e-b5e9264efa9e> a sh:PropertyShape ;
+    rdfs:label "vocab_name"@en ;
+    sh:name "vocab_name"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/name> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/c0fd25c7-b625-56c2-ba67-5a60943c7f8f> a sh:PropertyShape ;
+    rdfs:label "vocab_price"@en ;
+    sh:name "vocab_price"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/price> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/c2a4ab16-87cd-51de-978a-b6b591607095> a sh:PropertyShape ;
+    rdfs:label "vocab_amount"@en ;
+    sh:name "vocab_amount"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/amount> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/bee2a79a-5486-5f1f-ace2-cb3df6ed92c3> a sh:PropertyShape ;
+    rdfs:label "was derived from (prov:)"@en ;
+    sh:name "was derived from (prov:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path prov:wasDerivedFrom .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741> a sh:PropertyShape ;
+    rdfs:label "label (rdfs:)"@en ;
+    sh:name "label (rdfs:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path rdfs:label .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b> a sh:PropertyShape ;
+    rdfs:label "type (rdf:)"@en ;
+    sh:name "type (rdf:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
