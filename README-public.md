@@ -4,7 +4,6 @@ Generate SHACL node and property shapes from a data graph.
 
 [![eccenca Corporate Memory][cmem-shield]][cmem-link]
 
-<<<<<<< before updating
 
 You can install it with the [cmemc](https://eccenca.com/go/cmemc) command line
 clients with:
