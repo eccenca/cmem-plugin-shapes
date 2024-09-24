@@ -4,16 +4,17 @@ Generate SHACL node and property shapes from a data graph.
 
 [![eccenca Corporate Memory][cmem-shield]][cmem-link]
 
+<<<<<<< before updating
 
 You can install it with the [cmemc](https://eccenca.com/go/cmemc) command line
 clients with:
 
-This is a plugin for [eccenca](https://eccenca.com) [Corporate Memory](https://documentation.eccenca.com). You can install it with the [cmemc](https://eccenca.com/go/cmemc) command line clients like this:
-
-
 ```
 cmemc admin workspace python install cmem-plugin-shapes
 ```
+
+This is a plugin for [eccenca](https://eccenca.com) [Corporate Memory](https://documentation.eccenca.com). You can install it with the [cmemc](https://eccenca.com/go/cmemc) command line clients like this:
+
 
 [![workflow](https://github.com/eccenca/cmem-plugin-shapes/actions/workflows/check.yml/badge.svg)](https://github.com/eccenca/cmem-plugin-shapes/actions)  
 [![poetry][poetry-shield]][poetry-link] [![ruff][ruff-shield]][ruff-link] [![mypy][mypy-shield]][mypy-link] [![copier][copier-shield]][copier] 
