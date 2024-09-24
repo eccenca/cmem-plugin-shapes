@@ -20,5 +20,5 @@ Import the SHACL shapes graph in the CMEM Shapes catalog by adding an `owl:impor
 
 ### Use prefixes
 
-Attempt to fetch namespace prefixes from [http://prefix.cc](http://prefix.cc) instead of from the local database.
-If this fails, fall back on local database.
+Attempt to fetch namespace prefixes from http://prefix.cc instead of from the local database. If this fails, fall back
+on local database. Prefixes defined in the CMEM project override prefixes defined in the external database.

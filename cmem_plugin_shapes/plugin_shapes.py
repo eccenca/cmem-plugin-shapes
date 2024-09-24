@@ -84,8 +84,9 @@ def format_namespace(iri: str) -> str:
             param_type=BoolParameterType(),
             name="prefix_cc",
             label="Fetch namespace prefixes from prefix.cc",
-            description="""IAttempt to fetch namespace prefixes from http://prefix.cc instead of
-            from the local database. If this fails, fall back on local database.""",
+            description="""Attempt to fetch namespace prefixes from http://prefix.cc instead of
+            from the local database. If this fails, fall back on local database. Prefixes defined in
+            the CMEM project override prefixes defined in the external database.""",
             default_value=True,
             advanced=True,
         ),
