@@ -18,7 +18,6 @@ homepage = "https://github.com/eccenca/cmem-plugin-shapes"
 python = "^3.11"
 validators = "^0.34.0"
 str2bool = "^1.1"
-urllib3 = "^2.2.2"
 
 [tool.poetry.dependencies.cmem-plugin-base]
 version = "^4.7.0"

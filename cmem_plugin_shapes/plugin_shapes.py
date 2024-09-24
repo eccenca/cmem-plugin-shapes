@@ -2,12 +2,10 @@
 
 from io import BytesIO
 from json import load, loads
-from os import environ
 from pathlib import Path
 from urllib.parse import quote_plus
 from urllib.request import urlopen
 from uuid import NAMESPACE_URL, uuid5
-from warnings import simplefilter
 
 from cmem.cmempy.api import send_request
 from cmem.cmempy.config import get_dp_api_endpoint
@@ -25,15 +23,11 @@ from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
 from rdflib import RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
 from str2bool import str2bool
-from urllib3.exceptions import InsecureRequestWarning
 from validators import url
 
 from cmem_plugin_shapes.doc import SHAPES_DOC
 
 from . import __path__
-
-environ["SSL_VERIFY"] = "false"
-simplefilter("ignore", category=InsecureRequestWarning)
 
 SHUI = Namespace("https://vocab.eccenca.com/shui/")
 
