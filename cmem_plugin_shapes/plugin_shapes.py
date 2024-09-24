@@ -30,6 +30,7 @@ from cmem_plugin_shapes.doc import SHAPES_DOC
 from . import __path__
 
 SHUI = Namespace("https://vocab.eccenca.com/shui/")
+PREFIX_CC = "http://prefix.cc/popular/all.file.json"
 
 
 def format_namespace(iri: str) -> str:
@@ -115,7 +116,7 @@ class ShapesPlugin(WorkflowPlugin):
         err = None
         if self.prefix_cc:
             try:
-                res = urlopen("http://prefix.cc/popular/all.file.json")
+                res = urlopen(PREFIX_CC)  # noqa: S310
                 if res.status == 200:  # noqa: PLR2004
                     self.log.info("prefixes fetched from http://prefix.cc")
                     prefixes = {v: k for k, v in loads(res.read()).items()}

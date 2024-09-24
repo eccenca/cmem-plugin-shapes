@@ -462,7 +462,7 @@
   "crmgeo": "http://www.ics.forth.gr/isl/CRMgeo/",
   "crminf": "http://www.cidoc-crm.org/cidoc-crm/CRMinf/",
   "crml": "http://semweb.mmlab.be/ns/rml/condition#",
-  "crmsci": "http://www.ics.forth.gr/isl/CRMsci/",
+  "crmsci": "http://www.cidoc-crm.org/extensions/crmsci/",
   "cro": "http://rhizomik.net/ontologies/copyrightonto.owl#",
   "crowd": "http://purl.org/crowd/",
   "crsw": "http://courseware.rkbexplorer.com/ontologies/courseware#",

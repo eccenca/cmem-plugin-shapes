@@ -3,6 +3,7 @@
 import json
 from contextlib import suppress
 from pathlib import Path
+from urllib.request import urlopen
 
 import pytest
 from cmem.cmempy.dp.proxy.graph import delete, get, post
@@ -12,7 +13,7 @@ from cmem.cmempy.workspace.projects.project import delete_project, make_new_proj
 from rdflib import Graph
 from rdflib.compare import isomorphic
 
-from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
+from cmem_plugin_shapes.plugin_shapes import PREFIX_CC, ShapesPlugin
 from tests.utils import TestExecutionContext, needs_cmem
 
 from . import __path__
@@ -60,7 +61,7 @@ def test_workflow_execution(_setup: pytest.FixtureRequest) -> None:  # noqa: PT0
         shapes_graph_iri=RESULT_IRI,
         overwrite=True,
         import_shapes=True,
-        prefix_cc=True,
+        prefix_cc=False,
     ).execute(inputs=None, context=TestExecutionContext(project_id=PROJECT_NAME))
 
     query = f"""
@@ -78,3 +79,15 @@ def test_workflow_execution(_setup: pytest.FixtureRequest) -> None:  # noqa: PT0
     result_graph = Graph().parse(data=get(RESULT_IRI, owl_imports_resolution=False).text)
     test = Graph().parse(Path(__path__[0]) / "test_shapes.ttl", format="turtle")
     assert isomorphic(result_graph, test)
+
+
+@needs_cmem
+def test_prefix_cc_download() -> None:
+    """Test prefix.cc download"""
+    res = urlopen(PREFIX_CC)  # noqa: S310
+    if res.status == 200:  # noqa: PLR2004
+        prefixes = {v: k for k, v in json.loads(res.read()).items()}
+    else:
+        raise OSError(res.status)
+    if not prefixes:
+        raise OSError("prefix.cc error")
