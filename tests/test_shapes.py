@@ -1,10 +1,12 @@
 """Plugin tests."""
 
+import json
 from contextlib import suppress
 from pathlib import Path
 
 import pytest
 from cmem.cmempy.dp.proxy.graph import delete, get, post
+from cmem.cmempy.dp.proxy.sparql import post as post_select
 from cmem.cmempy.dp.proxy.update import post as post_update
 from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
 from rdflib import Graph
@@ -30,7 +32,7 @@ def _setup(request: pytest.FixtureRequest) -> None:
         PREFIX owl: <http://www.w3.org/2002/07/owl#>
         DELETE DATA {{
             GRAPH <https://vocab.eccenca.com/shacl/> {{
-                <https://vocab.eccenca.com/shacl/> owl:imports <{RESULT_IRI}> .
+                <https://vocab.eccenca.com/shacl/> owl:imports <{RESULT_IRI}>
             }}
         }}
         """
@@ -61,6 +63,18 @@ def test_workflow_execution(_setup: pytest.FixtureRequest) -> None:  # noqa: PT0
         prefix_cc=True,
     ).execute(inputs=None, context=TestExecutionContext(project_id=PROJECT_NAME))
 
-    result = Graph().parse(data=get(RESULT_IRI, owl_imports_resolution=False).text)
+    query = f"""
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    SELECT ?o {{
+        GRAPH <https://vocab.eccenca.com/shacl/> {{
+            <https://vocab.eccenca.com/shacl/> owl:imports ?o
+        }}
+        FILTER( ?o = <{RESULT_IRI}> ) 
+    }}
+    """
+    result_import = json.loads(post_select(query=query))
+    assert result_import["results"]["bindings"][0]["o"]["value"] == RESULT_IRI
+
+    result_graph = Graph().parse(data=get(RESULT_IRI, owl_imports_resolution=False).text)
     test = Graph().parse(Path(__path__[0]) / "test_shapes.ttl", format="turtle")
-    assert isomorphic(result, test)
+    assert isomorphic(result_graph, test)
