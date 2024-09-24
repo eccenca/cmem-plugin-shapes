@@ -1239,7 +1239,7 @@
   "input": "http://volt-name.space/vocab/input#",
   "insdc": "http://ddbj.nig.ac.jp/ontologies/sequence#",
   "interop": "http://www.w3.org/ns/solid/interop#",
-  "interpro": "http://purl.obolibrary.org/obo/IPR_",
+  "interpro": "https://www.ebi.ac.uk/interpro/entry/InterPro/",
   "interval": "http://reference.data.gov.uk/def/intervals/",
   "intervals": "http://reference.data.gov.uk/def/intervals/",
   "into": "https://app.korfin.de/ontology/into/",
