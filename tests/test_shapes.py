@@ -58,6 +58,7 @@ def test_workflow_execution(_setup: pytest.FixtureRequest) -> None:  # noqa: PT0
         shapes_graph_iri=RESULT_IRI,
         overwrite=False,
         import_shapes=True,
+        prefix_cc=False,
     ).execute(inputs=None, context=TestExecutionContext(project_id=PROJECT_NAME))
 
     result = Graph().parse(data=get(RESULT_IRI, owl_imports_resolution=False).text)
