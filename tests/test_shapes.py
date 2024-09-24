@@ -69,11 +69,11 @@ def test_workflow_execution(_setup: pytest.FixtureRequest) -> None:  # noqa: PT0
         GRAPH <https://vocab.eccenca.com/shacl/> {{
             <https://vocab.eccenca.com/shacl/> owl:imports ?o
         }}
-        FILTER( ?o = <{RESULT_IRI}> ) 
+        FILTER( ?o = <{RESULT_IRI}> )
     }}
     """
     result_import = json.loads(post_select(query=query))
-    assert result_import["results"]["bindings"][0]["o"]["value"] == RESULT_IRI
+    assert len(result_import["results"]["bindings"]) == 1
 
     result_graph = Graph().parse(data=get(RESULT_IRI, owl_imports_resolution=False).text)
     test = Graph().parse(Path(__path__[0]) / "test_shapes.ttl", format="turtle")
