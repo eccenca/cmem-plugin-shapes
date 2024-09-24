@@ -40,7 +40,7 @@ def _setup(request: pytest.FixtureRequest) -> None:
         delete_project(PROJECT_NAME)
     make_new_project(PROJECT_NAME)
 
-    res = post(DATA_IRI, Path(__path__[0]) / "test_shapes_data.ttl", replace=False)
+    res = post(DATA_IRI, Path(__path__[0]) / "test_shapes_data.ttl", replace=True)
     if res.status_code != 204:  # noqa: PLR2004
         raise ValueError(f"Response {res.status_code}: {res.url}")
 
@@ -56,7 +56,7 @@ def test_workflow_execution(_setup: pytest.FixtureRequest) -> None:  # noqa: PT0
     ShapesPlugin(
         data_graph_iri=DATA_IRI,
         shapes_graph_iri=RESULT_IRI,
-        overwrite=False,
+        overwrite=True,
         import_shapes=True,
         prefix_cc=True,
     ).execute(inputs=None, context=TestExecutionContext(project_id=PROJECT_NAME))
