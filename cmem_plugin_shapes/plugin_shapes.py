@@ -164,7 +164,12 @@ class ShapesPlugin(WorkflowPlugin):
         if namespace in self.prefixes:
             prefix = self.prefixes[namespace] + ":"
             if title_json["fromIri"]:
-                title = title[len(prefix) :] if title.startswith(prefix) else title.split("_", 1)[1]
+                try:
+                    title = (
+                        title[len(prefix) :] if title.startswith(prefix) else title.split("_", 1)[1]
+                    )
+                except:
+                    raise ValueError(title)
             title += f" ({prefix})"
         return title
 
