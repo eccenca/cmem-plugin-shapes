@@ -17,7 +17,6 @@ homepage = "https://github.com/eccenca/cmem-plugin-shapes"
 [tool.poetry.dependencies]# if you need to change python version here, change it also in .python-version
 python = "^3.11"
 validators = "^0.34.0"
-str2bool = "^1.1"
 
 [tool.poetry.dependencies.cmem-plugin-base]
 version = "^4.7.0"
@@ -43,7 +42,7 @@ requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
 build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.poetry-dynamic-versioning]
-enable = false
+enable = true
 vcs = "git"
 dirty = true
 bump = true

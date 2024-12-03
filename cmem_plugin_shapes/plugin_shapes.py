@@ -22,7 +22,6 @@ from cmem_plugin_base.dataintegration.types import BoolParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
 from rdflib import RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
-from str2bool import str2bool
 from validators import url
 
 from cmem_plugin_shapes.doc import SHAPES_DOC
@@ -31,11 +30,25 @@ from . import __path__
 
 SHUI = Namespace("https://vocab.eccenca.com/shui/")
 PREFIX_CC = "http://prefix.cc/popular/all.file.json"
+TRUE_SET = ["yes", "true", "t", "y", "1"]
+FALSE_SET = ["no", "false", "f", "n", "0"]
 
 
 def format_namespace(iri: str) -> str:
     """Add '/' to namespace if graph IRI does not end with '/' or '#'"""
     return iri if iri.endswith(("/", "#")) else iri + "/"
+
+
+def str2bool(value: str) -> bool:
+    """Convert str to bool"""
+    if isinstance(value, str):
+        value = value.lower()
+        if value in TRUE_SET:
+            return True
+        if value in FALSE_SET:
+            return False
+    vals = '", "'.join(TRUE_SET + FALSE_SET)
+    raise ValueError(f'Expected "{vals}"')
 
 
 @Plugin(
