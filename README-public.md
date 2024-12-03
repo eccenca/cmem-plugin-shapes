@@ -12,10 +12,9 @@ clients with:
 cmemc admin workspace python install cmem-plugin-shapes
 ```
 
-This is a plugin for [eccenca](https://eccenca.com) [Corporate Memory](https://documentation.eccenca.com). You can install it with the [cmemc](https://eccenca.com/go/cmemc) command line clients like this:
 
+[![workflow](https://github.com/eccenca/cmem-plugin-shapes/actions/workflows/check.yml/badge.svg)](https://github.com/eccenca/cmem-plugin-shapes/actions) [![pypi version](https://img.shields.io/pypi/v/cmem-plugin-shapes)](https://pypi.org/project/cmem-plugin-shapes) [![license](https://img.shields.io/pypi/l/cmem-plugin-shapes)](https://pypi.org/project/cmem-plugin-shapes)
 
-[![workflow](https://github.com/eccenca/cmem-plugin-shapes/actions/workflows/check.yml/badge.svg)](https://github.com/eccenca/cmem-plugin-shapes/actions)  
 [![poetry][poetry-shield]][poetry-link] [![ruff][ruff-shield]][ruff-link] [![mypy][mypy-shield]][mypy-link] [![copier][copier-shield]][copier] 
 
 [cmem-link]: https://documentation.eccenca.com

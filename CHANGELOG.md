@@ -6,7 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [unreleased] 
 
+### Changed
 
+- removed dependency str2bool
+- use GraphParameterType for Shapes graph 
 
 ## [1.0.0beta1] 2024-07-24
 

@@ -6,7 +6,7 @@ from pathlib import Path
 from urllib.request import urlopen
 
 import pytest
-from cmem.cmempy.dp.proxy.graph import delete, get, post
+from cmem.cmempy.dp.proxy.graph import delete, get, post_streamed
 from cmem.cmempy.dp.proxy.sparql import post as post_select
 from cmem.cmempy.dp.proxy.update import post as post_update
 from cmem.cmempy.workspace.projects.project import delete_project, make_new_project
@@ -43,7 +43,7 @@ def _setup(request: pytest.FixtureRequest) -> None:
         delete_project(PROJECT_NAME)
     make_new_project(PROJECT_NAME)
 
-    res = post(DATA_IRI, Path(__path__[0]) / "test_shapes_data.ttl", replace=True)
+    res = post_streamed(DATA_IRI, str(Path(__path__[0]) / "test_shapes_data.ttl"), replace=True)
     if res.status_code != 204:  # noqa: PLR2004
         raise ValueError(f"Response {res.status_code}: {res.url}")
 
