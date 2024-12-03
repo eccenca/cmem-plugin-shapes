@@ -168,8 +168,8 @@ class ShapesPlugin(WorkflowPlugin):
                     title = (
                         title[len(prefix) :] if title.startswith(prefix) else title.split("_", 1)[1]
                     )
-                except:
-                    raise ValueError(title)
+                except IndexError:
+                    raise ValueError(title) from None
             title += f" ({prefix})"
         return title
 
