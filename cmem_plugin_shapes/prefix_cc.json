@@ -606,6 +606,7 @@
   "dcr": "http://www.isocat.org/ns/dcr.rdf#",
   "dcs": "http://ontologi.es/doap-changeset#",
   "dct": "http://purl.org/dc/terms/",
+  "dcterm": "http://purl.org/dc/terms/",
   "dcterms": "http://purl.org/dc/terms/",
   "dctype": "http://purl.org/dc/dcmitype/",
   "dctypes": "http://purl.org/dc/dcmitype/",
