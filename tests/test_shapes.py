@@ -53,32 +53,32 @@ def _setup(request: pytest.FixtureRequest) -> None:
     request.addfinalizer(lambda: delete(RESULT_IRI))  # noqa: PT021
 
 
-# @needs_cmem
-# def test_workflow_execution(_setup: pytest.FixtureRequest) -> None:  # noqa: RUF100 PT019
-#     """Test plugin execution"""
-#     ShapesPlugin(
-#         data_graph_iri=DATA_IRI,
-#         shapes_graph_iri=RESULT_IRI,
-#         overwrite=True,
-#         import_shapes=True,
-#         prefix_cc=False,
-#     ).execute(inputs=None, context=TestExecutionContext(project_id=PROJECT_NAME))
-#
-#     query = f"""
-#     PREFIX owl: <http://www.w3.org/2002/07/owl#>
-#     SELECT ?o {{
-#         GRAPH <https://vocab.eccenca.com/shacl/> {{
-#             <https://vocab.eccenca.com/shacl/> owl:imports ?o
-#         }}
-#         FILTER( ?o = <{RESULT_IRI}> )
-#     }}
-#     """
-#     result_import = json.loads(post_select(query=query))
-#     assert len(result_import["results"]["bindings"]) == 1
-#
-#     result_graph = Graph().parse(data=get(RESULT_IRI, owl_imports_resolution=False).text)
-#     test = Graph().parse(Path(__path__[0]) / "test_shapes.ttl", format="turtle")
-#     assert isomorphic(result_graph, test)
+@needs_cmem
+def test_workflow_execution(_setup: pytest.FixtureRequest) -> None:  # noqa: RUF100 PT019
+    """Test plugin execution"""
+    ShapesPlugin(
+        data_graph_iri=DATA_IRI,
+        shapes_graph_iri=RESULT_IRI,
+        overwrite=True,
+        import_shapes=True,
+        prefix_cc=True,
+    ).execute(inputs=None, context=TestExecutionContext(project_id=PROJECT_NAME))
+
+    query = f"""
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    SELECT ?o {{
+        GRAPH <https://vocab.eccenca.com/shacl/> {{
+            <https://vocab.eccenca.com/shacl/> owl:imports ?o
+        }}
+        FILTER( ?o = <{RESULT_IRI}> )
+    }}
+    """
+    result_import = json.loads(post_select(query=query))
+    assert len(result_import["results"]["bindings"]) == 1
+
+    result_graph = Graph().parse(data=get(RESULT_IRI, owl_imports_resolution=False).text)
+    test = Graph().parse(Path(__path__[0]) / "test_shapes.ttl", format="turtle")
+    assert isomorphic(result_graph, test)
 
 
 @needs_cmem
