@@ -25,7 +25,7 @@ DATA_IRI = f"https://eccenca.com/shapes_plugin/{UUID}/data/"
 
 
 @pytest.fixture
-def _setup(request: pytest.FixtureRequest) -> None:
+def setup(request: pytest.FixtureRequest) -> None:
     """Create DI project"""
 
     def remove_import() -> None:
@@ -54,14 +54,15 @@ def _setup(request: pytest.FixtureRequest) -> None:
 
 
 @needs_cmem
-def test_workflow_execution(_setup: pytest.FixtureRequest) -> None:  # noqa: RUF100 PT019
+@pytest.mark.usefixtures("setup")
+def test_workflow_execution() -> None:
     """Test plugin execution"""
     ShapesPlugin(
         data_graph_iri=DATA_IRI,
         shapes_graph_iri=RESULT_IRI,
         overwrite=True,
         import_shapes=True,
-        prefix_cc=True,
+        prefix_cc=False,
     ).execute(inputs=None, context=TestExecutionContext(project_id=PROJECT_NAME))
 
     query = f"""
