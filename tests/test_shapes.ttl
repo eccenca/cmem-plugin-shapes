@@ -1,0 +1,820 @@
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix ns1: <https://vocab.eccenca.com/shui/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix vann: <http://purl.org/vocab/vann/> .
+@prefix void: <http://rdfs.org/ns/void#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/> a ns1:ShapeCatalog ;
+    rdfs:label "Shapes for https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/data/" .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/1ca4d39e-3c44-575a-8e82-b745bf274777> a sh:NodeShape ;
+    rdfs:label "ObjectProperty (owl:)"@en ;
+    sh:name "ObjectProperty (owl:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2e218ab8-518d-5cd0-a660-f575a101e5d8>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2f7d9ec3-f9e0-5b86-8abd-74dbfa758f05>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3e98087c-7fe5-5523-b25a-b83b0f6bbd8c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/5c60d828-ef94-58a4-a953-a7aed41d69ca>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/5f5cce27-b3f3-5f71-9c07-ff3e5793f8ea>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/61e44c93-4a09-5eb0-8bd6-70a89590a33d>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/783f030d-ad23-5d2f-bd3d-7db6ecf37e17>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7bb543ed-c62b-580f-93de-12b46351985a>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7c57b611-ad89-5139-a3a5-ea8e85dd18b7>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/84d654c0-420b-5a08-ad64-1f16d51de0b2>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/93b461ec-a453-5ffa-9e12-66c7ce15205e>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/9bc8f7a1-0510-5f13-977b-a23e946324e6>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/a6c2bf42-d4f5-57a1-ba32-32ccece8cf7e>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/a6f7d798-278a-5485-88ad-7b99e6dca827>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/b35a3c36-f175-583a-8e9e-b5e9264efa9e>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/bced57b6-a8cb-51f9-8417-ca23a70e15f7>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/c6a11966-a018-5be8-95a0-eba182c2fd93>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e57dfea7-a1d0-559a-9ecc-0a65cf99ec5d>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/ec554dd3-a425-5dc0-b731-666ba293ce0b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/f39d0b9d-ebfd-555b-81d8-1543eb3c8e60> ;
+    sh:targetClass owl:ObjectProperty .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3ec82436-7bdb-57ad-b935-61f9942cecfa> a sh:NodeShape ;
+    rdfs:label "Resource Viewer Widget (shui:)"@en ;
+    sh:name "Resource Viewer Widget (shui:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2e218ab8-518d-5cd0-a660-f575a101e5d8>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3e98087c-7fe5-5523-b25a-b83b0f6bbd8c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7bb543ed-c62b-580f-93de-12b46351985a>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de> ;
+    sh:targetClass ns1:ResourceViewerWidget .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/581d50c0-7bc2-5a97-bdc2-9c056f43c807> a sh:NodeShape ;
+    rdfs:label "Class (owl:)"@en ;
+    sh:name "Class (owl:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/13e2c88f-b46e-582a-8ae8-a66bd4672136>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/1cd446c4-3a7f-52f9-b3b0-be71eb154877>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2e218ab8-518d-5cd0-a660-f575a101e5d8>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/330bed19-aff4-57e3-8093-54addacd8591>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3759a725-5640-56cb-a3b9-c0fa828fc9df>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/398eb7b2-b692-5707-8565-bc5511ec9ada>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3e98087c-7fe5-5523-b25a-b83b0f6bbd8c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/63c19abc-e3db-5773-8eef-29840720f2a1>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/67f1ce40-4273-590d-9d53-607a9dd7a547>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7bb543ed-c62b-580f-93de-12b46351985a>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/a0cdc9e2-d17a-51d2-9c75-eab8ce1f80bc>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/aa6405a5-0b52-5616-8aa5-86be6576cf21>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/b35a3c36-f175-583a-8e9e-b5e9264efa9e>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/bd3b37bc-270a-5e5f-8e0f-8e9f4d48a9e7>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d55dc3fe-9a9f-5908-baae-e67d0fa0eab0>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e11dd516-ca58-50a2-91a2-e26c010eed30>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/f20b1c8b-96c3-55d8-8cca-fea0859be9ea> ;
+    sh:targetClass owl:Class .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/6e311ffe-8110-56e6-8f9a-81cb0ac9d4c7> a sh:NodeShape ;
+    rdfs:label "SPARQL 1.1 Update (shui:)"@en ;
+    sh:name "SPARQL 1.1 Update (shui:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/1dfd5dec-94c9-5411-9a96-ca5c714080e5>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/49ce944f-7b5e-5f95-a8a6-a92f0e0109c7>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/54a86bdc-5cdd-5e10-99b5-2d02d69b6fb1>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d42eb7aa-cc8f-5828-885e-6784b2f28e19>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d8e5ad84-32e7-5634-ba64-5da49cf11037>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de> ;
+    sh:targetClass ns1:SparqlUpdate .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73d101aa-9788-5397-ac46-4569ceaae23d> a sh:NodeShape ;
+    rdfs:label "DatatypeProperty (owl:)"@en ;
+    sh:name "DatatypeProperty (owl:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2e218ab8-518d-5cd0-a660-f575a101e5d8>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2f7d9ec3-f9e0-5b86-8abd-74dbfa758f05>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3e98087c-7fe5-5523-b25a-b83b0f6bbd8c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/5f5cce27-b3f3-5f71-9c07-ff3e5793f8ea>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/61e44c93-4a09-5eb0-8bd6-70a89590a33d>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7b0905db-0d4e-52bd-9dfb-08fe864464e8>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7bb543ed-c62b-580f-93de-12b46351985a>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7c57b611-ad89-5139-a3a5-ea8e85dd18b7>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/84d654c0-420b-5a08-ad64-1f16d51de0b2>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/93b461ec-a453-5ffa-9e12-66c7ce15205e>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/9bc8f7a1-0510-5f13-977b-a23e946324e6>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/a6c2bf42-d4f5-57a1-ba32-32ccece8cf7e>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/a6f7d798-278a-5485-88ad-7b99e6dca827>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/b35a3c36-f175-583a-8e9e-b5e9264efa9e>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/c6a11966-a018-5be8-95a0-eba182c2fd93>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/cddc327b-cf86-5c12-8506-683bfea36ee4>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e57dfea7-a1d0-559a-9ecc-0a65cf99ec5d>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/ec554dd3-a425-5dc0-b731-666ba293ce0b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/f2d4e873-0e08-5abc-9f19-e842ba16f68a>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/f39d0b9d-ebfd-555b-81d8-1543eb3c8e60> ;
+    sh:targetClass owl:DatatypeProperty .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/8fa80a6e-cc95-5b09-b8b4-ef12745f2c41> a sh:NodeShape ;
+    rdfs:label "FunctionalProperty (owl:)"@en ;
+    sh:name "FunctionalProperty (owl:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2e218ab8-518d-5cd0-a660-f575a101e5d8>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3e98087c-7fe5-5523-b25a-b83b0f6bbd8c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/61e44c93-4a09-5eb0-8bd6-70a89590a33d>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7bb543ed-c62b-580f-93de-12b46351985a>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/84d654c0-420b-5a08-ad64-1f16d51de0b2>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/c6a11966-a018-5be8-95a0-eba182c2fd93>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/ec554dd3-a425-5dc0-b731-666ba293ce0b> ;
+    sh:targetClass owl:FunctionalProperty .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/925c76c0-596b-56ec-b768-ce3924a53bdf> a sh:NodeShape ;
+    rdfs:label "Datatype (rdfs:)"@en ;
+    sh:name "Datatype (rdfs:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2e218ab8-518d-5cd0-a660-f575a101e5d8>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3e98087c-7fe5-5523-b25a-b83b0f6bbd8c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7bb543ed-c62b-580f-93de-12b46351985a>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/c5b7f6dc-bde4-5a15-9156-655f5d69a359>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d55dc3fe-9a9f-5908-baae-e67d0fa0eab0>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e11dd516-ca58-50a2-91a2-e26c010eed30>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/ec554dd3-a425-5dc0-b731-666ba293ce0b> ;
+    sh:targetClass rdfs:Datatype .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/a729984c-4bf8-5678-ab95-68f8deca02f0> a sh:NodeShape ;
+    rdfs:label "URI Template (shui:)"@en ;
+    sh:name "URI Template (shui:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/8bfc5c46-8ffe-5f2f-8189-2cc6633d0a1e>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/fb380a1d-38f7-5063-858d-272b02aca07a> ;
+    sh:targetClass ns1:URITemplate .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/a89d6dd5-9273-51c5-839e-983c7375e6dd> a sh:NodeShape ;
+    rdfs:label "vocab_NodeKind"@en ;
+    sh:name "vocab_NodeKind"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/06cd7ee5-6d4c-5fa4-a98f-6cfd38bbdbe0>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741> ;
+    sh:targetClass <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/NodeKind> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/afdcab05-7442-57dd-8f2f-0543e3692037> a sh:NodeShape ;
+    rdfs:label "SHACL Node Shape"@en ;
+    sh:name "SHACL Node Shape"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/13e2c88f-b46e-582a-8ae8-a66bd4672136>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/1cd446c4-3a7f-52f9-b3b0-be71eb154877>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/330bed19-aff4-57e3-8093-54addacd8591>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3759a725-5640-56cb-a3b9-c0fa828fc9df>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/6de9761e-6aa8-537e-b13c-3ec4631de3a5>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/a0cdc9e2-d17a-51d2-9c75-eab8ce1f80bc>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/a6f7d798-278a-5485-88ad-7b99e6dca827>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/aa6405a5-0b52-5616-8aa5-86be6576cf21>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/adc38b63-e456-5594-bd5c-6a082667a0ac>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/b35a3c36-f175-583a-8e9e-b5e9264efa9e>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/bd3b37bc-270a-5e5f-8e0f-8e9f4d48a9e7>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e11dd516-ca58-50a2-91a2-e26c010eed30>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/ec554dd3-a425-5dc0-b731-666ba293ce0b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/f39d0b9d-ebfd-555b-81d8-1543eb3c8e60> ;
+    sh:targetClass <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/NodeShape> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/b5ed52e4-c008-598b-be02-565fe717def9> a sh:NodeShape ;
+    rdfs:label "Shape Catalog (shui:)"@en ;
+    sh:name "Shape Catalog (shui:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/398eb7b2-b692-5707-8565-bc5511ec9ada>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/9c4b09be-97a5-5604-ae34-e6cb21c2d0f1>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e70ba921-ada5-550d-a639-97440f9f4270> ;
+    sh:targetClass ns1:ShapeCatalog .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/c4d46947-b828-50f4-871e-f29b15045aa5> a sh:NodeShape ;
+    rdfs:label "AnnotationProperty (owl:)"@en ;
+    sh:name "AnnotationProperty (owl:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2e218ab8-518d-5cd0-a660-f575a101e5d8>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3e98087c-7fe5-5523-b25a-b83b0f6bbd8c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/61e44c93-4a09-5eb0-8bd6-70a89590a33d>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7bb543ed-c62b-580f-93de-12b46351985a>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/84d654c0-420b-5a08-ad64-1f16d51de0b2>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/c6a11966-a018-5be8-95a0-eba182c2fd93>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de> ;
+    sh:targetClass owl:AnnotationProperty .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/c7780306-6499-5e06-ac99-87c2272b4a94> a sh:NodeShape ;
+    rdfs:label "SHACL Property Group"@en ;
+    sh:name "SHACL Property Group"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/1e81fa67-3f37-5928-b6ca-88441bb402b1>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/93b461ec-a453-5ffa-9e12-66c7ce15205e>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de> ;
+    sh:targetClass <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/PropertyGroup> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d6ac0df2-324e-561c-9f05-41d3b2d5ebd3> a sh:NodeShape ;
+    rdfs:label "Resource (rdfs:)"@en ;
+    sh:name "Resource (rdfs:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2e218ab8-518d-5cd0-a660-f575a101e5d8>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3e98087c-7fe5-5523-b25a-b83b0f6bbd8c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/61e44c93-4a09-5eb0-8bd6-70a89590a33d>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7bb543ed-c62b-580f-93de-12b46351985a>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de> ;
+    sh:targetClass rdfs:Resource .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/dd3dfe8c-5643-5d9b-bf03-eec2b9d8ccc5> a sh:NodeShape ;
+    rdfs:label "SHACL Property Shape"@en ;
+    sh:name "SHACL Property Shape"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2f7d9ec3-f9e0-5b86-8abd-74dbfa758f05>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3d7b217d-831b-54f6-9e66-0914e4d381f9>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/5c60d828-ef94-58a4-a953-a7aed41d69ca>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/5e17943c-87c1-5958-9db0-0f3b7898fc3c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/5f5cce27-b3f3-5f71-9c07-ff3e5793f8ea>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/61e44c93-4a09-5eb0-8bd6-70a89590a33d>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/6b4cf4e0-c56b-5db3-b31b-18144fc6dd26>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/783f030d-ad23-5d2f-bd3d-7db6ecf37e17>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7b0905db-0d4e-52bd-9dfb-08fe864464e8>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7c57b611-ad89-5139-a3a5-ea8e85dd18b7>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/8259b17c-f872-525f-bbac-497f32b77e53>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/84bcad75-cb00-50d7-aad8-dba64ea36122>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/84d654c0-420b-5a08-ad64-1f16d51de0b2>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/93b461ec-a453-5ffa-9e12-66c7ce15205e>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/954d202b-0e14-57de-9b5d-52e2a0ab4384>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/98f0c87b-8f0b-5b7b-8e41-6b142ee2c91c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/9bc8f7a1-0510-5f13-977b-a23e946324e6>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/a6c2bf42-d4f5-57a1-ba32-32ccece8cf7e>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/a6f7d798-278a-5485-88ad-7b99e6dca827>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/b35a3c36-f175-583a-8e9e-b5e9264efa9e>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/bced57b6-a8cb-51f9-8417-ca23a70e15f7>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/c6a11966-a018-5be8-95a0-eba182c2fd93>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/cddc327b-cf86-5c12-8506-683bfea36ee4>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e541c741-2549-529b-94e1-24fad880178f>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e57dfea7-a1d0-559a-9ecc-0a65cf99ec5d>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/ec554dd3-a425-5dc0-b731-666ba293ce0b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/f2d4e873-0e08-5abc-9f19-e842ba16f68a>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/f39d0b9d-ebfd-555b-81d8-1543eb3c8e60>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/f5d81a49-7bfa-5301-b81f-4fc7805f0361> ;
+    sh:targetClass <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/PropertyShape> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/de475b35-6998-5567-ae79-ac755eb97d0a> a sh:NodeShape ;
+    rdfs:label "SPARQL 1.1 Query (shui:)"@en ;
+    sh:name "SPARQL 1.1 Query (shui:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/54a86bdc-5cdd-5e10-99b5-2d02d69b6fb1>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/652fd0c7-0a94-51b8-96fc-7e09b6311c47>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0153add-ff8c-5c5f-86ab-96cc4fd1a276>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d8e5ad84-32e7-5634-ba64-5da49cf11037>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de> ;
+    sh:targetClass ns1:SparqlQuery .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e1846273-87a5-5aa3-8b4d-26ddb730e821> a sh:NodeShape ;
+    rdfs:label "vocab_Severity"@en ;
+    sh:name "vocab_Severity"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/167fdc24-efba-5c58-820a-93cd0c529ac0>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de> ;
+    sh:targetClass <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/Severity> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e21f4a95-fec8-57e2-80eb-e4fd1cd542e2> a sh:NodeShape ;
+    rdfs:label "Ontology (owl:)"@en ;
+    sh:name "Ontology (owl:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2db0199c-c05f-51cd-b1d4-6c0ca7bb7485>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2e218ab8-518d-5cd0-a660-f575a101e5d8>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3e98087c-7fe5-5523-b25a-b83b0f6bbd8c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/493ce8af-070d-53cb-9536-19f6390ba257>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/4e4580e2-e10e-5f17-91cf-1f763a7acc6c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7f011711-d926-5b42-bbe1-2cfdc87862c4>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/9c4b09be-97a5-5604-ae34-e6cb21c2d0f1>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/b89db759-4650-5e9b-9c61-62700448cfc9>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/dc535988-d222-586f-997f-2e6b6ee2bbd4>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e70ba921-ada5-550d-a639-97440f9f4270> ;
+    sh:targetClass owl:Ontology .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/f5dc60c4-204f-5690-9084-c454237d4db7> a sh:NodeShape ;
+    rdfs:label "Resource Ownership Method (shui:)"@en ;
+    sh:name "Resource Ownership Method (shui:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2e218ab8-518d-5cd0-a660-f575a101e5d8>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3e98087c-7fe5-5523-b25a-b83b0f6bbd8c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7bb543ed-c62b-580f-93de-12b46351985a>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de> ;
+    sh:targetClass ns1:ResourceOwnershipMethod .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/f84f9907-ea82-5b59-bcf9-d1eb7a00fac9> a sh:NodeShape ;
+    rdfs:label "Vocabulary (voaf:)"@en ;
+    sh:name "Vocabulary (voaf:)"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2db0199c-c05f-51cd-b1d4-6c0ca7bb7485>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2e218ab8-518d-5cd0-a660-f575a101e5d8>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3e98087c-7fe5-5523-b25a-b83b0f6bbd8c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/493ce8af-070d-53cb-9536-19f6390ba257>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/4e4580e2-e10e-5f17-91cf-1f763a7acc6c>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7f011711-d926-5b42-bbe1-2cfdc87862c4>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/9c4b09be-97a5-5604-ae34-e6cb21c2d0f1>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/b89db759-4650-5e9b-9c61-62700448cfc9>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/dc535988-d222-586f-997f-2e6b6ee2bbd4>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e70ba921-ada5-550d-a639-97440f9f4270> ;
+    sh:targetClass <http://purl.org/vocommons/voaf#Vocabulary> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/fae5e08a-2f0f-5ea1-a138-704bfab9b1c1> a sh:NodeShape ;
+    rdfs:label "Search Scoring Method"@en ;
+    sh:name "Search Scoring Method"@en ;
+    sh:property <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b>,
+        <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741> ;
+    sh:targetClass <https://vocab.eccenca.com/configuration/EasyNavSearchScoringMethod> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/06cd7ee5-6d4c-5fa4-a98f-6cfd38bbdbe0> a sh:PropertyShape ;
+    rdfs:label "← vocab_nodeKind"@en ;
+    sh:name "← vocab_nodeKind"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/nodeKind> ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/167fdc24-efba-5c58-820a-93cd0c529ac0> a sh:PropertyShape ;
+    rdfs:label "← vocab_severity"@en ;
+    sh:name "← vocab_severity"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/severity> ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/1dfd5dec-94c9-5411-9a96-ca5c714080e5> a sh:PropertyShape ;
+    rdfs:label "← on delete update (shui:)"@en ;
+    sh:name "← on delete update (shui:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path ns1:onDeleteUpdate ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/1e81fa67-3f37-5928-b6ca-88441bb402b1> a sh:PropertyShape ;
+    rdfs:label "← vocab_group"@en ;
+    sh:name "← vocab_group"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/group> ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3d7b217d-831b-54f6-9e66-0914e4d381f9> a sh:PropertyShape ;
+    rdfs:label "vocab_severity"@en ;
+    sh:name "vocab_severity"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/severity> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/49ce944f-7b5e-5f95-a8a6-a92f0e0109c7> a sh:PropertyShape ;
+    rdfs:label "← on update update (shui:)"@en ;
+    sh:name "← on update update (shui:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path ns1:onUpdateUpdate ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/5e17943c-87c1-5958-9db0-0f3b7898fc3c> a sh:PropertyShape ;
+    rdfs:label "read only (shui:)"@en ;
+    sh:name "read only (shui:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path ns1:readOnly .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/63c19abc-e3db-5773-8eef-29840720f2a1> a sh:PropertyShape ;
+    rdfs:label "← type (rdf:)"@en ;
+    sh:name "← type (rdf:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/652fd0c7-0a94-51b8-96fc-7e09b6311c47> a sh:PropertyShape ;
+    rdfs:label "← user interface query (shui:)"@en ;
+    sh:name "← user interface query (shui:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path ns1:uiQuery ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/67f1ce40-4273-590d-9d53-607a9dd7a547> a sh:PropertyShape ;
+    rdfs:label "← subClassOf (rdfs:)"@en ;
+    sh:name "← subClassOf (rdfs:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdfs:subClassOf ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/6b4cf4e0-c56b-5db3-b31b-18144fc6dd26> a sh:PropertyShape ;
+    rdfs:label "on insert update (shui:)"@en ;
+    sh:name "on insert update (shui:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path ns1:onInsertUpdate .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/6de9761e-6aa8-537e-b13c-3ec4631de3a5> a sh:PropertyShape ;
+    rdfs:label "on update update (shui:)"@en ;
+    sh:name "on update update (shui:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path ns1:onUpdateUpdate .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/8259b17c-f872-525f-bbac-497f32b77e53> a sh:PropertyShape ;
+    rdfs:label "on delete update (shui:)"@en ;
+    sh:name "on delete update (shui:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path ns1:onDeleteUpdate .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/84bcad75-cb00-50d7-aad8-dba64ea36122> a sh:PropertyShape ;
+    rdfs:label "vocab_uniqueLang"@en ;
+    sh:name "vocab_uniqueLang"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/uniqueLang> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/8bfc5c46-8ffe-5f2f-8189-2cc6633d0a1e> a sh:PropertyShape ;
+    rdfs:label "← URI template for new resources (shui:)"@en ;
+    sh:name "← URI template for new resources (shui:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path ns1:uriTemplate ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/954d202b-0e14-57de-9b5d-52e2a0ab4384> a sh:PropertyShape ;
+    rdfs:label "inverse path (shui:)"@en ;
+    sh:name "inverse path (shui:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path ns1:inversePath .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/98f0c87b-8f0b-5b7b-8e41-6b142ee2c91c> a sh:PropertyShape ;
+    rdfs:label "value query (shui:)"@en ;
+    sh:name "value query (shui:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path ns1:valueQuery .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/adc38b63-e456-5594-bd5c-6a082667a0ac> a sh:PropertyShape ;
+    rdfs:label "URI template for new resources (shui:)"@en ;
+    sh:name "URI template for new resources (shui:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path ns1:uriTemplate .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/c5b7f6dc-bde4-5a15-9156-655f5d69a359> a sh:PropertyShape ;
+    rdfs:label "← vocab_datatype"@en ;
+    sh:name "← vocab_datatype"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/datatype> ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0153add-ff8c-5c5f-86ab-96cc4fd1a276> a sh:PropertyShape ;
+    rdfs:label "← value query (shui:)"@en ;
+    sh:name "← value query (shui:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path ns1:valueQuery ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d42eb7aa-cc8f-5828-885e-6784b2f28e19> a sh:PropertyShape ;
+    rdfs:label "← on insert update (shui:)"@en ;
+    sh:name "← on insert update (shui:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path ns1:onInsertUpdate ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e541c741-2549-529b-94e1-24fad880178f> a sh:PropertyShape ;
+    rdfs:label "vocab_flags"@en ;
+    sh:name "vocab_flags"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/flags> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/f20b1c8b-96c3-55d8-8cca-fea0859be9ea> a sh:PropertyShape ;
+    rdfs:label "is graph type (shui:)"@en ;
+    sh:name "is graph type (shui:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path ns1:isGraphType .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/f5d81a49-7bfa-5301-b81f-4fc7805f0361> a sh:PropertyShape ;
+    rdfs:label "value query - hide header (shui:)"@en ;
+    sh:name "value query - hide header (shui:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path ns1:valueQueryHideHeader .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/fb380a1d-38f7-5063-858d-272b02aca07a> a sh:PropertyShape ;
+    rdfs:label "URI template string (shui:)"@en ;
+    sh:name "URI template string (shui:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path ns1:templateString .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/13e2c88f-b46e-582a-8ae8-a66bd4672136> a sh:PropertyShape ;
+    rdfs:label "vocab_property"@en ;
+    sh:name "vocab_property"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/property> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/1cd446c4-3a7f-52f9-b3b0-be71eb154877> a sh:PropertyShape ;
+    rdfs:label "← vocab_targetClass"@en ;
+    sh:name "← vocab_targetClass"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/targetClass> ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2db0199c-c05f-51cd-b1d4-6c0ca7bb7485> a sh:PropertyShape ;
+    rdfs:label "preferred label (skos:)"@en ;
+    sh:name "preferred label (skos:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path skos:prefLabel .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/330bed19-aff4-57e3-8093-54addacd8591> a sh:PropertyShape ;
+    rdfs:label "← vocab_class"@en ;
+    sh:name "← vocab_class"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/class> ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3759a725-5640-56cb-a3b9-c0fa828fc9df> a sh:PropertyShape ;
+    rdfs:label "depiction (foaf:)"@en ;
+    sh:name "depiction (foaf:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path foaf:depiction .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/398eb7b2-b692-5707-8565-bc5511ec9ada> a sh:PropertyShape ;
+    rdfs:label "managed classes (shui:)"@en ;
+    sh:name "managed classes (shui:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path ns1:managedClasses .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/493ce8af-070d-53cb-9536-19f6390ba257> a sh:PropertyShape ;
+    rdfs:label "← isDefinedBy (rdfs:)"@en ;
+    sh:name "← isDefinedBy (rdfs:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdfs:isDefinedBy ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/4e4580e2-e10e-5f17-91cf-1f763a7acc6c> a sh:PropertyShape ;
+    rdfs:label "Title (dcterms:)"@en ;
+    sh:name "Title (dcterms:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path dcterms:title .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/54a86bdc-5cdd-5e10-99b5-2d02d69b6fb1> a sh:PropertyShape ;
+    rdfs:label "query text (shui:)"@en ;
+    sh:name "query text (shui:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path ns1:queryText .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/5c60d828-ef94-58a4-a953-a7aed41d69ca> a sh:PropertyShape ;
+    rdfs:label "vocab_class"@en ;
+    sh:name "vocab_class"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/class> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/783f030d-ad23-5d2f-bd3d-7db6ecf37e17> a sh:PropertyShape ;
+    rdfs:label "deny new resources (shui:)"@en ;
+    sh:name "deny new resources (shui:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path ns1:denyNewResources .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7b0905db-0d4e-52bd-9dfb-08fe864464e8> a sh:PropertyShape ;
+    rdfs:label "use textarea (shui:)"@en ;
+    sh:name "use textarea (shui:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path ns1:textarea .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7f011711-d926-5b42-bbe1-2cfdc87862c4> a sh:PropertyShape ;
+    rdfs:label "Rights (dcterms:)"@en ;
+    sh:name "Rights (dcterms:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path dcterms:rights .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/a0cdc9e2-d17a-51d2-9c75-eab8ce1f80bc> a sh:PropertyShape ;
+    rdfs:label "vocab_targetClass"@en ;
+    sh:name "vocab_targetClass"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/targetClass> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/aa6405a5-0b52-5616-8aa5-86be6576cf21> a sh:PropertyShape ;
+    rdfs:label "← managed classes (shui:)"@en ;
+    sh:name "← managed classes (shui:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path ns1:managedClasses ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/b89db759-4650-5e9b-9c61-62700448cfc9> a sh:PropertyShape ;
+    rdfs:label "versionInfo (owl:)"@en ;
+    sh:name "versionInfo (owl:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path owl:versionInfo .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/bced57b6-a8cb-51f9-8417-ca23a70e15f7> a sh:PropertyShape ;
+    rdfs:label "user interface query (shui:)"@en ;
+    sh:name "user interface query (shui:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path ns1:uiQuery .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/bd3b37bc-270a-5e5f-8e0f-8e9f4d48a9e7> a sh:PropertyShape ;
+    rdfs:label "← domain (rdfs:)"@en ;
+    sh:name "← domain (rdfs:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdfs:domain ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/cddc327b-cf86-5c12-8506-683bfea36ee4> a sh:PropertyShape ;
+    rdfs:label "vocab_pattern"@en ;
+    sh:name "vocab_pattern"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/pattern> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d55dc3fe-9a9f-5908-baae-e67d0fa0eab0> a sh:PropertyShape ;
+    rdfs:label "subClassOf (rdfs:)"@en ;
+    sh:name "subClassOf (rdfs:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdfs:subClassOf .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d8e5ad84-32e7-5634-ba64-5da49cf11037> a sh:PropertyShape ;
+    rdfs:label "query type (shui:)"@en ;
+    sh:name "query type (shui:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path ns1:queryType .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/dc535988-d222-586f-997f-2e6b6ee2bbd4> a sh:PropertyShape ;
+    rdfs:label "preferredNamespacePrefix (vann:)"@en ;
+    sh:name "preferredNamespacePrefix (vann:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path vann:preferredNamespacePrefix .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/f2d4e873-0e08-5abc-9f19-e842ba16f68a> a sh:PropertyShape ;
+    rdfs:label "vocab_datatype"@en ;
+    sh:name "vocab_datatype"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/datatype> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2f7d9ec3-f9e0-5b86-8abd-74dbfa758f05> a sh:PropertyShape ;
+    rdfs:label "vocab_path"@en ;
+    sh:name "vocab_path"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/path> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/5f5cce27-b3f3-5f71-9c07-ff3e5793f8ea> a sh:PropertyShape ;
+    rdfs:label "vocab_group"@en ;
+    sh:name "vocab_group"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/group> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7c57b611-ad89-5139-a3a5-ea8e85dd18b7> a sh:PropertyShape ;
+    rdfs:label "show always (shui:)"@en ;
+    sh:name "show always (shui:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path ns1:showAlways .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/9bc8f7a1-0510-5f13-977b-a23e946324e6> a sh:PropertyShape ;
+    rdfs:label "vocab_minCount"@en ;
+    sh:name "vocab_minCount"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/minCount> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/9c4b09be-97a5-5604-ae34-e6cb21c2d0f1> a sh:PropertyShape ;
+    rdfs:label "vocabulary (void:)"@en ;
+    sh:name "vocabulary (void:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path void:vocabulary .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/a6c2bf42-d4f5-57a1-ba32-32ccece8cf7e> a sh:PropertyShape ;
+    rdfs:label "← vocab_property"@en ;
+    sh:name "← vocab_property"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/property> ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e11dd516-ca58-50a2-91a2-e26c010eed30> a sh:PropertyShape ;
+    rdfs:label "← range (rdfs:)"@en ;
+    sh:name "← range (rdfs:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdfs:range ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e57dfea7-a1d0-559a-9ecc-0a65cf99ec5d> a sh:PropertyShape ;
+    rdfs:label "vocab_maxCount"@en ;
+    sh:name "vocab_maxCount"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/maxCount> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/e70ba921-ada5-550d-a639-97440f9f4270> a sh:PropertyShape ;
+    rdfs:label "preferredNamespaceUri (vann:)"@en ;
+    sh:name "preferredNamespaceUri (vann:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path vann:preferredNamespaceUri .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/93b461ec-a453-5ffa-9e12-66c7ce15205e> a sh:PropertyShape ;
+    rdfs:label "vocab_order"@en ;
+    sh:name "vocab_order"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/order> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/a6f7d798-278a-5485-88ad-7b99e6dca827> a sh:PropertyShape ;
+    rdfs:label "vocab_nodeKind"@en ;
+    sh:name "vocab_nodeKind"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/nodeKind> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/f39d0b9d-ebfd-555b-81d8-1543eb3c8e60> a sh:PropertyShape ;
+    rdfs:label "vocab_description"@en ;
+    sh:name "vocab_description"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/description> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/84d654c0-420b-5a08-ad64-1f16d51de0b2> a sh:PropertyShape ;
+    rdfs:label "domain (rdfs:)"@en ;
+    sh:name "domain (rdfs:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdfs:domain .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/b35a3c36-f175-583a-8e9e-b5e9264efa9e> a sh:PropertyShape ;
+    rdfs:label "vocab_name"@en ;
+    sh:name "vocab_name"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/name> .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/c6a11966-a018-5be8-95a0-eba182c2fd93> a sh:PropertyShape ;
+    rdfs:label "range (rdfs:)"@en ;
+    sh:name "range (rdfs:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdfs:range .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/61e44c93-4a09-5eb0-8bd6-70a89590a33d> a sh:PropertyShape ;
+    rdfs:label "← vocab_path"@en ;
+    sh:name "← vocab_path"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/vocab/path> ;
+    ns1:inversePath true .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/ec554dd3-a425-5dc0-b731-666ba293ce0b> a sh:PropertyShape ;
+    rdfs:label "seeAlso (rdfs:)"@en ;
+    sh:name "seeAlso (rdfs:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdfs:seeAlso .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7bb543ed-c62b-580f-93de-12b46351985a> a sh:PropertyShape ;
+    rdfs:label "Date Modified (dcterms:)"@en ;
+    sh:name "Date Modified (dcterms:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path dcterms:modified .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2e218ab8-518d-5cd0-a660-f575a101e5d8> a sh:PropertyShape ;
+    rdfs:label "isDefinedBy (rdfs:)"@en ;
+    sh:name "isDefinedBy (rdfs:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdfs:isDefinedBy .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3e98087c-7fe5-5523-b25a-b83b0f6bbd8c> a sh:PropertyShape ;
+    rdfs:label "Date Issued (dcterms:)"@en ;
+    sh:name "Date Issued (dcterms:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path dcterms:issued .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/da1b0b28-9c51-55c3-a963-2337006693de> a sh:PropertyShape ;
+    rdfs:label "comment (rdfs:)"@en ;
+    sh:name "comment (rdfs:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path rdfs:comment .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/04c98189-f62e-5579-830e-0410984d00ce> a sh:PropertyShape ;
+    rdfs:label "is system resource (shui:)"@en ;
+    sh:name "is system resource (shui:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path ns1:isSystemResource .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/73b69787-81ea-563e-8e09-9c84cad4cf2b> a sh:PropertyShape ;
+    rdfs:label "type (rdf:)"@en ;
+    sh:name "type (rdf:)"@en ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741> a sh:PropertyShape ;
+    rdfs:label "label (rdfs:)"@en ;
+    sh:name "label (rdfs:)"@en ;
+    sh:nodeKind sh:Literal ;
+    sh:path rdfs:label .
+

@@ -2,12 +2,10 @@
 
 from io import BytesIO
 from json import load, loads
-from os import environ
 from pathlib import Path
 from urllib.parse import quote_plus
 from urllib.request import urlopen
 from uuid import NAMESPACE_URL, uuid5
-from warnings import simplefilter
 
 from cmem.cmempy.api import send_request
 from cmem.cmempy.config import get_dp_api_endpoint
@@ -17,23 +15,23 @@ from cmem.cmempy.dp.proxy.update import post
 from cmem.cmempy.workspace.projects.project import get_prefixes
 from cmem_plugin_base.dataintegration.context import ExecutionContext
 from cmem_plugin_base.dataintegration.description import Icon, Plugin, PluginParameter
+from cmem_plugin_base.dataintegration.parameter.graph import GraphParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
-from cmem_plugin_base.dataintegration.types import BoolParameterType, StringParameterType
+from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
+from cmem_plugin_base.dataintegration.types import BoolParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
 from rdflib import RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
-from str2bool import str2bool
-from urllib3.exceptions import InsecureRequestWarning
 from validators import url
 
-from cmem_plugin_shapes.parameter_types import GraphParameterTypeNew
+from cmem_plugin_shapes.doc import SHAPES_DOC
 
 from . import __path__
 
-environ["SSL_VERIFY"] = "false"
-simplefilter("ignore", category=InsecureRequestWarning)
-
 SHUI = Namespace("https://vocab.eccenca.com/shui/")
+PREFIX_CC = "http://prefix.cc/popular/all.file.json"
+TRUE_SET = ["yes", "true", "t", "y", "1"]
+FALSE_SET = ["no", "false", "f", "n", "0"]
 
 
 def format_namespace(iri: str) -> str:
@@ -41,44 +39,62 @@ def format_namespace(iri: str) -> str:
     return iri if iri.endswith(("/", "#")) else iri + "/"
 
 
+def str2bool(value: str) -> bool:
+    """Convert str to bool"""
+    if isinstance(value, str):
+        value = value.lower()
+        if value in TRUE_SET:
+            return True
+        if value in FALSE_SET:
+            return False
+    vals = '", "'.join(TRUE_SET + FALSE_SET)
+    raise ValueError(f'Expected "{vals}"')
+
+
 @Plugin(
     label="Generate SHACL shapes from data",
     icon=Icon(file_name="shacl.jpg", package=__package__),
-    description="Generates SHACL node and property shapes from a data graph",
-    documentation="",
+    description="Generate SHACL node and property shapes from a data graph",
+    documentation=SHAPES_DOC,
     parameters=[
         PluginParameter(
-            param_type=GraphParameterTypeNew(),
+            param_type=GraphParameterType(),
             name="data_graph_iri",
             label="Input data graph.",
-            description="",
+            description="The input data graph to be analyzed for the SHACL shapes generation.",
         ),
         PluginParameter(
-            param_type=StringParameterType(),
+            param_type=GraphParameterType(
+                classes=["https://vocab.eccenca.com/shui/ShapeCatalog"],
+                allow_only_autocompleted_values=False,
+            ),
             name="shapes_graph_iri",
             label="Output SHACL shapes graph.",
-            description="",
+            description="The output SHACL shapes graph.",
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="overwrite",
-            label="Overwrite shapes graph if it exists.",
-            description="",
+            label="Overwrite output graph.",
+            description="""Overwrite the output SHACL shapes graph if it exists. If disabled and
+            the graph exists, the plugin execution fails.""",
             default_value=False,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="import_shapes",
-            label="Import shapes graph in CMEM Shapes Catalog.",
-            description="",
+            label="Import SHACL shapes graph in CMEM Shapes Catalog.",
+            description="""Import the SHACL shapes graph in the CMEM Shapes catalog by adding an
+            `owl:imports` triple to the CMEM Shapes Catalog.""",
             default_value=False,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="prefix_cc",
-            label="Fetch namespace prefixes from prefix.cc.",
-            description="""If enabled, attempt to fetch namespace prefixes from http://prefix.cc
-            instead of from the local database. If this fails, fall back on local database.""",
+            label="Fetch namespace prefixes from prefix.cc",
+            description="""Attempt to fetch namespace prefixes from http://prefix.cc instead of
+            from the local database. If this fails, fall back on local database. Prefixes defined in
+            the CMEM project override prefixes defined in the external database.""",
             default_value=True,
             advanced=True,
         ),
@@ -87,7 +103,7 @@ def format_namespace(iri: str) -> str:
 class ShapesPlugin(WorkflowPlugin):
     """SHACL shapes EasyNav plugin"""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         data_graph_iri: str = "",
         shapes_graph_iri: str = "",
@@ -105,12 +121,15 @@ class ShapesPlugin(WorkflowPlugin):
         self.import_shapes = import_shapes
         self.prefix_cc = prefix_cc
 
+        self.input_ports = FixedNumberOfInputs([])
+        self.output_port = None
+
     def get_prefixes(self) -> dict:
         """Get list of prefixes from prefix.cc or use local copy"""
         err = None
         if self.prefix_cc:
             try:
-                res = urlopen("http://prefix.cc/popular/all.file.json")
+                res = urlopen(PREFIX_CC)  # noqa: S310
                 if res.status == 200:  # noqa: PLR2004
                     self.log.info("prefixes fetched from http://prefix.cc")
                     prefixes = {v: k for k, v in loads(res.read()).items()}
@@ -123,7 +142,7 @@ class ShapesPlugin(WorkflowPlugin):
                     f"failed to fetch prefixes from http://prefix.cc ({err}) - using local file"
                 )
         if err or not self.prefix_cc:
-            with (Path(__path__[0]) / "prefix.cc.json").open("r") as json_file:
+            with (Path(__path__[0]) / "prefix_cc.json").open("r", encoding="utf-8") as json_file:
                 prefixes = {v: k for k, v in load(json_file).items()}
         prefixes_project = {v: k for k, v in get_prefixes(self.context.task.project_id()).items()}
         prefixes.update(prefixes_project)
@@ -145,7 +164,12 @@ class ShapesPlugin(WorkflowPlugin):
         if namespace in self.prefixes:
             prefix = self.prefixes[namespace] + ":"
             if title_json["fromIri"]:
-                title = title[len(prefix) :] if title.startswith(prefix) else title.split("_", 1)[1]
+                try:
+                    title = (
+                        title[len(prefix) :] if title.startswith(prefix) else title.split("_", 1)[1]
+                    )
+                except IndexError:
+                    raise ValueError(title) from None
             title += f" ({prefix})"
         return title
 
@@ -250,7 +274,7 @@ class ShapesPlugin(WorkflowPlugin):
         setup_cmempy_user_access(self.context.user)
         post(query)
 
-    def execute(self, inputs: tuple, context: ExecutionContext) -> None:  # noqa: ARG002
+    def execute(self, inputs: None, context: ExecutionContext) -> None:  # noqa: ARG002
         """Execute plugin"""
         setup_cmempy_user_access(context.user)
         if not self.overwrite and self.shapes_graph_iri in [i["iri"] for i in get_graphs_list()]:

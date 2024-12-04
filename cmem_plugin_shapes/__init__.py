@@ -1,1 +1,1 @@
-"""shapes - main package"""
+"""cmem-plugin-shapes"""
