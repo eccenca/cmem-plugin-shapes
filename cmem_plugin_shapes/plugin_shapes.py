@@ -178,7 +178,8 @@ class ShapesPlugin(WorkflowPlugin):
             prefix = prefixes[0]
             if title_json["fromIri"]:
                 if title.startswith(prefixes):
-                    prefix = title.split(":", 1)[0] + ":"
+                    if len(prefixes) > 1:
+                        prefix = title.split(":", 1)[0] + ":"
                     title = title[len(prefix) :]
                 else:
                     try:
