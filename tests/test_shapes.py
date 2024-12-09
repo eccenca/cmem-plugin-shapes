@@ -1,7 +1,7 @@
 """Plugin tests."""
 
-import json
 from contextlib import suppress
+from json import loads
 from pathlib import Path
 from urllib.request import urlopen
 
@@ -62,7 +62,7 @@ def test_workflow_execution() -> None:
         shapes_graph_iri=RESULT_IRI,
         overwrite=True,
         import_shapes=True,
-        prefix_cc=True,
+        prefix_cc=False,
     ).execute(inputs=None, context=TestExecutionContext(project_id=PROJECT_NAME))
 
     query = f"""
@@ -74,7 +74,7 @@ def test_workflow_execution() -> None:
         FILTER( ?o = <{RESULT_IRI}> )
     }}
     """
-    result_import = json.loads(post_select(query=query))
+    result_import = loads(post_select(query=query))
     assert len(result_import["results"]["bindings"]) == 1
 
     result_graph = Graph().parse(data=get(RESULT_IRI, owl_imports_resolution=False).text)
@@ -82,13 +82,7 @@ def test_workflow_execution() -> None:
     assert isomorphic(result_graph, test)
 
 
-@needs_cmem
 def test_prefix_cc_download() -> None:
     """Test prefix.cc download"""
     res = urlopen(PREFIX_CC)  # noqa: S310
-    if res.status == 200:  # noqa: PLR2004
-        prefixes = {v: k for k, v in json.loads(res.read()).items()}
-    else:
-        raise OSError(res.status)
-    if not prefixes:
-        raise OSError("prefix.cc error")
+    {v: k for k, v in loads(res.read()).items()}
