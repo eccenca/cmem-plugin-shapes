@@ -62,7 +62,7 @@ def test_workflow_execution() -> None:
         shapes_graph_iri=RESULT_IRI,
         overwrite=True,
         import_shapes=True,
-        prefix_cc=False,
+        prefix_cc=True,
     ).execute(inputs=None, context=TestExecutionContext(project_id=PROJECT_NAME))
 
     query = f"""

@@ -134,22 +134,17 @@ class ShapesPlugin(WorkflowPlugin):
 
     def get_prefixes(self) -> dict:
         """Get list of prefixes from prefix.cc or use local copy"""
-        err = None
+        prefixes = None
         if self.prefix_cc:
             try:
                 res = urlopen(PREFIX_CC)  # noqa: S310
-                if res.status == 200:  # noqa: PLR2004
-                    self.log.info("prefixes fetched from http://prefix.cc")
-                    prefixes = self.format_prefixes(res.read())
-                else:
-                    err = res.status
+                self.log.info("prefixes fetched from http://prefix.cc")
+                prefixes = self.format_prefixes(loads(res.read()))
             except Exception as exc:  # noqa: BLE001
-                err = exc
-            if err:
                 self.log.warning(
-                    f"failed to fetch prefixes from http://prefix.cc ({err}) - using local file"
+                    f"failed to fetch prefixes from http://prefix.cc ({exc}) - using local file"
                 )
-        if err or not self.prefix_cc:
+        if not prefixes or not self.prefix_cc:
             with (Path(__path__[0]) / "prefix_cc.json").open("r", encoding="utf-8") as json_file:
                 prefixes = self.format_prefixes(load(json_file))
         prefixes_project = {
