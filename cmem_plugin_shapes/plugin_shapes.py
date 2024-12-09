@@ -172,9 +172,10 @@ class ShapesPlugin(WorkflowPlugin):
             namespace, resource = split_uri(iri)
         except ValueError as exc:
             raise ValueError(f"Invalid class or property ({iri}).") from exc
+
         if namespace in self.prefixes:
             prefixes = self.prefixes[namespace]
-
+            prefix = prefixes[0]
             if title_json["fromIri"]:
                 if title.startswith(prefixes):
                     prefix = title.split(":", 1)[0] + ":"
@@ -184,8 +185,8 @@ class ShapesPlugin(WorkflowPlugin):
                         title = title.split("_", 1)[1]
                     except IndexError as exc:
                         raise IndexError(f"{title_json['title']} {prefixes}") from exc
+            title += f" ({prefix})"
 
-            title += f" ({prefixes[0]})"
         return title
 
     def init_shapes_graph(self) -> Graph:
