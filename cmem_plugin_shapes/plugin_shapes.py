@@ -41,12 +41,11 @@ def format_namespace(iri: str) -> str:
 
 def str2bool(value: str) -> bool:
     """Convert str to bool"""
-    if isinstance(value, str):
-        value = value.lower()
-        if value in TRUE_SET:
-            return True
-        if value in FALSE_SET:
-            return False
+    value = value.lower()
+    if value in TRUE_SET:
+        return True
+    if value in FALSE_SET:
+        return False
     vals = '", "'.join(TRUE_SET + FALSE_SET)
     raise ValueError(f'Expected "{vals}"')
 
