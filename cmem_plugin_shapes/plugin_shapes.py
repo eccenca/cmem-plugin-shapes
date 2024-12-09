@@ -124,6 +124,15 @@ class ShapesPlugin(WorkflowPlugin):
         self.input_ports = FixedNumberOfInputs([])
         self.output_port = None
 
+    def format_prefixes(self, prf: dict) -> dict:
+        """Format dict of prefixes"""
+        prefixes: dict = {}
+        for k, v in prf.items():
+            prefixes.setdefault(v, []).append(k + ":")
+        for k, v in prefixes.items():
+            prefixes[k] = tuple(sorted(v))
+        return prefixes
+
     def get_prefixes(self) -> dict:
         """Get list of prefixes from prefix.cc or use local copy"""
         err = None
@@ -132,7 +141,8 @@ class ShapesPlugin(WorkflowPlugin):
                 res = urlopen(PREFIX_CC)  # noqa: S310
                 if res.status == 200:  # noqa: PLR2004
                     self.log.info("prefixes fetched from http://prefix.cc")
-                    prefixes = {v: k for k, v in loads(res.read()).items()}
+                    # prefixes = {v: k for k, v in loads(res.read()).items()}
+                    prefixes = self.format_prefixes(res.read())
                 else:
                     err = res.status
             except Exception as exc:  # noqa: BLE001
@@ -143,8 +153,11 @@ class ShapesPlugin(WorkflowPlugin):
                 )
         if err or not self.prefix_cc:
             with (Path(__path__[0]) / "prefix_cc.json").open("r", encoding="utf-8") as json_file:
-                prefixes = {v: k for k, v in load(json_file).items()}
-        prefixes_project = {v: k for k, v in get_prefixes(self.context.task.project_id()).items()}
+                # prefixes = {v: k for k, v in load(json_file).items()}
+                prefixes = self.format_prefixes(load(json_file))
+        prefixes_project = {
+            v: (k + ":",) for k, v in get_prefixes(self.context.task.project_id()).items()
+        }
         prefixes.update(prefixes_project)
         return prefixes
 
@@ -162,15 +175,20 @@ class ShapesPlugin(WorkflowPlugin):
         except ValueError as exc:
             raise ValueError(f"Invalid class or property ({iri}).") from exc
         if namespace in self.prefixes:
-            prefix = self.prefixes[namespace] + ":"
+            # prefix = self.prefixes[namespace] + ":"
+            prefixes = self.prefixes[namespace]
+
             if title_json["fromIri"]:
-                try:
-                    title = (
-                        title[len(prefix) :] if title.startswith(prefix) else title.split("_", 1)[1]
-                    )
-                except IndexError:
-                    raise ValueError(f"{title_json['title']} {prefix}") from None
-            title += f" ({prefix})"
+                if title.startswith(prefixes):
+                    prefix = title.split(":", 1)[0] + ":"
+                    title = title[len(prefix) :]
+                else:
+                    try:
+                        title = title.split("_", 1)[1]
+                    except IndexError as exc:
+                        raise IndexError(f"{title_json['title']} {prefixes}") from exc
+
+            title += f" ({prefixes[0]})"
         return title
 
     def init_shapes_graph(self) -> Graph:
@@ -285,6 +303,7 @@ class ShapesPlugin(WorkflowPlugin):
         shapes_graph = self.init_shapes_graph()
         shapes_graph = self.make_shapes(shapes_graph)
         nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
+
         res = post_streamed(
             self.shapes_graph_iri,
             nt_file,
