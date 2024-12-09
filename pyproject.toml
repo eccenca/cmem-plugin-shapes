@@ -93,7 +93,6 @@ ignore = [
     "PD",      # opinionated linting for pandas code
     "S101",    # use of assert detected
     "TRY003",  # Avoid specifying long messages outside the exception class
-    "ERA001",  # Found commented-out code # temporory
     "F401",    # imported but unused
 
 

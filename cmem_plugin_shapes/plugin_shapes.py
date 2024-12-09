@@ -141,7 +141,6 @@ class ShapesPlugin(WorkflowPlugin):
                 res = urlopen(PREFIX_CC)  # noqa: S310
                 if res.status == 200:  # noqa: PLR2004
                     self.log.info("prefixes fetched from http://prefix.cc")
-                    # prefixes = {v: k for k, v in loads(res.read()).items()}
                     prefixes = self.format_prefixes(res.read())
                 else:
                     err = res.status
@@ -153,7 +152,6 @@ class ShapesPlugin(WorkflowPlugin):
                 )
         if err or not self.prefix_cc:
             with (Path(__path__[0]) / "prefix_cc.json").open("r", encoding="utf-8") as json_file:
-                # prefixes = {v: k for k, v in load(json_file).items()}
                 prefixes = self.format_prefixes(load(json_file))
         prefixes_project = {
             v: (k + ":",) for k, v in get_prefixes(self.context.task.project_id()).items()
@@ -175,7 +173,6 @@ class ShapesPlugin(WorkflowPlugin):
         except ValueError as exc:
             raise ValueError(f"Invalid class or property ({iri}).") from exc
         if namespace in self.prefixes:
-            # prefix = self.prefixes[namespace] + ":"
             prefixes = self.prefixes[namespace]
 
             if title_json["fromIri"]:
