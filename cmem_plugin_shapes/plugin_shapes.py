@@ -163,7 +163,7 @@ class ShapesPlugin(WorkflowPlugin):
         title_json = loads(response)
         title: str = title_json["title"]
         try:
-            namespace, resource = split_uri(iri)
+            namespace, _ = split_uri(iri)
         except ValueError as exc:
             raise ValueError(f"Invalid class or property ({iri}).") from exc
 

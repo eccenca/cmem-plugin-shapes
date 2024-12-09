@@ -17,6 +17,7 @@ homepage = "https://github.com/eccenca/cmem-plugin-shapes"
 [tool.poetry.dependencies]# if you need to change python version here, change it also in .python-version
 python = "^3.11"
 validators = "^0.34.0"
+rdflib = "^6.3.2"
 
 [tool.poetry.dependencies.cmem-plugin-base]
 version = "^4.5.0"
@@ -94,6 +95,4 @@ ignore = [
     "S101",    # use of assert detected
     "TRY003",  # Avoid specifying long messages outside the exception class
     "F401",    # imported but unused
-
-
 ]
