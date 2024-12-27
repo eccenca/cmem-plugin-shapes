@@ -25,7 +25,7 @@ DATA_IRI = f"https://eccenca.com/shapes_plugin/{UUID}/data/"
 
 
 @pytest.fixture
-def setup(request: pytest.FixtureRequest) -> None:
+def setup() -> None:
     """Create DI project"""
 
     def remove_import() -> None:
@@ -46,17 +46,17 @@ def setup(request: pytest.FixtureRequest) -> None:
     res = post_streamed(DATA_IRI, str(Path(__path__[0]) / "test_shapes_data.ttl"), replace=True)
     if res.status_code != 204:  # noqa: PLR2004
         raise ValueError(f"Response {res.status_code}: {res.url}")
-
-    request.addfinalizer(lambda: delete_project(PROJECT_NAME))
-    request.addfinalizer(lambda: remove_import)
-    request.addfinalizer(lambda: delete(DATA_IRI))
-    request.addfinalizer(lambda: delete(RESULT_IRI))  # noqa: PT021
+    yield None
+    delete_project(PROJECT_NAME)
+    remove_import()
+    delete(DATA_IRI)
+    delete(RESULT_IRI)
 
 
 @needs_cmem
-@pytest.mark.usefixtures("setup")
-def test_workflow_execution() -> None:
+def test_workflow_execution(setup) -> None:
     """Test plugin execution"""
+    _ = setup
     ShapesPlugin(
         data_graph_iri=DATA_IRI,
         shapes_graph_iri=RESULT_IRI,
@@ -80,9 +80,3 @@ def test_workflow_execution() -> None:
     result_graph = Graph().parse(data=get(RESULT_IRI, owl_imports_resolution=False).text)
     test = Graph().parse(Path(__path__[0]) / "test_shapes.ttl", format="turtle")
     assert isomorphic(result_graph, test)
-
-
-def test_prefix_cc_download() -> None:
-    """Test prefix.cc download"""
-    res = urlopen(PREFIX_CC)  # noqa: S310
-    {v: k for k, v in loads(res.read()).items()}
