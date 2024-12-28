@@ -1,5 +1,6 @@
 """Plugin tests."""
 
+from collections.abc import Generator
 from contextlib import suppress
 from json import loads
 from pathlib import Path
@@ -25,7 +26,7 @@ DATA_IRI = f"https://eccenca.com/shapes_plugin/{UUID}/data/"
 
 
 @pytest.fixture
-def setup() -> None:
+def setup() -> Generator:
     """Create DI project"""
 
     def remove_import() -> None:
@@ -54,16 +55,16 @@ def setup() -> None:
 
 
 @needs_cmem
-def test_workflow_execution(setup) -> None:
+@pytest.mark.usefixtures("setup")
+def test_workflow_execution() -> None:
     """Test plugin execution"""
-    _ = setup
     ShapesPlugin(
         data_graph_iri=DATA_IRI,
         shapes_graph_iri=RESULT_IRI,
         overwrite=True,
         import_shapes=True,
         prefix_cc=False,
-    ).execute(inputs=None, context=TestExecutionContext(project_id=PROJECT_NAME))
+    ).execute(inputs=[], context=TestExecutionContext(project_id=PROJECT_NAME))
 
     query = f"""
     PREFIX owl: <http://www.w3.org/2002/07/owl#>

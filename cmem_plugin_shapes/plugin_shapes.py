@@ -1,5 +1,7 @@
 """Generate SHACL node and property shapes from a data graph"""
 
+from collections.abc import Sequence
+from http import HTTPStatus
 from io import BytesIO
 from json import load, loads
 from pathlib import Path
@@ -15,6 +17,7 @@ from cmem.cmempy.dp.proxy.update import post
 from cmem.cmempy.workspace.projects.project import get_prefixes
 from cmem_plugin_base.dataintegration.context import ExecutionContext
 from cmem_plugin_base.dataintegration.description import Icon, Plugin, PluginParameter
+from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.graph import GraphParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
@@ -30,24 +33,24 @@ from . import __path__
 
 SHUI = Namespace("https://vocab.eccenca.com/shui/")
 PREFIX_CC = "http://prefix.cc/popular/all.file.json"
-TRUE_SET = ["yes", "true", "t", "y", "1"]
-FALSE_SET = ["no", "false", "f", "n", "0"]
+TRUE_SET = {"yes", "true", "t", "y", "1"}
+FALSE_SET = {"no", "false", "f", "n", "0"}
 
 
 def format_namespace(iri: str) -> str:
-    """Add '/' to namespace if graph IRI does not end with '/' or '#'"""
+    """Ensure namespace ends with '/' or '#'"""
     return iri if iri.endswith(("/", "#")) else iri + "/"
 
 
 def str2bool(value: str) -> bool:
-    """Convert str to bool"""
+    """Convert string to boolean"""
     value = value.lower()
     if value in TRUE_SET:
         return True
     if value in FALSE_SET:
         return False
-    vals = '", "'.join(TRUE_SET + FALSE_SET)
-    raise ValueError(f'Expected "{vals}"')
+    allowed_values = '", "'.join(TRUE_SET | FALSE_SET)
+    raise ValueError(f'Expected one of: "{allowed_values}"')
 
 
 @Plugin(
@@ -100,7 +103,7 @@ def str2bool(value: str) -> bool:
     ],
 )
 class ShapesPlugin(WorkflowPlugin):
-    """SHACL shapes EasyNav plugin"""
+    """SHACL shapes generation plugin"""
 
     def __init__(
         self,
@@ -123,17 +126,15 @@ class ShapesPlugin(WorkflowPlugin):
         self.input_ports = FixedNumberOfInputs([])
         self.output_port = None
 
-    def format_prefixes(self, prf: dict) -> dict:
-        """Format dict of prefixes"""
-        prefixes: dict = {}
-        for k, v in prf.items():
-            prefixes.setdefault(v, []).append(k + ":")
-        for k, v in prefixes.items():
-            prefixes[k] = tuple(sorted(v))
-        return prefixes
+    def format_prefixes(self, prefixes: dict) -> dict:
+        """Format prefix dictionary for consistency"""
+        formatted_prefixes: dict = {}
+        for prefix, namespace in prefixes.items():
+            formatted_prefixes.setdefault(namespace, []).append(prefix + ":")
+        return {k: tuple(sorted(v)) for k, v in formatted_prefixes.items()}
 
     def get_prefixes(self) -> dict:
-        """Get list of prefixes from prefix.cc or use local copy"""
+        """Fetch namespace prefixes"""
         prefixes = None
         if self.prefix_cc:
             try:
@@ -154,7 +155,7 @@ class ShapesPlugin(WorkflowPlugin):
         return prefixes
 
     def get_name(self, iri: str) -> str:
-        """Get shape name."""
+        """Generate shape name from IRI"""
         response = send_request(
             uri=f"{self.dp_api_endpoint}/api/explore/title?resource={quote_plus(iri)}",
             method="GET",
@@ -185,19 +186,21 @@ class ShapesPlugin(WorkflowPlugin):
         return title
 
     def init_shapes_graph(self) -> Graph:
-        """Return initial shapes graph"""
-        shapes_graph_uri = URIRef(self.shapes_graph_iri)
+        """Initialize SHACL shapes graph"""
         shapes_graph = Graph()
-        shapes_graph.add((shapes_graph_uri, RDF.type, SHUI.ShapeCatalog))
+        shapes_graph.add((URIRef(self.shapes_graph_iri), RDF.type, SHUI.ShapeCatalog))
         shapes_graph.add(
-            (shapes_graph_uri, RDFS.label, Literal(f"Shapes for {self.data_graph_iri}"))
+            (
+                URIRef(self.shapes_graph_iri),
+                RDFS.label,
+                Literal(f"Shapes for {self.data_graph_iri}"),
+            )
         )
         return shapes_graph
 
     def get_class_dict(self) -> dict:
-        """Get classes and properties"""
+        """Retrieve classes and associated properties"""
         setup_cmempy_user_access(self.context.user)
-        class_dict: dict = {}
         query = f"""
             SELECT DISTINCT ?class ?property ?data ?inverse
             FROM <{self.data_graph_iri}> {{
@@ -216,11 +219,14 @@ class ShapesPlugin(WorkflowPlugin):
                 }}
             }}
         """  # noqa: S608
-        res = loads(get(query))
-        for binding in res["results"]["bindings"]:
-            if binding["class"]["value"] not in class_dict:
-                class_dict[binding["class"]["value"]] = []
-            class_dict[binding["class"]["value"]].append(
+        results = loads(get(query))
+
+        class_dict: dict = {}
+        for binding in results["results"]["bindings"]:
+            class_iri = binding["class"]["value"]
+            if class_iri not in class_dict:
+                class_dict[class_iri] = []
+            class_dict[class_iri].append(
                 {
                     "property": binding["property"]["value"],
                     "data": str2bool(binding["data"]["value"]),
@@ -229,51 +235,55 @@ class ShapesPlugin(WorkflowPlugin):
             )
         return class_dict
 
-    def make_shapes(self, shapes_graph: Graph) -> Graph:
-        """Make shapes"""
-        class_uuids = []
-        prop_uuids = []
-        for cls, props in self.get_class_dict().items():
+    def create_shapes(self, shapes_graph: Graph) -> Graph:
+        """Create SHACL node and property shapes"""
+        class_uuids = set()
+        prop_uuids = set()
+
+        for cls, properties in self.get_class_dict().items():
             class_uuid = uuid5(NAMESPACE_URL, cls)
             node_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{class_uuid}")
+
             if class_uuid not in class_uuids:
                 shapes_graph.add((node_shape_uri, RDF.type, SH.NodeShape))
                 shapes_graph.add((node_shape_uri, SH.targetClass, URIRef(cls)))
                 name = self.get_name(cls)
                 shapes_graph.add((node_shape_uri, SH.name, Literal(name, lang="en")))
                 shapes_graph.add((node_shape_uri, RDFS.label, Literal(name, lang="en")))
-                class_uuids.append(class_uuid)
-            for prop in props:
-                if prop["inverse"]:
-                    prop_uuid = uuid5(NAMESPACE_URL, f'{prop["property"]}inverse')
-                else:
-                    prop_uuid = uuid5(NAMESPACE_URL, prop["property"])
+                class_uuids.add(class_uuid)
+
+            for prop in properties:
+                prop_uuid = uuid5(
+                    NAMESPACE_URL, f'{prop["property"]}{"inverse" if prop["inverse"] else ""}'
+                )
                 property_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{prop_uuid}")
+
                 if prop_uuid not in prop_uuids:
                     name = self.get_name(prop["property"])
                     shapes_graph.add((property_shape_uri, RDF.type, SH.PropertyShape))
                     shapes_graph.add((property_shape_uri, SH.path, URIRef(prop["property"])))
-                    if prop["data"]:
-                        shapes_graph.add((property_shape_uri, SH.nodeKind, SH.Literal))
-                    else:
-                        shapes_graph.add((property_shape_uri, SH.nodeKind, SH.IRI))
-                        if prop["inverse"]:
-                            shapes_graph.add(
-                                (
-                                    property_shape_uri,
-                                    SHUI.inversePath,
-                                    Literal("true", datatype=XSD.boolean),
-                                )
+                    shapes_graph.add(
+                        (property_shape_uri, SH.nodeKind, SH.Literal if prop["data"] else SH.IRI)
+                    )
+                    if prop["inverse"]:
+                        shapes_graph.add(
+                            (
+                                property_shape_uri,
+                                SHUI.inversePath,
+                                Literal("true", datatype=XSD.boolean),
                             )
-                            name = "← " + name
+                        )
+                        name = "← " + name
                     shapes_graph.add((property_shape_uri, SH.name, Literal(name, lang="en")))
                     shapes_graph.add((property_shape_uri, RDFS.label, Literal(name, lang="en")))
-                    prop_uuids.append(prop_uuid)
+                    prop_uuids.add(prop_uuid)
+
                 shapes_graph.add((node_shape_uri, SH.property, property_shape_uri))
+
         return shapes_graph
 
     def import_shapes_graph(self) -> None:
-        """Add shapes IRI to owl:imports in CMEM Shapes Catalog"""
+        """Import SHACL shapes graph to catalog"""
         query = f"""
         INSERT DATA {{
             GRAPH <https://vocab.eccenca.com/shacl/> {{
@@ -285,25 +295,35 @@ class ShapesPlugin(WorkflowPlugin):
         setup_cmempy_user_access(self.context.user)
         post(query)
 
-    def execute(self, inputs: None, context: ExecutionContext) -> None:  # noqa: ARG002
+    def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
         """Execute plugin"""
+        _ = inputs
         setup_cmempy_user_access(context.user)
-        if not self.overwrite and self.shapes_graph_iri in [i["iri"] for i in get_graphs_list()]:
-            raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists")
+
+        if not self.overwrite and self.shapes_graph_iri in [
+            graph["iri"] for graph in get_graphs_list()
+        ]:
+            raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists.")
+
         self.context = context
         self.dp_api_endpoint = get_dp_api_endpoint()
         self.prefixes = self.get_prefixes()
-        shapes_graph = self.init_shapes_graph()
-        shapes_graph = self.make_shapes(shapes_graph)
-        nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
 
-        res = post_streamed(
+        shapes_graph = self.init_shapes_graph()
+        shapes_graph = self.create_shapes(shapes_graph)
+
+        nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
+        response = post_streamed(
             self.shapes_graph_iri,
             nt_file,
             replace=self.overwrite,
             content_type="application/n-triples",
         )
-        if res.status_code != 204:  # noqa: PLR2004
-            raise OSError(f"Error posting SHACL validation graph (status code {res.status_code}).")
+
+        if response.status_code != HTTPStatus.NO_CONTENT:
+            raise OSError(
+                f"Error posting SHACL validation graph (status code {response.status_code})."
+            )
+
         if self.import_shapes:
             self.import_shapes_graph()
