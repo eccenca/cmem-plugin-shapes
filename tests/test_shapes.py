@@ -79,5 +79,6 @@ def test_workflow_execution() -> None:
     assert len(result_import["results"]["bindings"]) == 1
 
     result_graph = Graph().parse(data=get(RESULT_IRI, owl_imports_resolution=False).text)
+    # result_graph.serialize("tests/result_graph.ttl", format="turtle")  # noqa: ERA001
     test = Graph().parse(Path(__path__[0]) / "test_shapes.ttl", format="turtle")
     assert isomorphic(result_graph, test)

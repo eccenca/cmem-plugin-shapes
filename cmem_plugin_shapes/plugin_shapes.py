@@ -1,9 +1,9 @@
 """Generate SHACL node and property shapes from a data graph"""
 
+import json
 from collections.abc import Sequence
 from http import HTTPStatus
 from io import BytesIO
-from json import load, loads
 from pathlib import Path
 from urllib.parse import quote_plus
 from urllib.request import urlopen
@@ -126,33 +126,34 @@ class ShapesPlugin(WorkflowPlugin):
         self.input_ports = FixedNumberOfInputs([])
         self.output_port = None
 
-    def format_prefixes(self, prefixes: dict) -> dict:
+    def format_prefixes(self, prefixes: dict, formatted_prefixes: dict | None = None) -> dict:
         """Format prefix dictionary for consistency"""
-        formatted_prefixes: dict = {}
+        if formatted_prefixes is None:
+            formatted_prefixes = {}
         for prefix, namespace in prefixes.items():
             formatted_prefixes.setdefault(namespace, []).append(prefix + ":")
-        return {k: tuple(sorted(v)) for k, v in formatted_prefixes.items()}
+        return formatted_prefixes
 
     def get_prefixes(self) -> dict:
         """Fetch namespace prefixes"""
-        prefixes = None
+        prefixes_project = get_prefixes(self.context.task.project_id())
+        prefixes = self.format_prefixes(prefixes_project)
+
+        prefixes_cc = None
         if self.prefix_cc:
             try:
                 res = urlopen(PREFIX_CC)  # noqa: S310
                 self.log.info("prefixes fetched from http://prefix.cc")
-                prefixes = self.format_prefixes(loads(res.read()))
+                prefixes_cc = self.format_prefixes(json.loads(res.read()), prefixes)
             except Exception as exc:  # noqa: BLE001
                 self.log.warning(
                     f"failed to fetch prefixes from http://prefix.cc ({exc}) - using local file"
                 )
-        if not prefixes or not self.prefix_cc:
+        if not prefixes_cc or not self.prefix_cc:
             with (Path(__path__[0]) / "prefix_cc.json").open("r", encoding="utf-8") as json_file:
-                prefixes = self.format_prefixes(load(json_file))
-        prefixes_project = {
-            v: (k + ":",) for k, v in get_prefixes(self.context.task.project_id()).items()
-        }
-        prefixes.update(prefixes_project)
-        return prefixes
+                prefixes_cc = self.format_prefixes(json.load(json_file), prefixes)
+
+        return {k: tuple(set(v)) for k, v in prefixes.items()}
 
     def get_name(self, iri: str) -> str:
         """Generate shape name from IRI"""
@@ -161,7 +162,7 @@ class ShapesPlugin(WorkflowPlugin):
             method="GET",
             headers={"Content-Type": "application/json", "Accept": "application/json"},
         )
-        title_json = loads(response)
+        title_json = json.loads(response)
         title: str = title_json["title"]
         try:
             namespace, _ = split_uri(iri)
@@ -219,7 +220,7 @@ class ShapesPlugin(WorkflowPlugin):
                 }}
             }}
         """  # noqa: S608
-        results = loads(get(query))
+        results = json.loads(get(query))
 
         class_dict: dict = {}
         for binding in results["results"]["bindings"]:
