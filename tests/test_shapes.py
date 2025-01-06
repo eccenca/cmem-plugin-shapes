@@ -72,7 +72,7 @@ def test_workflow_execution() -> None:
         GRAPH <https://vocab.eccenca.com/shacl/> {{
             <https://vocab.eccenca.com/shacl/> owl:imports ?o
         }}
-        FILTER( ?o = <{RESULT_IRI}> )
+        FILTER( ?o = <{RESULT_IRI}> )b
     }}
     """
     result_import = loads(post_select(query=query))
