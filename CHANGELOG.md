@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+
+## [1.0.0beta4] 2025-01-06
+
+- fix errors for certain namespace prefixes 
+
 ## [1.0.0beta3] 2025-01-06
 
 - preserve multiple prefixes for one namespace in prefix.cc list
