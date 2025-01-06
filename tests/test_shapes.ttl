@@ -542,8 +542,8 @@
     ns1:inversePath true .
 
 <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/2db0199c-c05f-51cd-b1d4-6c0ca7bb7485> a sh:PropertyShape ;
-    rdfs:label "prefLabel (skos:)"@en ;
-    sh:name "prefLabel (skos:)"@en ;
+    rdfs:label "preferred label (skos:)"@en ;
+    sh:name "preferred label (skos:)"@en ;
     sh:nodeKind sh:Literal ;
     sh:path skos:prefLabel .
 
@@ -574,8 +574,8 @@
     ns1:inversePath true .
 
 <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/4e4580e2-e10e-5f17-91cf-1f763a7acc6c> a sh:PropertyShape ;
-    rdfs:label "title (dcterms:)"@en ;
-    sh:name "title (dcterms:)"@en ;
+    rdfs:label "Title (dcterms:)"@en ;
+    sh:name "Title (dcterms:)"@en ;
     sh:nodeKind sh:Literal ;
     sh:path dcterms:title .
 
@@ -604,8 +604,8 @@
     sh:path ns1:textarea .
 
 <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7f011711-d926-5b42-bbe1-2cfdc87862c4> a sh:PropertyShape ;
-    rdfs:label "rights (dcterms:)"@en ;
-    sh:name "rights (dcterms:)"@en ;
+    rdfs:label "Rights (dcterms:)"@en ;
+    sh:name "Rights (dcterms:)"@en ;
     sh:nodeKind sh:Literal ;
     sh:path dcterms:rights .
 
@@ -777,8 +777,8 @@
     sh:path rdfs:seeAlso .
 
 <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/7bb543ed-c62b-580f-93de-12b46351985a> a sh:PropertyShape ;
-    rdfs:label "modified (dcterms:)"@en ;
-    sh:name "modified (dcterms:)"@en ;
+    rdfs:label "Date Modified (dcterms:)"@en ;
+    sh:name "Date Modified (dcterms:)"@en ;
     sh:nodeKind sh:Literal ;
     sh:path dcterms:modified .
 
@@ -789,8 +789,8 @@
     sh:path rdfs:isDefinedBy .
 
 <https://eccenca.com/shapes_plugin/5072e1e3e96c40389116a6833d9a3867/shapes/3e98087c-7fe5-5523-b25a-b83b0f6bbd8c> a sh:PropertyShape ;
-    rdfs:label "issued (dcterms:)"@en ;
-    sh:name "issued (dcterms:)"@en ;
+    rdfs:label "Date Issued (dcterms:)"@en ;
+    sh:name "Date Issued (dcterms:)"@en ;
     sh:nodeKind sh:Literal ;
     sh:path dcterms:issued .
 
