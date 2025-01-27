@@ -15,7 +15,7 @@ from cmem.cmempy.dp.proxy.graph import get_graphs_list, post_streamed
 from cmem.cmempy.dp.proxy.sparql import get
 from cmem.cmempy.dp.proxy.update import post
 from cmem.cmempy.workspace.projects.project import get_prefixes
-from cmem_plugin_base.dataintegration.context import ExecutionContext
+from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.description import Icon, Plugin, PluginParameter
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.graph import GraphParameterType
@@ -320,7 +320,13 @@ class ShapesPlugin(WorkflowPlugin):
             replace=self.overwrite,
             content_type="application/n-triples",
         )
-
+        self.context.report.update(
+            ExecutionReport(
+                entity_count=len(shapes_graph),
+                operation="write",
+                operation_desc="shapes created",
+            )
+        )
         if response.status_code != HTTPStatus.NO_CONTENT:
             raise OSError(
                 f"Error posting SHACL validation graph (status code {response.status_code})."
