@@ -203,18 +203,21 @@ class ShapesPlugin(WorkflowPlugin):
         """Retrieve classes and associated properties"""
         setup_cmempy_user_access(self.context.user)
         query = f"""
+            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             SELECT DISTINCT ?class ?property ?data ?inverse
             FROM <{self.data_graph_iri}> {{
                 {{
                     ?subject a ?class .
-                    ?subject ?property ?object
+                    ?subject ?property ?object .
+                    FILTER(?property != rdf:type)
                     BIND(isLiteral(?object) AS ?data)
                     BIND("false" AS ?inverse)
                 }}
             UNION
                 {{
                     ?object a ?class .
-                    ?subject ?property ?object
+                    ?subject ?property ?object .
+                    FILTER(?property != rdf:type)
                     BIND("false" AS ?data)
                     BIND("true" AS ?inverse)
                 }}
@@ -254,13 +257,13 @@ class ShapesPlugin(WorkflowPlugin):
                 class_uuids.add(class_uuid)
 
             for prop in properties:
-                shapes_count += 1
                 prop_uuid = uuid5(
                     NAMESPACE_URL, f'{prop["property"]}{"inverse" if prop["inverse"] else ""}'
                 )
                 property_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{prop_uuid}")
 
                 if prop_uuid not in prop_uuids:
+                    shapes_count += 1
                     name = self.get_name(prop["property"])
                     shapes_graph.add((property_shape_uri, RDF.type, SH.PropertyShape))
                     shapes_graph.add((property_shape_uri, SH.path, URIRef(prop["property"])))
