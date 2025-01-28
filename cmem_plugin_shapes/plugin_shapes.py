@@ -236,11 +236,11 @@ class ShapesPlugin(WorkflowPlugin):
             )
         return class_dict
 
-    def create_shapes(self, shapes_graph: Graph) -> Graph:
+    def create_shapes(self, shapes_graph: Graph) -> tuple[Graph, int]:
         """Create SHACL node and property shapes"""
         class_uuids = set()
         prop_uuids = set()
-
+        shapes_count = 0
         for cls, properties in self.get_class_dict().items():
             class_uuid = uuid5(NAMESPACE_URL, cls)
             node_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{class_uuid}")
@@ -254,6 +254,7 @@ class ShapesPlugin(WorkflowPlugin):
                 class_uuids.add(class_uuid)
 
             for prop in properties:
+                shapes_count += 1
                 prop_uuid = uuid5(
                     NAMESPACE_URL, f'{prop["property"]}{"inverse" if prop["inverse"] else ""}'
                 )
@@ -288,7 +289,7 @@ class ShapesPlugin(WorkflowPlugin):
 
                 shapes_graph.add((node_shape_uri, SH.property, property_shape_uri))
 
-        return shapes_graph
+        return shapes_graph, shapes_count
 
     def import_shapes_graph(self) -> None:
         """Import SHACL shapes graph to catalog"""
@@ -318,7 +319,7 @@ class ShapesPlugin(WorkflowPlugin):
         self.prefixes = self.get_prefixes()
 
         shapes_graph = self.init_shapes_graph()
-        shapes_graph = self.create_shapes(shapes_graph)
+        shapes_graph, shapes_count = self.create_shapes(shapes_graph)
 
         nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
         response = post_streamed(
@@ -329,7 +330,7 @@ class ShapesPlugin(WorkflowPlugin):
         )
         self.context.report.update(
             ExecutionReport(
-                entity_count=len(shapes_graph),
+                entity_count=shapes_count,
                 operation="write",
                 operation_desc="shapes created",
             )
