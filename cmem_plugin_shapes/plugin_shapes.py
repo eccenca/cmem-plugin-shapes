@@ -266,6 +266,13 @@ class ShapesPlugin(WorkflowPlugin):
                     shapes_graph.add(
                         (property_shape_uri, SH.nodeKind, SH.Literal if prop["data"] else SH.IRI)
                     )
+                    shapes_graph.add(
+                        (
+                            property_shape_uri,
+                            SHUI.showAlways,
+                            Literal("true", datatype=XSD.boolean),
+                        )
+                    )
                     if prop["inverse"]:
                         shapes_graph.add(
                             (
