@@ -153,7 +153,7 @@ class ShapesPlugin(WorkflowPlugin):
             with (Path(__path__[0]) / "prefix_cc.json").open("r", encoding="utf-8") as json_file:
                 prefixes_cc = self.format_prefixes(json.load(json_file), prefixes)
 
-        return {k: tuple(set(v)) for k, v in prefixes.items()}
+        return {k: tuple(sorted(set(v))) for k, v in prefixes.items()}
 
     def get_name(self, iri: str) -> str:
         """Generate shape name from IRI"""
