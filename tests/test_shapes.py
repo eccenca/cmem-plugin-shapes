@@ -8,11 +8,12 @@ from tempfile import mkdtemp
 import pytest
 from cmem.cmempy.dp.proxy.graph import get
 from rdflib import Graph
-from rdflib.compare import isomorphic, to_isomorphic, graph_diff
+from rdflib.compare import graph_diff, isomorphic, to_isomorphic
 
 from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
 from tests.utils import TestExecutionContext, needs_cmem
-from .cmemc_command_utils import run_without_assertion, run
+
+from .cmemc_command_utils import run, run_without_assertion
 
 FIXTURE_DIR = str(Path(__file__).parent / "fixture_dir")
 
@@ -23,11 +24,11 @@ PROJECT_NAME = f"shapes_plugin_test_{UUID}"
 GRAPHS = {
     "shapes": {
         "location": f"{FIXTURE_DIR}/test_shapes.ttl",
-        "iri": f"http://docker.localhost/my-persons-shapes",
+        "iri": "http://docker.localhost/my-persons-shapes",
     },
     "dataset": {
         "location": f"{FIXTURE_DIR}/test_shapes_data.ttl",
-        "iri": f"http://docker.localhost/my-persons",
+        "iri": "http://docker.localhost/my-persons",
     },
 }
 
@@ -68,7 +69,9 @@ def test_workflow_execution() -> None:
     result_graph = Graph().parse(data=get(shapes_graph_iri, owl_imports_resolution=False).text)
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     assert isomorphic(result_graph, test)
-    with pytest.raises(ValueError, match="Graph <http://docker.localhost/my-persons-shapes> already exists."):
+    with pytest.raises(
+        ValueError, match="Graph <http://docker.localhost/my-persons-shapes> already exists."
+    ):
         ShapesPlugin(
             data_graph_iri=data_graph_iri,
             shapes_graph_iri=shapes_graph_iri,
