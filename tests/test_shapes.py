@@ -61,10 +61,10 @@ def test_workflow_execution() -> None:
     ShapesPlugin(
         data_graph_iri=DATA_IRI,
         shapes_graph_iri=RESULT_IRI,
-        overwrite=True,
+        existing_graph="overwrite",
         import_shapes=True,
         prefix_cc=False,
-    ).execute(inputs=[], context=TestExecutionContext(project_id=PROJECT_NAME))
+    ).execute(inputs=None, context=TestExecutionContext(project_id=PROJECT_NAME))
 
     query = f"""
     PREFIX owl: <http://www.w3.org/2002/07/owl#>
