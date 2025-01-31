@@ -19,6 +19,7 @@ from cmem_plugin_base.dataintegration.context import ExecutionContext, Execution
 from cmem_plugin_base.dataintegration.description import Icon, Plugin, PluginParameter
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.graph import GraphParameterType
+from cmem_plugin_base.dataintegration.parameter.multiline import MultilineStringParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import BoolParameterType
@@ -100,23 +101,37 @@ def str2bool(value: str) -> bool:
             default_value=True,
             advanced=True,
         ),
+        PluginParameter(
+            param_type=MultilineStringParameterType(),
+            name="ignore_properties",
+            label="Properties to ignore from shape graph",
+            description="""Provide the list of properties to ignore from the shape.
+            one for each line
+            Example:\n
+            http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+            http://xmlns.com/foaf/0.1/familyName
+            """,
+            advanced=True,
+        ),
     ],
 )
 class ShapesPlugin(WorkflowPlugin):
     """SHACL shapes generation plugin"""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         data_graph_iri: str = "",
         shapes_graph_iri: str = "",
         overwrite: bool = False,
         import_shapes: bool = False,
         prefix_cc: bool = True,
+        ignore_properties: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
     ) -> None:
         if not url(data_graph_iri):
             raise ValueError("Data graph IRI parameter is invalid.")
         if not url(shapes_graph_iri):
             raise ValueError("Shapes graph IRI parameter is invalid.")
+        self.ignore_properties = [f"<{_}>" for _ in ignore_properties.split("\n")]
         self.shapes_graph_iri = shapes_graph_iri
         self.data_graph_iri = data_graph_iri
         self.overwrite = overwrite
@@ -209,7 +224,7 @@ class ShapesPlugin(WorkflowPlugin):
                 {{
                     ?subject a ?class .
                     ?subject ?property ?object .
-                    FILTER(?property != rdf:type)
+                    FILTER (?property NOT IN ({",".join(self.ignore_properties)}))
                     BIND(isLiteral(?object) AS ?data)
                     BIND("false" AS ?inverse)
                 }}
@@ -217,7 +232,7 @@ class ShapesPlugin(WorkflowPlugin):
                 {{
                     ?object a ?class .
                     ?subject ?property ?object .
-                    FILTER(?property != rdf:type)
+                    FILTER (?property NOT IN ({",".join(self.ignore_properties)}))
                     BIND("false" AS ?data)
                     BIND("true" AS ?inverse)
                 }}
