@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+## [Unreleased]
+
+### Fixed
+- Fixed summary report.
+
+### Added
+- Added shui:showAlways to all property shapes.
+- Introduced the `ignore properties` parameter to exclude specific properties from the shape graph.
 
 ## [1.0.0beta4] 2025-01-06
 
