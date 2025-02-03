@@ -64,7 +64,8 @@ def str2bool(value: str) -> bool:
             param_type=GraphParameterType(),
             name="data_graph_iri",
             label="Input data graph",
-            description="The Knowledge Graph containing the instance data to be analyzed for the SHACL shapes generation.",
+            description="The Knowledge Graph containing the instance data to "
+            "be analyzed for the SHACL shapes generation.",
         ),
         PluginParameter(
             param_type=GraphParameterType(
