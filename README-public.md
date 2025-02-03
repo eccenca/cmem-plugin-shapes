@@ -1,12 +1,11 @@
 # cmem-plugin-shapes
 
-Generate SHACL node and property shapes from a data graph.
+Generate SHACL shapes from an instance data graph.
 
 [![eccenca Corporate Memory][cmem-shield]][cmem-link]
 
 
-You can install it with the [cmemc](https://eccenca.com/go/cmemc) command line
-clients with:
+You can install it with the [cmemc](https://eccenca.com/go/cmemc) command line clients with:
 
 ```
 cmemc admin workspace python install cmem-plugin-shapes

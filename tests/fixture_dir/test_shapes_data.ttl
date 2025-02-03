@@ -1,0 +1,15 @@
+@prefix : <https://ns.eccenca.com/data/config/> .
+@prefix void: <http://rdfs.org/ns/void#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+
+<http://docker.localhost/my-persons/> a void:Dataset;
+  rdfs:label "My Persons"@en .
+
+<http://docker.localhost/my-persons/Sai> a foaf:Person;
+  rdfs:label "Sai";
+  foaf:knows <http://docker.localhost/my-persons/Seebi> .
+
+<http://docker.localhost/my-persons/Seebi> a foaf:Person;
+  rdfs:label "Seebi";
+  foaf:familyName "Tramp" .
