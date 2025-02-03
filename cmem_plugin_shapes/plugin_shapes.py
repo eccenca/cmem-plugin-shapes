@@ -1,8 +1,8 @@
 """Generate SHACL node and property shapes from a data graph"""
 
 import json
-from collections import OrderedDict
 from collections.abc import Sequence
+from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote_plus
@@ -18,7 +18,6 @@ from cmem.cmempy.workspace.projects.project import get_prefixes
 from cmem_plugin_base.dataintegration.context import ExecutionContext
 from cmem_plugin_base.dataintegration.description import Icon, Plugin, PluginParameter
 from cmem_plugin_base.dataintegration.entity import Entities
-from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.graph import GraphParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
@@ -76,20 +75,12 @@ def str2bool(value: str) -> bool:
             description="The output SHACL shapes graph.",
         ),
         PluginParameter(
-            param_type=ChoiceParameterType(
-                OrderedDict(
-                    {
-                        "add": "add result to graph",
-                        "replace": "replace existing graph with result",
-                        "stop": "stop workflow if output graph exists",
-                    }
-                )
-            ),
-            name="existing_graph",
-            label="Handle existing output graph",
-            description="""Add result to the existing graph, overwrite the existing graph with the
-            result, or stop the workflow if theh output graph already exists""",
-            default_value="stop",
+            param_type=BoolParameterType(),
+            name="overwrite",
+            label="Overwrite output graph.",
+            description="""Overwrite the output SHACL shapes graph if it exists. If disabled and
+            the graph exists, the plugin execution fails.""",
+            default_value=False,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
@@ -118,7 +109,7 @@ class ShapesPlugin(WorkflowPlugin):
         self,
         data_graph_iri: str = "",
         shapes_graph_iri: str = "",
-        existing_graph: str = "stop",
+        overwrite: bool = False,
         import_shapes: bool = False,
         prefix_cc: bool = True,
     ) -> None:
@@ -128,7 +119,7 @@ class ShapesPlugin(WorkflowPlugin):
             raise ValueError("Shapes graph IRI parameter is invalid.")
         self.shapes_graph_iri = shapes_graph_iri
         self.data_graph_iri = data_graph_iri
-        self.existing_graph = existing_graph
+        self.overwrite = overwrite
         self.import_shapes = import_shapes
         self.prefix_cc = prefix_cc
 
@@ -305,20 +296,15 @@ class ShapesPlugin(WorkflowPlugin):
         setup_cmempy_user_access(self.context.user)
         post(query)
 
-    def add_to_graph(self, shapes_graph: Graph) -> None:
-        """Add SHACL shapes graph to existing graph"""
-        query = f"""
-        INSERT DATA {{
-            GRAPH <{self.shapes_graph_iri}> {{
-                {shapes_graph.serialize(format="nt", encoding="utf-8").decode()}
-            }}
-        }}
-        """
-        post(query)
-
-    def execute(self, inputs: None, context: ExecutionContext) -> None:  # noqa: ARG002
+    def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
         """Execute plugin"""
+        _ = inputs
         setup_cmempy_user_access(context.user)
+
+        if not self.overwrite and self.shapes_graph_iri in [
+            graph["iri"] for graph in get_graphs_list()
+        ]:
+            raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists.")
 
         self.context = context
         self.dp_api_endpoint = get_dp_api_endpoint()
@@ -327,22 +313,18 @@ class ShapesPlugin(WorkflowPlugin):
         shapes_graph = self.init_shapes_graph()
         shapes_graph = self.create_shapes(shapes_graph)
 
-        graph_exists = self.shapes_graph_iri in [graph["iri"] for graph in get_graphs_list()]
+        nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
+        response = post_streamed(
+            self.shapes_graph_iri,
+            nt_file,
+            replace=self.overwrite,
+            content_type="application/n-triples",
+        )
 
-        if self.existing_graph == "stop" and graph_exists:
-            raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists.")
-
-        if self.existing_graph != "add" or not graph_exists:
-            nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
-            overwrite = self.existing_graph != "stop"
-            post_streamed(
-                self.shapes_graph_iri,
-                nt_file,
-                replace=overwrite,
-                content_type="application/n-triples",
+        if response.status_code != HTTPStatus.NO_CONTENT:
+            raise OSError(
+                f"Error posting SHACL validation graph (status code {response.status_code})."
             )
-        else:
-            self.add_to_graph(shapes_graph)
 
         if self.import_shapes:
             self.import_shapes_graph()
