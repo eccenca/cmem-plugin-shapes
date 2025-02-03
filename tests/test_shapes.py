@@ -1,10 +1,13 @@
 """Plugin tests."""
 
 import json
+import os
 from collections.abc import Generator
+from dataclasses import dataclass
 from pathlib import Path
 from shutil import rmtree
 from tempfile import mkdtemp
+from typing import Any
 
 import pytest
 from cmem.cmempy.dp.proxy.graph import get
@@ -13,33 +16,23 @@ from rdflib import Graph
 from rdflib.compare import isomorphic
 
 from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
+from tests import FIXTURE_DIR
+from tests.cmemc_command_utils import run, run_without_assertion
 from tests.utils import TestExecutionContext, needs_cmem
 
-from .cmemc_command_utils import run, run_without_assertion
 
-FIXTURE_DIR = str(Path(__file__).parent / "fixture_dir")
+@dataclass
+class GraphSetupFixture:
+    """Graph Setup Fixture"""
 
-UUID = "5072e1e3e96c40389116a6833d9a3867"
-PROJECT_NAME = f"shapes_plugin_test_{UUID}"
-
-
-GRAPHS = {
-    "shapes": {
-        "location": f"{FIXTURE_DIR}/test_shapes.ttl",
-        "iri": "http://docker.localhost/my-persons-shapes",
-    },
-    "dataset": {
-        "location": f"{FIXTURE_DIR}/test_shapes_data.ttl",
-        "iri": "http://docker.localhost/my-persons",
-    },
-}
-
-ECCENCA_SHAPES_CATELOG = {
-    "location": f"{FIXTURE_DIR}/test_shapes_eccenca.ttl",
-    "iri": "https://vocab.eccenca.com/shacl/",
-}
-
-ASK_QUERY = """PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    project_name: str = "shapes_plugin_test"
+    shapes_iri: str = "http://docker.localhost/my-persons-shapes"
+    shapes_file: str = str(FIXTURE_DIR / "test_shapes.ttl")
+    dataset_iri: str = "http://docker.localhost/my-persons"
+    dataset_file: str = str(FIXTURE_DIR / "test_shapes_data.ttl")
+    catalog_iri: str = "https://vocab.eccenca.com/shacl/"
+    catalog_file: str = str(FIXTURE_DIR / "test_shapes_eccenca.ttl")
+    ask_query: str = """PREFIX owl: <http://www.w3.org/2002/07/owl#>
 ASK
 {
   GRAPH <https://vocab.eccenca.com/shacl/> {
@@ -49,72 +42,144 @@ ASK
 
 
 @pytest.fixture
-def graph_setup() -> Generator[None, None, None]:
+def graph_setup(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]:
     """Graph setup fixture"""
+    if os.environ.get("CMEM_BASE_URI", "") == "":
+        pytest.skip("Needs CMEM configuration")
     # make backup and delete all GRAPHS
-    backup_directory = mkdtemp(prefix="cmemc-GRAPHS-backup")
-    run(["graph", "export", "--all", "--output-dir", backup_directory])
-    run(["graph", "delete", "--all"])
-    run(["graph", "import", GRAPHS["dataset"]["location"], GRAPHS["dataset"]["iri"]])
-    run_without_assertion(["project", "delete", PROJECT_NAME])
-    run(["project", "create", PROJECT_NAME])
-    yield None
+    _ = GraphSetupFixture()
+    export_zip = str(tmp_path / "export.store.zip")
+    run(["admin", "store", "export", export_zip])
+    run(["graph", "import", _.dataset_file, _.dataset_iri])
+    run_without_assertion(["project", "delete", _.project_name])
+    run(["project", "create", _.project_name])
+    yield _
     # remove test GRAPHS
-    for _ in GRAPHS.values():
-        run(["graph", "delete", _["iri"]])
-
-    # import backup GRAPHS and compare triple counts
-    run(["graph", "import", backup_directory])
-    rmtree(backup_directory)
+    run(["admin", "store", "import", export_zip])
 
 
-@needs_cmem
-@pytest.mark.usefixtures("graph_setup")
-def test_workflow_execution() -> None:
+def test_setup(graph_setup: GraphSetupFixture) -> None:
     """Test plugin execution"""
-    data_graph_iri = GRAPHS["dataset"]["iri"]
-    shapes_graph_iri = GRAPHS["shapes"]["iri"]
-    ShapesPlugin(
-        data_graph_iri=data_graph_iri,
-        shapes_graph_iri=shapes_graph_iri,
+    _ = graph_setup
+
+
+def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
+    """Test plugin execution"""
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
         overwrite=True,
         import_shapes=False,
         prefix_cc=False,
-    ).execute(inputs=[], context=TestExecutionContext(project_id=PROJECT_NAME))
-    result_graph = Graph().parse(data=get(shapes_graph_iri, owl_imports_resolution=False).text)
+    )
+    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
+    result_graph = Graph().parse(data=result_graph_turtle)
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     assert isomorphic(result_graph, test)
     with pytest.raises(
         ValueError, match="Graph <http://docker.localhost/my-persons-shapes> already exists."
     ):
         ShapesPlugin(
-            data_graph_iri=data_graph_iri,
-            shapes_graph_iri=shapes_graph_iri,
+            data_graph_iri=graph_setup.dataset_iri,
+            shapes_graph_iri=graph_setup.shapes_iri,
             overwrite=False,
             import_shapes=False,
             prefix_cc=False,
-        ).execute(inputs=[], context=TestExecutionContext(project_id=PROJECT_NAME))
+        ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
 
 
-@needs_cmem
-@pytest.mark.usefixtures("graph_setup")
-def test_import_shapes() -> None:
+def test_failing_inits(graph_setup: GraphSetupFixture) -> None:
+    """Test failing inits"""
+    with pytest.raises(ValueError, match="Data graph IRI parameter is invalid"):
+        ShapesPlugin(
+            data_graph_iri="no iri",
+            shapes_graph_iri=graph_setup.shapes_iri,
+            overwrite=False,
+            import_shapes=False,
+            prefix_cc=False,
+        )
+    with pytest.raises(ValueError, match="Shapes graph IRI parameter is invalid"):
+        ShapesPlugin(
+            data_graph_iri=graph_setup.dataset_iri,
+            shapes_graph_iri="no iri",
+            overwrite=False,
+            import_shapes=False,
+            prefix_cc=False,
+        )
+    with pytest.raises(ValueError, match="Ignored property IRI invalid"):
+        ShapesPlugin(
+            data_graph_iri=graph_setup.dataset_iri,
+            shapes_graph_iri=graph_setup.shapes_iri,
+            ignore_properties="""no iri""",
+        )
+    with pytest.raises(ValueError, match="Ignored property IRI invalid"):
+        ShapesPlugin(
+            data_graph_iri=graph_setup.dataset_iri,
+            shapes_graph_iri=graph_setup.shapes_iri,
+            ignore_properties="""http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+            no iri""",
+        )
+
+
+def test_prefix_cc_fetching(graph_setup: GraphSetupFixture) -> None:
+    """Test prefix.cc fetching"""
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        overwrite=True,
+        import_shapes=False,
+        prefix_cc=True,
+    )
+    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
+    result_graph = Graph().parse(data=result_graph_turtle)
+    test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
+    assert isomorphic(result_graph, test)
+
+
+def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
     """Test plugin execution with import shapes"""
-    data_graph_iri = GRAPHS["dataset"]["iri"]
-    shapes_graph_iri = GRAPHS["shapes"]["iri"]
     ShapesPlugin(
-        data_graph_iri=data_graph_iri,
-        shapes_graph_iri=shapes_graph_iri,
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
         overwrite=True,
         import_shapes=False,
         prefix_cc=False,
-    ).execute(inputs=[], context=TestExecutionContext(project_id=PROJECT_NAME))
-    assert not json.loads(ask(query=ASK_QUERY)).get("boolean", True)
+    ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    assert not json.loads(ask(query=graph_setup.ask_query)).get("boolean", True)
     ShapesPlugin(
-        data_graph_iri=data_graph_iri,
-        shapes_graph_iri=shapes_graph_iri,
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
         overwrite=True,
         import_shapes=True,
         prefix_cc=False,
-    ).execute(inputs=[], context=TestExecutionContext(project_id=PROJECT_NAME))
-    assert json.loads(ask(query=ASK_QUERY)).get("boolean", False)
+    ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    assert json.loads(ask(query=graph_setup.ask_query)).get("boolean", False)
+
+
+def test_filter_creation() -> None:
+    """Test FILTER NOT IN creation"""
+    rdf_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+    rdfs_label = "http://www.w3.org/2000/01/rdf-schema#label"
+    assert (
+        ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label])
+        == f"FILTER (?property NOT IN (<{rdf_type}>, <{rdfs_label}>))"
+    )
+    assert (
+        ShapesPlugin.iri_list_to_filter(iris=[rdfs_label])
+        == f"FILTER (?property NOT IN (<{rdfs_label}>))"
+    )
+    assert ShapesPlugin.iri_list_to_filter(iris=[]) == ""
+    assert (
+        ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="IN")
+        == f"FILTER (?property IN (<{rdf_type}>, <{rdfs_label}>))"
+    )
+    assert (
+        ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="IN", name="class")
+        == f"FILTER (?class IN (<{rdf_type}>, <{rdfs_label}>))"
+    )
+    with pytest.raises(ValueError, match="name must match"):
+        ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], name="sfsdf sdf")
+    with pytest.raises(ValueError, match="filter_ must be"):
+        ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="XXX")

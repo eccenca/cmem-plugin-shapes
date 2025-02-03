@@ -1,6 +1,7 @@
 """Generate SHACL node and property shapes from a data graph"""
 
 import json
+import re
 from collections.abc import Sequence
 from http import HTTPStatus
 from io import BytesIO
@@ -12,8 +13,8 @@ from uuid import NAMESPACE_URL, uuid5
 from cmem.cmempy.api import send_request
 from cmem.cmempy.config import get_dp_api_endpoint
 from cmem.cmempy.dp.proxy.graph import get_graphs_list, post_streamed
-from cmem.cmempy.dp.proxy.sparql import get
-from cmem.cmempy.dp.proxy.update import post
+from cmem.cmempy.dp.proxy.sparql import post as post_sparql
+from cmem.cmempy.dp.proxy.update import post as post_update
 from cmem.cmempy.workspace.projects.project import get_prefixes
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.description import Icon, Plugin, PluginParameter
@@ -127,7 +128,7 @@ class ShapesPlugin(WorkflowPlugin):
         self.ignore_properties = []
         for _ in ignore_properties.split("\n"):
             if not url(_):
-                raise ValueError(f"Ignored property IRI '{_}' is invalid.")
+                raise ValueError(f"Ignored property IRI invalid: '{_}'")
             self.ignore_properties.append(_)
         self.overwrite = overwrite
         self.import_shapes = import_shapes
@@ -209,6 +210,18 @@ class ShapesPlugin(WorkflowPlugin):
         )
         return shapes_graph
 
+    @staticmethod
+    def iri_list_to_filter(iris: list[str], name: str = "property", filter_: str = "NOT IN") -> str:
+        """List of iris to <iri1>, <iri2>, ..."""
+        if filter_ not in ["NOT IN", "IN"]:
+            raise ValueError("filter_ must be 'NOT IN' or 'IN'")
+        if not re.match(r"^[a-z]+$", name):
+            raise ValueError("name must match regex ^[a-z]+$")
+        if not iris:
+            return ""
+        iris_quoted = [f"<{_}>" for _ in iris]
+        return f"FILTER (?{name} {filter_} ({', '.join(iris_quoted)}))"
+
     def get_class_dict(self) -> dict:
         """Retrieve classes and associated properties"""
         setup_cmempy_user_access(self.context.user)
@@ -219,7 +232,7 @@ class ShapesPlugin(WorkflowPlugin):
                 {{
                     ?subject a ?class .
                     ?subject ?property ?object .
-                    FILTER (?property NOT IN ({",".join(self.ignore_properties)}))
+                    {self.iri_list_to_filter(self.ignore_properties)}
                     BIND(isLiteral(?object) AS ?data)
                     BIND("false" AS ?inverse)
                 }}
@@ -227,13 +240,13 @@ class ShapesPlugin(WorkflowPlugin):
                 {{
                     ?object a ?class .
                     ?subject ?property ?object .
-                    FILTER (?property NOT IN ({",".join(self.ignore_properties)}))
+                    {self.iri_list_to_filter(self.ignore_properties)}
                     BIND("false" AS ?data)
                     BIND("true" AS ?inverse)
                 }}
             }}
         """  # noqa: S608
-        results = json.loads(get(query))
+        results = json.loads(post_sparql(query))
 
         class_dict: dict = {}
         for binding in results["results"]["bindings"]:
@@ -315,7 +328,7 @@ class ShapesPlugin(WorkflowPlugin):
         }}
         """
         setup_cmempy_user_access(self.context.user)
-        post(query)
+        post_update(query)
 
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
         """Execute plugin"""
@@ -335,7 +348,7 @@ class ShapesPlugin(WorkflowPlugin):
         shapes_graph, shapes_count = self.create_shapes(shapes_graph)
 
         nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
-        response = post_streamed(
+        post_streamed(
             self.shapes_graph_iri,
             nt_file,
             replace=self.overwrite,
@@ -348,10 +361,5 @@ class ShapesPlugin(WorkflowPlugin):
                 operation_desc="shapes created",
             )
         )
-        if response.status_code != HTTPStatus.NO_CONTENT:
-            raise OSError(
-                f"Error posting SHACL validation graph (status code {response.status_code})."
-            )
-
         if self.import_shapes:
             self.import_shapes_graph()
