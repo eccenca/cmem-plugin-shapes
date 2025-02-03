@@ -2,7 +2,7 @@
 name = "cmem-plugin-shapes"
 version = "0.0.0"
 license = "Apache-2.0"
-description = "Generate SHACL node and property shapes from a data graph"
+description = "Generate SHACL shapes from an instance data graph."
 authors = ["eccenca GmbH <cmempy-developer@eccenca.com>"]
 classifiers = [
     "Development Status :: 4 - Beta","Environment :: Plugins",
