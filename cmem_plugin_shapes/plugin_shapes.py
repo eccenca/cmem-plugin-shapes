@@ -33,7 +33,7 @@ from cmem_plugin_shapes.doc import SHAPES_DOC
 from . import __path__
 
 SHUI = Namespace("https://vocab.eccenca.com/shui/")
-PREFIX_CC = "http://prefix.cc/popular/all.file.json"
+PREFIX_CC = "https://prefix.cc/popular/all.file.json"
 TRUE_SET = {"yes", "true", "t", "y", "1"}
 FALSE_SET = {"no", "false", "f", "n", "0"}
 
@@ -63,8 +63,8 @@ def str2bool(value: str) -> bool:
         PluginParameter(
             param_type=GraphParameterType(),
             name="data_graph_iri",
-            label="Input data graph.",
-            description="The input data graph to be analyzed for the SHACL shapes generation.",
+            label="Input data graph",
+            description="The Knowledge Graph containing the instance data to be analyzed for the SHACL shapes generation.",
         ),
         PluginParameter(
             param_type=GraphParameterType(
@@ -72,45 +72,35 @@ def str2bool(value: str) -> bool:
                 allow_only_autocompleted_values=False,
             ),
             name="shapes_graph_iri",
-            label="Output SHACL shapes graph.",
-            description="The output SHACL shapes graph.",
+            label="Output Shape Catalog",
+            description="The Knowledge Graph, the generated shapes will be added to.",
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="overwrite",
-            label="Overwrite output graph.",
-            description="""Overwrite the output SHACL shapes graph if it exists. If disabled and
-            the graph exists, the plugin execution fails.""",
+            label="Overwrite Shape Catalog",
+            description="""Overwrite the output graph if it exists. If disabled and
+            the graph exists, the execution will fail.""",
             default_value=False,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="import_shapes",
-            label="Import SHACL shapes graph in CMEM Shapes Catalog.",
-            description="""Import the SHACL shapes graph in the CMEM Shapes catalog by adding an
-            `owl:imports` triple to the CMEM Shapes Catalog.""",
+            label="Import the output graph into the central Shapes Catalog",
             default_value=False,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="prefix_cc",
-            label="Fetch namespace prefixes from prefix.cc",
-            description="""Attempt to fetch namespace prefixes from http://prefix.cc instead of
-            from the local database. If this fails, fall back on local database. Prefixes defined in
-            the CMEM project override prefixes defined in the external database.""",
-            default_value=True,
+            label="Additionally fetch namespace prefixes from prefix.cc",
+            default_value=False,
             advanced=True,
         ),
         PluginParameter(
             param_type=MultilineStringParameterType(),
             name="ignore_properties",
-            label="Properties to ignore from shape graph",
-            description="""Provide the list of properties to ignore from the shape.
-            one for each line
-            Example:\n
-            http://www.w3.org/1999/02/22-rdf-syntax-ns#type
-            http://xmlns.com/foaf/0.1/familyName
-            """,
+            label="Properties to ignore",
+            description="Provide the list of properties (as IRIs) to ignore.",
             advanced=True,
         ),
     ],
@@ -129,19 +119,23 @@ class ShapesPlugin(WorkflowPlugin):
     ) -> None:
         if not url(data_graph_iri):
             raise ValueError("Data graph IRI parameter is invalid.")
+        self.data_graph_iri = data_graph_iri
         if not url(shapes_graph_iri):
             raise ValueError("Shapes graph IRI parameter is invalid.")
-        self.ignore_properties = [f"<{_}>" for _ in ignore_properties.split("\n")]
         self.shapes_graph_iri = shapes_graph_iri
-        self.data_graph_iri = data_graph_iri
+        self.ignore_properties = []
+        for _ in ignore_properties.split("\n"):
+            if not url(_):
+                raise ValueError(f"Ignored property IRI '{_}' is invalid.")
+            self.ignore_properties.append(_)
         self.overwrite = overwrite
         self.import_shapes = import_shapes
         self.prefix_cc = prefix_cc
-
         self.input_ports = FixedNumberOfInputs([])
         self.output_port = None
 
-    def format_prefixes(self, prefixes: dict, formatted_prefixes: dict | None = None) -> dict:
+    @staticmethod
+    def format_prefixes(prefixes: dict, formatted_prefixes: dict | None = None) -> dict:
         """Format prefix dictionary for consistency"""
         if formatted_prefixes is None:
             formatted_prefixes = {}
@@ -158,11 +152,11 @@ class ShapesPlugin(WorkflowPlugin):
         if self.prefix_cc:
             try:
                 res = urlopen(PREFIX_CC)  # noqa: S310
-                self.log.info("prefixes fetched from http://prefix.cc")
+                self.log.info("prefixes fetched from https://prefix.cc")
                 prefixes_cc = self.format_prefixes(json.loads(res.read()), prefixes)
             except Exception as exc:  # noqa: BLE001
                 self.log.warning(
-                    f"failed to fetch prefixes from http://prefix.cc ({exc}) - using local file"
+                    f"failed to fetch prefixes from https://prefix.cc ({exc}) - using local file"
                 )
         if not prefixes_cc or not self.prefix_cc:
             with (Path(__path__[0]) / "prefix_cc.json").open("r", encoding="utf-8") as json_file:
