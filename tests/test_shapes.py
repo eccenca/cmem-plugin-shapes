@@ -5,8 +5,6 @@ import os
 from collections.abc import Generator
 from dataclasses import dataclass
 from pathlib import Path
-from shutil import rmtree
-from tempfile import mkdtemp
 from typing import Any
 
 import pytest
@@ -18,7 +16,7 @@ from rdflib.compare import isomorphic
 from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
 from tests import FIXTURE_DIR
 from tests.cmemc_command_utils import run, run_without_assertion
-from tests.utils import TestExecutionContext, needs_cmem
+from tests.utils import TestExecutionContext
 
 
 @dataclass
@@ -68,7 +66,7 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        overwrite=True,
+        existing_graph="replace",
         import_shapes=False,
         prefix_cc=False,
     )
@@ -83,7 +81,33 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
         ShapesPlugin(
             data_graph_iri=graph_setup.dataset_iri,
             shapes_graph_iri=graph_setup.shapes_iri,
-            overwrite=False,
+            existing_graph="stop",
+            import_shapes=False,
+            prefix_cc=False,
+        ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+
+
+def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
+    """Test plugin execution with "add to graph" setting"""
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph="replace",
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
+    result_graph = Graph().parse(data=result_graph_turtle)
+    test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
+    assert isomorphic(result_graph, test)
+    with pytest.raises(
+        ValueError, match="Graph <http://docker.localhost/my-persons-shapes> already exists."
+    ):
+        ShapesPlugin(
+            data_graph_iri=graph_setup.dataset_iri,
+            shapes_graph_iri=graph_setup.shapes_iri,
+            existing_graph="add",
             import_shapes=False,
             prefix_cc=False,
         ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
@@ -95,7 +119,7 @@ def test_failing_inits(graph_setup: GraphSetupFixture) -> None:
         ShapesPlugin(
             data_graph_iri="no iri",
             shapes_graph_iri=graph_setup.shapes_iri,
-            overwrite=False,
+            existing_graph="stop",
             import_shapes=False,
             prefix_cc=False,
         )
@@ -103,7 +127,7 @@ def test_failing_inits(graph_setup: GraphSetupFixture) -> None:
         ShapesPlugin(
             data_graph_iri=graph_setup.dataset_iri,
             shapes_graph_iri="no iri",
-            overwrite=False,
+            existing_graph="stop",
             import_shapes=False,
             prefix_cc=False,
         )
@@ -127,7 +151,7 @@ def test_prefix_cc_fetching(graph_setup: GraphSetupFixture) -> None:
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        overwrite=True,
+        existing_graph="replace",
         import_shapes=False,
         prefix_cc=True,
     )
@@ -143,7 +167,7 @@ def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
     ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        overwrite=True,
+        existing_graph="replace",
         import_shapes=False,
         prefix_cc=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
@@ -151,7 +175,7 @@ def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
     ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        overwrite=True,
+        existing_graph="replace",
         import_shapes=True,
         prefix_cc=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
