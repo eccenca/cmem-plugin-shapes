@@ -95,5 +95,4 @@ ignore = [
     "S101",    # use of assert detected
     "TRY003",  # Avoid specifying long messages outside the exception class
     "F401",    # imported but unused
-    "ERA001"   # Found commented-out code
 ]
