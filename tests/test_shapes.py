@@ -51,6 +51,7 @@ def graph_setup(
     _ = GraphSetupFixture()
     export_zip = str(tmp_path / "export.store.zip")
     run(["admin", "store", "export", export_zip])
+    raise OSError(add_to_graph)
     if add_to_graph:
         raise OSError("test")
         run(["graph", "import", _.dataset_file_add, _.dataset_iri])
