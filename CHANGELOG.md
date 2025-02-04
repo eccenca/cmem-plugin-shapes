@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+
+## [Unreleased] 2025-02-04
+
+### Changed
+
+- Replaced the bool parameter "Overwrite Shape Catalog" with the parameter "Handle existing output graph" with the 
+options to replace the graph or add the result shapes to the graph, or stop the workflow if the specified output graph 
+already exists.
+
 ## [1.0.0] 2025-02-03
 
 ### Fixed
