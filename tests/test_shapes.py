@@ -26,8 +26,8 @@ class GraphSetupFixture:
     project_name: str = "shapes_plugin_test"
     shapes_iri: str = "http://docker.localhost/my-persons-shapes"
     shapes_file: str = str(FIXTURE_DIR / "test_shapes.ttl")
+    shapes_file_add_init: str = str(FIXTURE_DIR / "test_shapes_add_init.ttl")
     dataset_iri: str = "http://docker.localhost/my-persons"
-    dataset_file_add: str = str(FIXTURE_DIR / "test_shapes_data_add.ttl")
     dataset_file: str = str(FIXTURE_DIR / "test_shapes_data.ttl")
     catalog_iri: str = "https://vocab.eccenca.com/shacl/"
     catalog_file: str = str(FIXTURE_DIR / "test_shapes_eccenca.ttl")
@@ -55,10 +55,10 @@ def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixtu
     _ = GraphSetupFixture()
     export_zip = str(tmp_path / "export.store.zip")
     run(["admin", "store", "export", export_zip])
+
+    run(["graph", "import", _.dataset_file, _.dataset_iri])
     if add_to_graph:
-        run(["graph", "import", _.dataset_file_add, _.dataset_iri])
-    else:
-        run(["graph", "import", _.dataset_file, _.dataset_iri])
+        run(["graph", "import", _.shapes_file_add_init, _.shapes_iri])
     run_without_assertion(["project", "delete", _.project_name])
     run(["project", "create", _.project_name])
     yield _
@@ -110,7 +110,7 @@ def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
     result_graph = Graph().parse(data=result_graph_turtle)
-    test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
+    test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
     assert isomorphic(result_graph, test)
 
 

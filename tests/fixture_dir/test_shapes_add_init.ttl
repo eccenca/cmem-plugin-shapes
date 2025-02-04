@@ -1,0 +1,25 @@
+@prefix : <https://ns.eccenca.com/data/config/> .
+@prefix ns1: <https://vocab.eccenca.com/shui/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix void: <http://rdfs.org/ns/void#> .
+
+
+<http://docker.localhost/my-persons-shapes/7daca3e6-86fc-515e-a96e-1d44e5b2828e> a
+    sh:NodeShape;
+  sh:name "Person (foaf:)"@en;
+  rdfs:label "Person (foaf:)"@en;
+  sh:property <http://docker.localhost/my-persons-shapes/da1b0b28-9c51-55c3-a963-2337006693de>;
+  sh:targetClass foaf:Person .
+
+<http://docker.localhost/my-persons-shapes> a ns1:ShapeCatalog;
+  rdfs:label "Shapes for http://docker.localhost/my-persons" .
+
+<http://docker.localhost/my-persons-shapes/da1b0b28-9c51-55c3-a963-2337006693de> a
+    sh:PropertyShape;
+  sh:name "comment (rdfs:)"@en;
+  rdfs:label "comment (rdfs:)"@en;
+  sh:nodeKind sh:Literal;
+  sh:path rdfs:comment;
+  ns1:showAlways true .
