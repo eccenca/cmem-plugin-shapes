@@ -51,7 +51,7 @@ def graph_setup(
     _ = GraphSetupFixture()
     export_zip = str(tmp_path / "export.store.zip")
     run(["admin", "store", "export", export_zip])
-    if add_to_graph==True:
+    if add_to_graph:
         raise OSError("test")
         run(["graph", "import", _.dataset_file_add, _.dataset_iri])
     else:
@@ -94,7 +94,7 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
         ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
 
 
-@pytest.mark.parametrize("add_to_graph", [(True,)])
+@pytest.mark.parametrize("add_to_graph", [True])
 def test_workflow_execution_add(graph_setup: GraphSetupFixture, add_to_graph: bool) -> None:  # noqa: ARG001
     """Test plugin execution with "add to graph" setting"""
     plugin = ShapesPlugin(
