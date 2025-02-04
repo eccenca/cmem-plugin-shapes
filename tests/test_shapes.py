@@ -41,7 +41,7 @@ ASK
 
 
 @pytest.fixture
-def graph_setup(tmp_path: Path, request) -> Generator[GraphSetupFixture, Any, None]:
+def graph_setup(tmp_path: Path, request) -> Generator[GraphSetupFixture, Any, None]:  # noqa: ANN001
     """Graph setup fixture"""
     if os.environ.get("CMEM_BASE_URI", "") == "":
         pytest.skip("Needs CMEM configuration")
@@ -93,8 +93,8 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
         ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
 
 
-@pytest.mark.parametrize("graph_setup", True)
-def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:  # noqa: ARG001
+@pytest.mark.parametrize("graph_setup", [True])
+def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
     """Test plugin execution with "add to graph" setting"""
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
