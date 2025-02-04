@@ -49,6 +49,7 @@ def add_to_graph() -> bool:
 @pytest.fixture
 def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixture, Any, None]:
     """Graph setup fixture"""
+    raise OSError(type(add_to_graph))
     if os.environ.get("CMEM_BASE_URI", "") == "":
         pytest.skip("Needs CMEM configuration")
     # make backup and delete all GRAPHS
