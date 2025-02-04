@@ -28,6 +28,7 @@ class GraphSetupFixture:
     shapes_file: str = str(FIXTURE_DIR / "test_shapes.ttl")
     dataset_iri: str = "http://docker.localhost/my-persons"
     dataset_file: str = str(FIXTURE_DIR / "test_shapes_data.ttl")
+    dataset_file_add: str = str(FIXTURE_DIR / "test_shapes_data_add.ttl")
     catalog_iri: str = "https://vocab.eccenca.com/shacl/"
     catalog_file: str = str(FIXTURE_DIR / "test_shapes_eccenca.ttl")
     ask_query: str = """PREFIX owl: <http://www.w3.org/2002/07/owl#>
@@ -40,7 +41,7 @@ ASK
 
 
 @pytest.fixture
-def graph_setup(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]:
+def graph_setup(tmp_path: Path, add: bool = False) -> Generator[GraphSetupFixture, Any, None]:
     """Graph setup fixture"""
     if os.environ.get("CMEM_BASE_URI", "") == "":
         pytest.skip("Needs CMEM configuration")
@@ -48,6 +49,10 @@ def graph_setup(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]:
     _ = GraphSetupFixture()
     export_zip = str(tmp_path / "export.store.zip")
     run(["admin", "store", "export", export_zip])
+    if add:
+        run(["graph", "import", _.dataset_file_add, _.dataset_iri])
+    else:
+        run(["graph", "import", _.dataset_file, _.dataset_iri])
     run(["graph", "import", _.dataset_file, _.dataset_iri])
     run_without_assertion(["project", "delete", _.project_name])
     run(["project", "create", _.project_name])
@@ -87,12 +92,13 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
         ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
 
 
-def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
+@pytest.mark.parametrize("add",  [("True")])
+def test_workflow_execution_add(graph_setup: GraphSetupFixture, add: bool) -> None:
     """Test plugin execution with "add to graph" setting"""
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="replace",
+        existing_graph="add",
         import_shapes=False,
         prefix_cc=False,
     )
@@ -101,16 +107,6 @@ def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
     result_graph = Graph().parse(data=result_graph_turtle)
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     assert isomorphic(result_graph, test)
-    with pytest.raises(
-        ValueError, match="Graph <http://docker.localhost/my-persons-shapes> already exists."
-    ):
-        ShapesPlugin(
-            data_graph_iri=graph_setup.dataset_iri,
-            shapes_graph_iri=graph_setup.shapes_iri,
-            existing_graph="add",
-            import_shapes=False,
-            prefix_cc=False,
-        ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
 
 
 def test_failing_inits(graph_setup: GraphSetupFixture) -> None:
