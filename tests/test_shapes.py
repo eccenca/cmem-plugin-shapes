@@ -68,6 +68,7 @@ def test_setup(graph_setup: GraphSetupFixture) -> None:
     _ = graph_setup
 
 
+@pytest.mark.parametrize("graph_setup", [False], indirect=["graph_setup"])
 def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
     """Test plugin execution"""
     plugin = ShapesPlugin(
