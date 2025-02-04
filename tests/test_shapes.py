@@ -26,6 +26,7 @@ class GraphSetupFixture:
     project_name: str = "shapes_plugin_test"
     shapes_iri: str = "http://docker.localhost/my-persons-shapes"
     shapes_file: str = str(FIXTURE_DIR / "test_shapes.ttl")
+    shapes_file_add_init: str = str(FIXTURE_DIR / "test_shapes_add_init.ttl")
     dataset_iri: str = "http://docker.localhost/my-persons"
     dataset_file: str = str(FIXTURE_DIR / "test_shapes_data.ttl")
     catalog_iri: str = "https://vocab.eccenca.com/shacl/"
@@ -40,7 +41,13 @@ ASK
 
 
 @pytest.fixture
-def graph_setup(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]:
+def add_to_graph() -> bool:
+    """Add to graph parameter fixture"""
+    return False
+
+
+@pytest.fixture
+def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixture, Any, None]:
     """Graph setup fixture"""
     if os.environ.get("CMEM_BASE_URI", "") == "":
         pytest.skip("Needs CMEM configuration")
@@ -48,8 +55,10 @@ def graph_setup(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]:
     _ = GraphSetupFixture()
     export_zip = str(tmp_path / "export.store.zip")
     run(["admin", "store", "export", export_zip])
+
     run(["graph", "import", _.dataset_file, _.dataset_iri])
-    run(["graph", "import", _.dataset_file, _.dataset_iri])
+    if add_to_graph:
+        run(["graph", "import", _.shapes_file_add_init, _.shapes_iri])
     run_without_assertion(["project", "delete", _.project_name])
     run(["project", "create", _.project_name])
     yield _
@@ -88,6 +97,7 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
         ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
 
 
+@pytest.mark.parametrize("add_to_graph", [True])
 def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
     """Test plugin execution with "add to graph" setting"""
     plugin = ShapesPlugin(
@@ -100,7 +110,7 @@ def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
     result_graph = Graph().parse(data=result_graph_turtle)
-    test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
+    test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
     assert isomorphic(result_graph, test)
 
 

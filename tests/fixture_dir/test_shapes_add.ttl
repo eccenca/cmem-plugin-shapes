@@ -1,0 +1,69 @@
+@prefix : <https://ns.eccenca.com/data/config/> .
+@prefix ns1: <https://vocab.eccenca.com/shui/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix void: <http://rdfs.org/ns/void#> .
+
+
+<http://docker.localhost/my-persons-shapes/7daca3e6-86fc-515e-a96e-1d44e5b2828e> a
+    sh:NodeShape;
+  sh:name "Person (foaf:)"@en;
+  rdfs:label "Person (foaf:)"@en;
+  sh:property <http://docker.localhost/my-persons-shapes/af9c7f1a-9a2c-5151-ba53-1d8797e408e1>,
+    <http://docker.localhost/my-persons-shapes/63efb8eb-7402-52f6-a3cf-107cb1c54b1e>,
+    <http://docker.localhost/my-persons-shapes/86fc9801-0605-5fb8-a417-da26a9ba0a71>,
+    <http://docker.localhost/my-persons-shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>,
+    <http://docker.localhost/my-persons-shapes/da1b0b28-9c51-55c3-a963-2337006693de>;
+  sh:targetClass foaf:Person .
+
+<http://docker.localhost/my-persons-shapes/af9c7f1a-9a2c-5151-ba53-1d8797e408e1> a
+    sh:PropertyShape;
+  sh:name "← knows (foaf:)"@en;
+  rdfs:label "← knows (foaf:)"@en;
+  sh:nodeKind sh:IRI;
+  sh:path foaf:knows;
+  ns1:showAlways true;
+  ns1:inversePath true .
+
+<http://docker.localhost/my-persons-shapes> a ns1:ShapeCatalog;
+  rdfs:label "Shapes for http://docker.localhost/my-persons" .
+
+<http://docker.localhost/my-persons-shapes/63efb8eb-7402-52f6-a3cf-107cb1c54b1e> a
+    sh:PropertyShape;
+  sh:name "knows (foaf:)"@en;
+  rdfs:label "knows (foaf:)"@en;
+  sh:nodeKind sh:IRI;
+  sh:path foaf:knows;
+  ns1:showAlways true .
+
+<http://docker.localhost/my-persons-shapes/8d8a3cbe-f6d7-5257-8618-1e08fbb0cbce> a
+    sh:NodeShape;
+  sh:name "Dataset (void:)"@en;
+  rdfs:label "Dataset (void:)"@en;
+  sh:property <http://docker.localhost/my-persons-shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>;
+  sh:targetClass void:Dataset .
+
+<http://docker.localhost/my-persons-shapes/86fc9801-0605-5fb8-a417-da26a9ba0a71> a
+    sh:PropertyShape;
+  sh:name "familyName (foaf:)"@en;
+  rdfs:label "familyName (foaf:)"@en;
+  sh:nodeKind sh:Literal;
+  sh:path foaf:familyName;
+  ns1:showAlways true .
+
+<http://docker.localhost/my-persons-shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741> a
+    sh:PropertyShape;
+  sh:name "label (rdfs:)"@en;
+  rdfs:label "label (rdfs:)"@en;
+  sh:nodeKind sh:Literal;
+  sh:path rdfs:label;
+  ns1:showAlways true .
+
+<http://docker.localhost/my-persons-shapes/da1b0b28-9c51-55c3-a963-2337006693de> a
+    sh:PropertyShape;
+  sh:name "comment (rdfs:)"@en;
+  rdfs:label "comment (rdfs:)"@en;
+  sh:nodeKind sh:Literal;
+  sh:path rdfs:comment;
+  ns1:showAlways true .
