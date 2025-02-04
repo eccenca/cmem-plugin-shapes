@@ -50,6 +50,7 @@ def graph_setup(tmp_path: Path, add: bool = False) -> Generator[GraphSetupFixtur
     export_zip = str(tmp_path / "export.store.zip")
     run(["admin", "store", "export", export_zip])
     if add:
+        raise OSError("test")
         run(["graph", "import", _.dataset_file_add, _.dataset_iri])
     else:
         run(["graph", "import", _.dataset_file, _.dataset_iri])
