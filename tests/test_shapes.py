@@ -41,9 +41,13 @@ ASK
 
 
 @pytest.fixture
-def graph_setup(
-    tmp_path: Path, request: pytest.FixtureRequest
-) -> Generator[GraphSetupFixture, Any, None]:
+def add_to_graph() -> bool:
+    """Add to graph parameter fixture"""
+    return False
+
+
+@pytest.fixture
+def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixture, Any, None]:
     """Graph setup fixture"""
     if os.environ.get("CMEM_BASE_URI", "") == "":
         pytest.skip("Needs CMEM configuration")
@@ -51,7 +55,7 @@ def graph_setup(
     _ = GraphSetupFixture()
     export_zip = str(tmp_path / "export.store.zip")
     run(["admin", "store", "export", export_zip])
-    if request.param:
+    if add_to_graph:
         raise OSError("test")
         run(["graph", "import", _.dataset_file_add, _.dataset_iri])
     else:
@@ -68,7 +72,6 @@ def test_setup(graph_setup: GraphSetupFixture) -> None:
     _ = graph_setup
 
 
-@pytest.mark.parametrize("graph_setup", [False], indirect=["graph_setup"])
 def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
     """Test plugin execution"""
     plugin = ShapesPlugin(
@@ -95,7 +98,7 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
         ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
 
 
-@pytest.mark.parametrize("graph_setup", [True], indirect=["graph_setup"])
+@pytest.mark.parametrize("add_to_graph", [True])
 def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
     """Test plugin execution with "add to graph" setting"""
     plugin = ShapesPlugin(
