@@ -23,7 +23,6 @@ from tests.utils import TestExecutionContext
 class GraphSetupFixture:
     """Graph Setup Fixture"""
 
-    add_to_graph: bool = False
     project_name: str = "shapes_plugin_test"
     shapes_iri: str = "http://docker.localhost/my-persons-shapes"
     shapes_file: str = str(FIXTURE_DIR / "test_shapes.ttl")
@@ -42,7 +41,9 @@ ASK
 
 
 @pytest.fixture
-def graph_setup(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]:
+def graph_setup(
+    tmp_path: Path, add_to_graph: bool = False
+) -> Generator[GraphSetupFixture, Any, None]:
     """Graph setup fixture"""
     if os.environ.get("CMEM_BASE_URI", "") == "":
         pytest.skip("Needs CMEM configuration")
@@ -50,7 +51,7 @@ def graph_setup(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]:
     _ = GraphSetupFixture()
     export_zip = str(tmp_path / "export.store.zip")
     run(["admin", "store", "export", export_zip])
-    if _.add_to_graph:
+    if add_to_graph:
         raise OSError("test")
         run(["graph", "import", _.dataset_file_add, _.dataset_iri])
     else:
@@ -93,9 +94,9 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
         ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
 
 
-def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
+@pytest.mark.parametrize("add_to_graph", [(True,)])
+def test_workflow_execution_add(graph_setup: GraphSetupFixture, add_to_graph: bool) -> None:  # noqa: ARG001
     """Test plugin execution with "add to graph" setting"""
-    graph_setup.add_to_graph = True
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
