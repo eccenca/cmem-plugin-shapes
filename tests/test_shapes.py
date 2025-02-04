@@ -92,8 +92,8 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
         ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
 
 
-@pytest.mark.parametrize("add",  [("True")])
-def test_workflow_execution_add(graph_setup: GraphSetupFixture, add: bool) -> None:
+@pytest.mark.parametrize("add", [(True)])
+def test_workflow_execution_add(graph_setup: GraphSetupFixture, add: bool) -> None:  # noqa: ARG001
     """Test plugin execution with "add to graph" setting"""
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
