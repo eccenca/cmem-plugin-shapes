@@ -5,7 +5,7 @@ name: check
 on:
   # Triggers the workflow on push or pull request events but only for the "main" and "develop" branch
   push:
-    branches: [main, develop, feature/optionToAddResultToExistingGraph]
+    branches: [main, develop, feature/optionToAddResultToExistingGraph, feature/useFixtureParameter]
   pull_request:
     branches: [main, develop]
 
