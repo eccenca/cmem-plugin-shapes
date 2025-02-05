@@ -397,7 +397,8 @@ class ShapesPlugin(WorkflowPlugin):
         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
         INSERT {{
             GRAPH <{self.shapes_graph_iri}> {{
-                <{self.shapes_graph_iri}> dcterms:modified ?current
+                <{self.shapes_graph_iri}> dcterms:modified ?previous
+                FILTER(?previous < xsd:dateTime("{now}"))
             }}
         }}
         WHERE {{
