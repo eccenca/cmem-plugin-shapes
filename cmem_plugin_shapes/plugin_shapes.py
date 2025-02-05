@@ -349,7 +349,7 @@ class ShapesPlugin(WorkflowPlugin):
             replace=True,
             content_type="application/n-triples",
         )
-        now = datetime.now(UTC).isoformat(timespec="milliseconds")
+        now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
         query_add_created = f"""
             PREFIX dcterms: <http://purl.org/dc/terms/>
             PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
@@ -370,7 +370,7 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
         post_update(query_data)
-        now = datetime.now(UTC).isoformat(timespec="milliseconds")
+        now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
 
         query_remove_modified = f"""
         PREFIX dcterms: <http://purl.org/dc/terms/>
