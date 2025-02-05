@@ -27,7 +27,7 @@ from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import BoolParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
-from rdflib import DCTERMS, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
+from rdflib import RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
 from validators import url
 
@@ -340,33 +340,75 @@ class ShapesPlugin(WorkflowPlugin):
         setup_cmempy_user_access(self.context.user)
         post_update(query)
 
-    def add_to_graph(self, shapes_graph: Graph, now: str) -> None:
-        """Add SHACL shapes x to existing graph"""
-        query = f"""
-        PREFIX dcterms: <http://purl.org/dc/terms/> .
+    def create_graph(self, shapes_graph: Graph) -> None:
+        """Create or replace SHACL shapes graph"""
+        nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
+        post_streamed(
+            self.shapes_graph_iri,
+            nt_file,
+            replace=True,
+            content_type="application/n-triples",
+        )
+        now = datetime.now(UTC).isoformat(timespec="milliseconds")
+        query_add_created = f"""
+            PREFIX dcterms: <http://purl.org/dc/terms/>
+            PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+            INSERT DATA {{
+                GRAPH <{self.shapes_graph_iri}> {{
+                    <{self.shapes_graph_iri}> dcterms:created "{now}"^^xsd:dateTime
+                }}
+            }}
+        """
+        post_update(query_add_created)
+
+    def add_to_graph(self, shapes_graph: Graph) -> None:
+        """Add SHACL shapes to existing graph"""
+        query_data = f"""
+        INSERT DATA {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                {shapes_graph.serialize(format="nt", encoding="utf-8").decode()}
+            }}
+        }}"""
+        post_update(query_data)
+        now = datetime.now(UTC).isoformat(timespec="milliseconds")
+
+        query_remove_modified = f"""
+        PREFIX dcterms: <http://purl.org/dc/terms/>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
         DELETE {{
             GRAPH <{self.shapes_graph_iri}> {{
                 <{self.shapes_graph_iri}> dcterms:modified ?previous
-            }}
-        }}
-        INSERT {{
-            GRAPH <{self.shapes_graph_iri}> {{
-                <{self.shapes_graph_iri}> dcterms:modified ?current .
-                {shapes_graph.serialize(format="nt", encoding="utf-8").decode()}
             }}
         }}
         WHERE {{
             GRAPH <{self.shapes_graph_iri}> {{
                 OPTIONAL {{
                     <{self.shapes_graph_iri}> dcterms:modified ?previous
+                    FILTER(?previous < xsd:dateTime("{now}"))
                 }}
             }}
+        }}
+        """
+        setup_cmempy_user_access(self.context.user)
+        post_update(query_remove_modified)
+
+        query_add_modified = f"""
+        PREFIX dcterms: <http://purl.org/dc/terms/>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+        INSERT {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                <{self.shapes_graph_iri}> dcterms:modified ?current
+            }}
+        }}
+        WHERE {{ 
+            GRAPH <{self.shapes_graph_iri}> {{
+                OPTIONAL {{ <{self.shapes_graph_iri}> dcterms:modified ?datetime }}
+            }}
             VALUES ?undef {{ UNDEF }}
-            BIND(IF(!BOUND(?previous) || ?previous < "{now}"^xsd:dateTime,
-                "{now}"^xsd:dateTime, ?undef) AS ?current)
+            BIND(IF(!BOUND(?datetime), xsd:dateTime("{now}"), ?undef) AS ?current)
         }}
         """  # noqa: S608
-        post_update(query)
+        post_update(query_add_modified)
 
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
         """Execute plugin"""
@@ -385,26 +427,11 @@ class ShapesPlugin(WorkflowPlugin):
         shapes_graph = self.init_shapes_graph()
         shapes_graph, shapes_count = self.create_shapes(shapes_graph)
 
-        now = datetime.now(UTC).isoformat(timespec="milliseconds") + "Z"
-
         setup_cmempy_user_access(context.user)
         if self.existing_graph != "add" or not graph_exists:
-            shapes_graph.add(
-                (
-                    URIRef(self.shapes_graph_iri),
-                    DCTERMS.created,
-                    Literal(now, datatype=XSD.dateTime),
-                )
-            )
-            nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
-            post_streamed(
-                self.shapes_graph_iri,
-                nt_file,
-                replace=True,
-                content_type="application/n-triples",
-            )
+            self.create_graph(shapes_graph)
         else:
-            self.add_to_graph(shapes_graph, now)
+            self.add_to_graph(shapes_graph)
 
         self.context.report.update(
             ExecutionReport(

@@ -122,6 +122,7 @@ def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
     modified = list(result_graph.objects(predicate=DCTERMS.modified))
     assert len(modified) == 1
     assert DATETIME_PATTERN.match(str(modified[0]))
+    assert str(modified[0]) != "2025-02-05T13:28:07.246000+00:00"
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
     test.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))

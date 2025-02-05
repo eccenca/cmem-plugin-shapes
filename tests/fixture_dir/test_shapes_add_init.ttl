@@ -17,7 +17,7 @@
 
 <http://docker.localhost/my-persons-shapes> a ns1:ShapeCatalog;
   rdfs:label "Shapes for http://docker.localhost/my-persons" ;
-  dcterms:modified "2025-02-05T12:10:47.744+00:00"^^xsd:dateTime .
+  dcterms:modified "2025-02-05T13:28:07.246000+00:00"^^xsd:dateTime .
 
 
 <http://docker.localhost/my-persons-shapes/da1b0b28-9c51-55c3-a963-2337006693de> a
