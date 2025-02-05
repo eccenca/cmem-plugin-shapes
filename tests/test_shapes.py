@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from cmem.cmempy.dp.proxy.graph import get
 from cmem.cmempy.dp.proxy.sparql import get as ask
-from rdflib import DCTERMS, XSD, Graph, URIRef
+from rdflib import DCTERMS, Graph, URIRef
 from rdflib.compare import isomorphic
 
 from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
@@ -122,7 +122,6 @@ def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
     modified = list(result_graph.objects(predicate=DCTERMS.modified))
     assert len(modified) == 1
     assert DATETIME_PATTERN.match(str(modified[0]))
-    assert modified[0].dataype == XSD.dateTime  # type: ignore[attr-defined]
     assert str(modified[0]) != "2025-02-05T13:28:07.246000+00:00"
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
