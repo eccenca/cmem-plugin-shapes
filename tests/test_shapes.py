@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from cmem.cmempy.dp.proxy.graph import get
 from cmem.cmempy.dp.proxy.sparql import get as ask
-from rdflib import Graph
+from rdflib import DCTERMS, Graph, URIRef
 from rdflib.compare import isomorphic
 
 from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
@@ -83,6 +83,7 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
     result_graph = Graph().parse(data=result_graph_turtle)
+    result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     assert isomorphic(result_graph, test)
     with pytest.raises(
@@ -110,6 +111,7 @@ def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
     result_graph = Graph().parse(data=result_graph_turtle)
+    result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
     assert isomorphic(result_graph, test)
 
@@ -159,6 +161,7 @@ def test_prefix_cc_fetching(graph_setup: GraphSetupFixture) -> None:
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
     result_graph = Graph().parse(data=result_graph_turtle)
+    result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     assert isomorphic(result_graph, test)
 

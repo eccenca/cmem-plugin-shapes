@@ -4,6 +4,7 @@ import json
 import re
 from collections import OrderedDict
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote_plus
@@ -26,7 +27,7 @@ from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import BoolParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
-from rdflib import RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
+from rdflib import DCTERMS, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
 from validators import url
 
@@ -366,6 +367,17 @@ class ShapesPlugin(WorkflowPlugin):
 
         shapes_graph = self.init_shapes_graph()
         shapes_graph, shapes_count = self.create_shapes(shapes_graph)
+
+        now = datetime.now(UTC).isoformat(timespec="milliseconds") + "Z"
+
+        if self.existing_graph != "add" or not graph_exists:
+            dcterms_prop = DCTERMS.created
+        else:
+            dcterms_prop = DCTERMS.modified
+
+        shapes_graph.add(
+            (URIRef(self.shapes_graph_iri), dcterms_prop, Literal(now, datatype=XSD.dateTime))
+        )
 
         setup_cmempy_user_access(context.user)
         if self.existing_graph != "add" or not graph_exists:
