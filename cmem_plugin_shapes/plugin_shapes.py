@@ -400,7 +400,7 @@ class ShapesPlugin(WorkflowPlugin):
                 <{self.shapes_graph_iri}> dcterms:modified ?current
             }}
         }}
-        WHERE {{ 
+        WHERE {{
             GRAPH <{self.shapes_graph_iri}> {{
                 OPTIONAL {{ <{self.shapes_graph_iri}> dcterms:modified ?datetime }}
             }}
