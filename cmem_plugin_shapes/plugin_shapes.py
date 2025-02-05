@@ -391,7 +391,7 @@ class ShapesPlugin(WorkflowPlugin):
             shapes_graph.add(
                 (
                     URIRef(self.shapes_graph_iri),
-                    DCTERMS.modifed,
+                    DCTERMS.modified,
                     Literal(now, datatype=XSD.dateTime),
                 )
             )
