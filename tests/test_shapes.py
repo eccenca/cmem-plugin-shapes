@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from cmem.cmempy.dp.proxy.graph import get
 from cmem.cmempy.dp.proxy.sparql import get as ask
-from rdflib import DCTERMS, Graph, URIRef, XSD
+from rdflib import DCTERMS, XSD, Graph, URIRef
 from rdflib.compare import isomorphic
 
 from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
