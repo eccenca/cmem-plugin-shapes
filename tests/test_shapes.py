@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 from collections.abc import Generator
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +18,10 @@ from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
 from tests import FIXTURE_DIR
 from tests.cmemc_command_utils import run, run_without_assertion
 from tests.utils import TestExecutionContext
+
+DATETIME_PATTERN = re.compile(
+    "^[1-9][0-9]{3}-[0-1][1-9]-[0-3][1-9]T[0-2][1-9]:[0-5][0-9]:[0-5][0-9].[0-9]{3}Z$"
+)
 
 
 @dataclass
@@ -83,6 +88,9 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
     result_graph = Graph().parse(data=result_graph_turtle)
+    created = list(result_graph.objects(predicate=DCTERMS.created))
+    assert len(created) == 1
+    assert DATETIME_PATTERN.match(str(created[0]))
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     assert isomorphic(result_graph, test)
@@ -111,6 +119,9 @@ def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
     result_graph = Graph().parse(data=result_graph_turtle)
+    modified = list(result_graph.objects(predicate=DCTERMS.modified))
+    assert len(modified) == 1
+    assert DATETIME_PATTERN.match(str(modified[0]))
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
     assert isomorphic(result_graph, test)
@@ -161,6 +172,9 @@ def test_prefix_cc_fetching(graph_setup: GraphSetupFixture) -> None:
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
     result_graph = Graph().parse(data=result_graph_turtle)
+    created = list(result_graph.objects(predicate=DCTERMS.created))
+    assert len(created) == 1
+    assert DATETIME_PATTERN.match(str(created[0]))
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     assert isomorphic(result_graph, test)
