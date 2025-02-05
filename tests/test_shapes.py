@@ -91,6 +91,9 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
     created = list(result_graph.objects(predicate=DCTERMS.created))
     assert len(created) == 1
     assert DATETIME_PATTERN.match(str(created[0]))
+    dirs = dir(created[0])
+    dirs2 = [n for n in dirs if n.startswith("d")]
+    raise OSError(dirs2)
     assert created[0].dataype == XSD.dateTime  # type: ignore[attr-defined]
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
