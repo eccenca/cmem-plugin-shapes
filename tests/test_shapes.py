@@ -124,6 +124,7 @@ def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
     assert DATETIME_PATTERN.match(str(modified[0]))
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
+    test.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
     assert isomorphic(result_graph, test)
 
 
