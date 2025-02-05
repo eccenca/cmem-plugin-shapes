@@ -370,17 +370,15 @@ class ShapesPlugin(WorkflowPlugin):
 
         now = datetime.now(UTC).isoformat(timespec="milliseconds") + "Z"
 
-        if self.existing_graph != "add" or not graph_exists:
-            dcterms_prop = DCTERMS.created
-        else:
-            dcterms_prop = DCTERMS.modified
-
-        shapes_graph.add(
-            (URIRef(self.shapes_graph_iri), dcterms_prop, Literal(now, datatype=XSD.dateTime))
-        )
-
         setup_cmempy_user_access(context.user)
         if self.existing_graph != "add" or not graph_exists:
+            shapes_graph.add(
+                (
+                    URIRef(self.shapes_graph_iri),
+                    DCTERMS.created,
+                    Literal(now, datatype=XSD.dateTime),
+                )
+            )
             nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
             post_streamed(
                 self.shapes_graph_iri,
@@ -389,6 +387,14 @@ class ShapesPlugin(WorkflowPlugin):
                 content_type="application/n-triples",
             )
         else:
+            shapes_graph.remove((URIRef(self.shapes_graph_iri), DCTERMS.modified, None))
+            shapes_graph.add(
+                (
+                    URIRef(self.shapes_graph_iri),
+                    DCTERMS.modifed,
+                    Literal(now, datatype=XSD.dateTime),
+                )
+            )
             self.add_to_graph(shapes_graph)
 
         self.context.report.update(
