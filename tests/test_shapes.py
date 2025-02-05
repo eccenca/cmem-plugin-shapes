@@ -20,7 +20,7 @@ from tests.cmemc_command_utils import run, run_without_assertion
 from tests.utils import TestExecutionContext
 
 DATETIME_PATTERN = re.compile(
-    "^[1-9][0-9]{3}-[0-1][1-9]-[0-3][1-9]T[0-2][1-9]:[0-5][0-9]:[0-5][0-9].[0-9]{3}Z$"
+    "^[1-9][0-9]{3}-[0-1][1-9]-[0-3][1-9]T[0-2][1-9]:[0-5][0-9]:[0-5][0-9].[0-9]{3}000\\+00:00$"
 )
 
 
