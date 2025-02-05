@@ -2,23 +2,26 @@
 
 import json
 import os
+import re
 from collections.abc import Generator
 from dataclasses import dataclass
 from pathlib import Path
-from shutil import rmtree
-from tempfile import mkdtemp
 from typing import Any
 
 import pytest
 from cmem.cmempy.dp.proxy.graph import get
 from cmem.cmempy.dp.proxy.sparql import get as ask
-from rdflib import Graph
+from rdflib import DCTERMS, Graph, URIRef
 from rdflib.compare import isomorphic
 
 from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
 from tests import FIXTURE_DIR
 from tests.cmemc_command_utils import run, run_without_assertion
-from tests.utils import TestExecutionContext, needs_cmem
+from tests.utils import TestExecutionContext
+
+DATETIME_PATTERN = re.compile(
+    "^[1-9][0-9]{3}-[0-1][1-9]-[0-3][1-9]T[0-2][1-9]:[0-5][0-9]:[0-5][0-9].[0-9]{3}000\\+00:00$"
+)
 
 
 @dataclass
@@ -28,6 +31,7 @@ class GraphSetupFixture:
     project_name: str = "shapes_plugin_test"
     shapes_iri: str = "http://docker.localhost/my-persons-shapes"
     shapes_file: str = str(FIXTURE_DIR / "test_shapes.ttl")
+    shapes_file_add_init: str = str(FIXTURE_DIR / "test_shapes_add_init.ttl")
     dataset_iri: str = "http://docker.localhost/my-persons"
     dataset_file: str = str(FIXTURE_DIR / "test_shapes_data.ttl")
     catalog_iri: str = "https://vocab.eccenca.com/shacl/"
@@ -42,7 +46,13 @@ ASK
 
 
 @pytest.fixture
-def graph_setup(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]:
+def add_to_graph() -> bool:
+    """Add to graph parameter fixture"""
+    return False
+
+
+@pytest.fixture
+def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixture, Any, None]:
     """Graph setup fixture"""
     if os.environ.get("CMEM_BASE_URI", "") == "":
         pytest.skip("Needs CMEM configuration")
@@ -50,7 +60,10 @@ def graph_setup(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]:
     _ = GraphSetupFixture()
     export_zip = str(tmp_path / "export.store.zip")
     run(["admin", "store", "export", export_zip])
+
     run(["graph", "import", _.dataset_file, _.dataset_iri])
+    if add_to_graph:
+        run(["graph", "import", _.shapes_file_add_init, _.shapes_iri])
     run_without_assertion(["project", "delete", _.project_name])
     run(["project", "create", _.project_name])
     yield _
@@ -68,13 +81,17 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        overwrite=True,
+        existing_graph="replace",
         import_shapes=False,
         prefix_cc=False,
     )
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
     result_graph = Graph().parse(data=result_graph_turtle)
+    created = list(result_graph.objects(predicate=DCTERMS.created))
+    assert len(created) == 1
+    assert DATETIME_PATTERN.match(str(created[0]))
+    result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     assert isomorphic(result_graph, test)
     with pytest.raises(
@@ -83,10 +100,33 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
         ShapesPlugin(
             data_graph_iri=graph_setup.dataset_iri,
             shapes_graph_iri=graph_setup.shapes_iri,
-            overwrite=False,
+            existing_graph="stop",
             import_shapes=False,
             prefix_cc=False,
         ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+
+
+@pytest.mark.parametrize("add_to_graph", [True])
+def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
+    """Test plugin execution with "add to graph" setting"""
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph="add",
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
+    result_graph = Graph().parse(data=result_graph_turtle)
+    modified = list(result_graph.objects(predicate=DCTERMS.modified))
+    assert len(modified) == 1
+    assert DATETIME_PATTERN.match(str(modified[0]))
+    assert str(modified[0]) != "2025-02-05T13:28:07.246000+00:00"
+    result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
+    test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
+    test.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
+    assert isomorphic(result_graph, test)
 
 
 def test_failing_inits(graph_setup: GraphSetupFixture) -> None:
@@ -95,7 +135,7 @@ def test_failing_inits(graph_setup: GraphSetupFixture) -> None:
         ShapesPlugin(
             data_graph_iri="no iri",
             shapes_graph_iri=graph_setup.shapes_iri,
-            overwrite=False,
+            existing_graph="stop",
             import_shapes=False,
             prefix_cc=False,
         )
@@ -103,7 +143,7 @@ def test_failing_inits(graph_setup: GraphSetupFixture) -> None:
         ShapesPlugin(
             data_graph_iri=graph_setup.dataset_iri,
             shapes_graph_iri="no iri",
-            overwrite=False,
+            existing_graph="stop",
             import_shapes=False,
             prefix_cc=False,
         )
@@ -127,13 +167,17 @@ def test_prefix_cc_fetching(graph_setup: GraphSetupFixture) -> None:
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        overwrite=True,
+        existing_graph="replace",
         import_shapes=False,
         prefix_cc=True,
     )
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
     result_graph = Graph().parse(data=result_graph_turtle)
+    created = list(result_graph.objects(predicate=DCTERMS.created))
+    assert len(created) == 1
+    assert DATETIME_PATTERN.match(str(created[0]))
+    result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     assert isomorphic(result_graph, test)
 
@@ -143,7 +187,7 @@ def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
     ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        overwrite=True,
+        existing_graph="replace",
         import_shapes=False,
         prefix_cc=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
@@ -151,7 +195,7 @@ def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
     ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        overwrite=True,
+        existing_graph="replace",
         import_shapes=True,
         prefix_cc=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
