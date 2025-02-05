@@ -340,15 +340,32 @@ class ShapesPlugin(WorkflowPlugin):
         setup_cmempy_user_access(self.context.user)
         post_update(query)
 
-    def add_to_graph(self, shapes_graph: Graph) -> None:
+    def add_to_graph(self, shapes_graph: Graph, now: str) -> None:
         """Add SHACL shapes x to existing graph"""
         query = f"""
-        INSERT DATA {{
+        PREFIX dcterms: <http://purl.org/dc/terms/> .
+        DELETE {{
             GRAPH <{self.shapes_graph_iri}> {{
+                <{self.shapes_graph_iri}> dcterms:modified ?previous
+            }}
+        }}
+        INSERT {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                <{self.shapes_graph_iri}> dcterms:modified ?current .
                 {shapes_graph.serialize(format="nt", encoding="utf-8").decode()}
             }}
         }}
-        """
+        WHERE {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                OPTIONAL {{
+                    <{self.shapes_graph_iri}> dcterms:modified ?previous
+                }}
+            }}
+            VALUES ?undef {{ UNDEF }}
+            BIND(IF(!BOUND(?previous) || ?previous < "{now}"^xsd:dateTime,
+                "{now}"^xsd:dateTime, ?undef) AS ?current)
+        }}
+        """  # noqa: S608
         post_update(query)
 
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
@@ -387,15 +404,7 @@ class ShapesPlugin(WorkflowPlugin):
                 content_type="application/n-triples",
             )
         else:
-            shapes_graph.remove((URIRef(self.shapes_graph_iri), DCTERMS.modified, None))
-            shapes_graph.add(
-                (
-                    URIRef(self.shapes_graph_iri),
-                    DCTERMS.modified,
-                    Literal(now, datatype=XSD.dateTime),
-                )
-            )
-            self.add_to_graph(shapes_graph)
+            self.add_to_graph(shapes_graph, now)
 
         self.context.report.update(
             ExecutionReport(
