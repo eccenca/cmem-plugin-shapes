@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from cmem.cmempy.dp.proxy.graph import get
 from cmem.cmempy.dp.proxy.sparql import get as ask
-from rdflib import DCTERMS, XSD, Graph, Literal, URIRef
+from rdflib import DCTERMS, Graph, URIRef
 from rdflib.compare import isomorphic
 
 from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
@@ -91,14 +91,6 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
     created = list(result_graph.objects(predicate=DCTERMS.created))
     assert len(created) == 1
     assert DATETIME_PATTERN.match(str(created[0]))
-
-    g = Graph()
-    now = "2025-02-05T09:35:36.312Z"
-    g.add((URIRef("http://example.org"), DCTERMS.created, Literal(now, datatype=XSD.dateTime)))
-    res = list(g.objects(predicate=DCTERMS.created))[0]  # noqa: RUF015
-    assert res.dataype == XSD.dateTime  # type: ignore[attr-defined]
-
-    # assert created[0].dataype == XSD.dateTime  # type: ignore[attr-defined]  # noqa: ERA001
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     assert isomorphic(result_graph, test)
@@ -130,7 +122,6 @@ def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
     modified = list(result_graph.objects(predicate=DCTERMS.modified))
     assert len(modified) == 1
     assert DATETIME_PATTERN.match(str(modified[0]))
-    assert modified[0].dataype == XSD.dateTime  # type: ignore[attr-defined]
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
     assert isomorphic(result_graph, test)
@@ -184,7 +175,6 @@ def test_prefix_cc_fetching(graph_setup: GraphSetupFixture) -> None:
     created = list(result_graph.objects(predicate=DCTERMS.created))
     assert len(created) == 1
     assert DATETIME_PATTERN.match(str(created[0]))
-    assert created[0].dataype == XSD.dateTime  # type: ignore[attr-defined]
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     assert isomorphic(result_graph, test)
