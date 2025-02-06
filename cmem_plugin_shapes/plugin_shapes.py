@@ -177,7 +177,7 @@ class ShapesPlugin(WorkflowPlugin):
         if prefixes_cc:
             prefixes = self.format_prefixes(prefixes_cc, prefixes)
 
-        return {k: tuple(sorted(set(v))) for k, v in prefixes.items()}
+        return prefixes
 
     def get_name(self, iri: str) -> str:
         """Generate shape name from IRI"""
