@@ -177,7 +177,7 @@ class ShapesPlugin(WorkflowPlugin):
         if prefixes_cc:
             prefixes = self.format_prefixes(prefixes_cc, prefixes)
 
-        return {k: tuple(v) for k, v in prefixes.items()}
+        return prefixes
 
     def get_name(self, iri: str) -> str:
         """Generate shape name from IRI"""
@@ -194,7 +194,7 @@ class ShapesPlugin(WorkflowPlugin):
             raise ValueError(f"Invalid class or property ({iri}).") from exc
 
         if namespace in self.prefixes:
-            prefixes = self.prefixes[namespace]
+            prefixes = tuple(self.prefixes[namespace])
             prefix = prefixes[0]
             if title_json["fromIri"]:
                 if title.startswith(prefixes):
