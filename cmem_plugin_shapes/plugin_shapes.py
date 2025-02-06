@@ -2,9 +2,8 @@
 
 import json
 import re
-from collections import OrderedDict
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote_plus
@@ -20,7 +19,6 @@ from cmem.cmempy.workspace.projects.project import get_prefixes
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.description import Icon, Plugin, PluginParameter
 from cmem_plugin_base.dataintegration.entity import Entities
-from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.graph import GraphParameterType
 from cmem_plugin_base.dataintegration.parameter.multiline import MultilineStringParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
@@ -80,20 +78,12 @@ def str2bool(value: str) -> bool:
             description="The Knowledge Graph, the generated shapes will be added to.",
         ),
         PluginParameter(
-            param_type=ChoiceParameterType(
-                OrderedDict(
-                    {
-                        "add": "add result to graph",
-                        "replace": "replace existing graph with result",
-                        "stop": "stop workflow if output graph exists",
-                    }
-                )
-            ),
-            name="existing_graph",
-            label="Handle existing output graph",
-            description="Add result to the existing graph, overwrite the existing graph with the "
-            "result, or stop the workflow if theh output graph already exists",
-            default_value="stop",
+            param_type=BoolParameterType(),
+            name="overwrite",
+            label="Overwrite Shape Catalog",
+            description="""Overwrite the output graph if it exists. If disabled and
+            the graph exists, the execution will fail.""",
+            default_value=False,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
@@ -124,7 +114,7 @@ class ShapesPlugin(WorkflowPlugin):
         self,
         data_graph_iri: str = "",
         shapes_graph_iri: str = "",
-        existing_graph: str = "stop",
+        overwrite: bool = False,
         import_shapes: bool = False,
         prefix_cc: bool = True,
         ignore_properties: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
@@ -140,7 +130,7 @@ class ShapesPlugin(WorkflowPlugin):
             if not url(_):
                 raise ValueError(f"Ignored property IRI invalid: '{_}'")
             self.ignore_properties.append(_)
-        self.existing_graph = existing_graph
+        self.overwrite = overwrite
         self.import_shapes = import_shapes
         self.prefix_cc = prefix_cc
         self.input_ports = FixedNumberOfInputs([])
@@ -340,84 +330,14 @@ class ShapesPlugin(WorkflowPlugin):
         setup_cmempy_user_access(self.context.user)
         post_update(query)
 
-    def create_graph(self, shapes_graph: Graph) -> None:
-        """Create or replace SHACL shapes graph"""
-        nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
-        post_streamed(
-            self.shapes_graph_iri,
-            nt_file,
-            replace=True,
-            content_type="application/n-triples",
-        )
-        now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
-        query_add_created = f"""
-            PREFIX dcterms: <http://purl.org/dc/terms/>
-            PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-            INSERT DATA {{
-                GRAPH <{self.shapes_graph_iri}> {{
-                    <{self.shapes_graph_iri}> dcterms:created "{now}"^^xsd:dateTime
-                }}
-            }}
-        """
-        post_update(query_add_created)
-
-    def add_to_graph(self, shapes_graph: Graph) -> None:
-        """Add SHACL shapes to existing graph"""
-        query_data = f"""
-        INSERT DATA {{
-            GRAPH <{self.shapes_graph_iri}> {{
-                {shapes_graph.serialize(format="nt", encoding="utf-8").decode()}
-            }}
-        }}"""
-        post_update(query_data)
-        now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
-
-        query_remove_modified = f"""
-        PREFIX dcterms: <http://purl.org/dc/terms/>
-        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-        DELETE {{
-            GRAPH <{self.shapes_graph_iri}> {{
-                <{self.shapes_graph_iri}> dcterms:modified ?previous
-            }}
-        }}
-        WHERE {{
-            GRAPH <{self.shapes_graph_iri}> {{
-                OPTIONAL {{
-                    <{self.shapes_graph_iri}> dcterms:modified ?previous
-                    FILTER(?previous < xsd:dateTime("{now}"))
-                }}
-            }}
-        }}
-        """
-        setup_cmempy_user_access(self.context.user)
-        post_update(query_remove_modified)
-
-        query_add_modified = f"""
-        PREFIX dcterms: <http://purl.org/dc/terms/>
-        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-        INSERT {{
-            GRAPH <{self.shapes_graph_iri}> {{
-                <{self.shapes_graph_iri}> dcterms:modified ?current
-            }}
-        }}
-        WHERE {{
-            GRAPH <{self.shapes_graph_iri}> {{
-                OPTIONAL {{ <{self.shapes_graph_iri}> dcterms:modified ?datetime }}
-            }}
-            VALUES ?undef {{ UNDEF }}
-            BIND(IF(!BOUND(?datetime), xsd:dateTime("{now}"), ?undef) AS ?current)
-        }}
-        """  # noqa: S608
-        post_update(query_add_modified)
-
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
         """Execute plugin"""
         _ = inputs
         setup_cmempy_user_access(context.user)
 
-        graph_exists = self.shapes_graph_iri in [graph["iri"] for graph in get_graphs_list()]
-
-        if self.existing_graph == "stop" and graph_exists:
+        if not self.overwrite and self.shapes_graph_iri in [
+            graph["iri"] for graph in get_graphs_list()
+        ]:
             raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists.")
 
         self.context = context
@@ -427,12 +347,13 @@ class ShapesPlugin(WorkflowPlugin):
         shapes_graph = self.init_shapes_graph()
         shapes_graph, shapes_count = self.create_shapes(shapes_graph)
 
-        setup_cmempy_user_access(context.user)
-        if self.existing_graph != "add" or not graph_exists:
-            self.create_graph(shapes_graph)
-        else:
-            self.add_to_graph(shapes_graph)
-
+        nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
+        post_streamed(
+            self.shapes_graph_iri,
+            nt_file,
+            replace=self.overwrite,
+            content_type="application/n-triples",
+        )
         self.context.report.update(
             ExecutionReport(
                 entity_count=shapes_count,

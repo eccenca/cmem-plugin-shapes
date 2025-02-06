@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cmem-plugin-shapes"
-version = "1.0.1.dev39+1aaa346.dirty"
+version = "0.0.0"
 license = "Apache-2.0"
 description = "Generate SHACL shapes from an instance data graph."
 authors = ["eccenca GmbH <cmempy-developer@eccenca.com>"]
