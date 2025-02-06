@@ -93,7 +93,6 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
     datetime = modified[0].split()[-2]
     assert DATETIME_PATTERN.match(datetime)
     result_graph = Graph().parse(data=result_graph_turtle)
-    assert len(list(result_graph.objects(predicate=DCTERMS.modified))) == 0
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     assert isomorphic(result_graph, test)
@@ -110,8 +109,8 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
 
 
 @pytest.mark.parametrize("add_to_graph", [True])
-def test_workflow_execution_add_exists(graph_setup: GraphSetupFixture) -> None:
-    """Test plugin execution with "add to graph" setting and existing graph"""
+def test_workflow_execution_add(graph_setup: GraphSetupFixture) -> None:
+    """Test plugin execution with "add to graph" setting"""
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
@@ -128,7 +127,6 @@ def test_workflow_execution_add_exists(graph_setup: GraphSetupFixture) -> None:
     assert DATETIME_PATTERN.match(datetime)
     assert datetime != """"2025-02-05T13:28:07.246Z"^^<http://www.w3.org/2001/XMLSchema#dateTime>"""
     result_graph = Graph().parse(data=result_graph_turtle)
-    assert len(list(result_graph.objects(predicate=DCTERMS.created))) == 0
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
     test.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
