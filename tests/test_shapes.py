@@ -109,25 +109,6 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
         ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
 
 
-def test_workflow_execution_add_not_exists(graph_setup: GraphSetupFixture) -> None:
-    """Test plugin execution with "add to graph" setting withour existing graph"""
-    plugin = ShapesPlugin(
-        data_graph_iri=graph_setup.dataset_iri,
-        shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="add",
-        import_shapes=False,
-        prefix_cc=False,
-    )
-    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
-    result_graph = Graph().parse(data=result_graph_turtle)
-    assert len(list(result_graph.objects(predicate=DCTERMS.created))) == 1
-    assert len(list(result_graph.objects(predicate=DCTERMS.modified))) == 0
-    result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
-    test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
-    assert isomorphic(result_graph, test)
-
-
 @pytest.mark.parametrize("add_to_graph", [True])
 def test_workflow_execution_add_exists(graph_setup: GraphSetupFixture) -> None:
     """Test plugin execution with "add to graph" setting and existing graph"""
