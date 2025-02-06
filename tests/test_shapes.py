@@ -20,8 +20,8 @@ from tests.cmemc_command_utils import run, run_without_assertion
 from tests.utils import TestExecutionContext
 
 DATETIME_PATTERN = re.compile(
-    r"""^"[1-9][0-9]{3}-[0-1][1-9]-[0-3][1-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9]{3}Z"\^\^"""
-    """<http://www.w3.org/2001/XMLSchema#dateTime>"""
+    r'^"[1-9][0-9]{3}-[0-1][1-9]-[0-3][1-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9]{3}Z"\^\^'
+    '<http://www.w3.org/2001/XMLSchema#dateTime>'
 )
 
 
@@ -110,7 +110,7 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
 
 
 def test_workflow_execution_add_graph_not_exists(graph_setup: GraphSetupFixture) -> None:
-    """Test plugin execution with "add to graph" setting"""
+    """Test plugin execution with "add to graph" setting without existing graph"""
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
@@ -131,7 +131,7 @@ def test_workflow_execution_add_graph_not_exists(graph_setup: GraphSetupFixture)
 
 @pytest.mark.parametrize("add_to_graph", [True])
 def test_workflow_execution_add_graph_exists(graph_setup: GraphSetupFixture) -> None:
-    """Test plugin execution with "add to graph" setting"""
+    """Test plugin execution with "add to graph" setting with existing graph"""
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
