@@ -159,6 +159,7 @@ class ShapesPlugin(WorkflowPlugin):
         """Fetch namespace prefixes"""
         prefixes_project = get_prefixes(self.context.task.project_id())
         prefixes = self.format_prefixes(prefixes_project)
+
         prefixes_cc = None
         if self.prefix_cc:
             try:
@@ -172,6 +173,7 @@ class ShapesPlugin(WorkflowPlugin):
         if not prefixes_cc or not self.prefix_cc:
             with (Path(__path__[0]) / "prefix_cc.json").open("r", encoding="utf-8") as json_file:
                 prefixes_cc = json.load(json_file)
+
         if prefixes_cc:
             prefixes = self.format_prefixes(prefixes_cc, prefixes)
 
