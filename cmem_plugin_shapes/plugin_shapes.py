@@ -92,7 +92,7 @@ def str2bool(value: str) -> bool:
             name="existing_graph",
             label="Handle existing output graph",
             description="Add result to the existing graph, overwrite the existing graph with the "
-            "result, or stop the workflow if theh output graph already exists",
+            "result, or stop the workflow if the output graph already exists",
             default_value="stop",
         ),
         PluginParameter(
@@ -165,14 +165,17 @@ class ShapesPlugin(WorkflowPlugin):
             try:
                 res = urlopen(PREFIX_CC)  # noqa: S310
                 self.log.info("prefixes fetched from https://prefix.cc")
-                prefixes_cc = self.format_prefixes(json.loads(res.read()), prefixes)
+                prefixes_cc = json.loads(res.read())
             except Exception as exc:  # noqa: BLE001
                 self.log.warning(
                     f"failed to fetch prefixes from https://prefix.cc ({exc}) - using local file"
                 )
         if not prefixes_cc or not self.prefix_cc:
             with (Path(__path__[0]) / "prefix_cc.json").open("r", encoding="utf-8") as json_file:
-                prefixes_cc = self.format_prefixes(json.load(json_file), prefixes)
+                prefixes_cc = json.load(json_file)
+
+        if prefixes_cc:
+            prefixes = self.format_prefixes(prefixes_cc, prefixes)
 
         return {k: tuple(sorted(set(v))) for k, v in prefixes.items()}
 
