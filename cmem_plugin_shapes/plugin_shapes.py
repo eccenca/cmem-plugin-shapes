@@ -352,10 +352,9 @@ class ShapesPlugin(WorkflowPlugin):
 
     def create_graph(self, shapes_graph: Graph) -> None:
         """Create or replace SHACL shapes graph"""
-        nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
         post_streamed(
             self.shapes_graph_iri,
-            nt_file,
+            BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8")),
             replace=self.replace,
             content_type="application/n-triples",
         )
@@ -420,35 +419,40 @@ class ShapesPlugin(WorkflowPlugin):
         """  # noqa: S608
         post_update(query_add_modified)
 
-    def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
+    def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:  # noqa: ARG002
         """Execute plugin"""
-        _ = inputs
+        context.report.update(
+            ExecutionReport(
+                entity_count=0,
+                operation="write",
+                operation_desc="shapes created",
+            )
+        )
         setup_cmempy_user_access(context.user)
-
-        graph_exists = self.shapes_graph_iri in [graph["iri"] for graph in get_graphs_list()]
+        graph_exists = self.shapes_graph_iri in [_["iri"] for _ in get_graphs_list()]
         if self.existing_graph == "stop" and graph_exists:
             raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists.")
 
         self.context = context
-        self.dp_api_endpoint = get_dp_api_endpoint()
         self.prefixes = self.get_prefixes()
-
         shapes_graph = self.init_shapes_graph()
+        self.dp_api_endpoint = get_dp_api_endpoint()
         shapes_graph, shapes_count = self.create_shapes(shapes_graph)
 
         setup_cmempy_user_access(context.user)
         if self.existing_graph != "add":
             self.create_graph(shapes_graph)
-        elif self.shapes_graph_iri in [graph["iri"] for graph in get_graphs_list()]:
+        elif self.shapes_graph_iri in [_["iri"] for _ in get_graphs_list()]:
             self.add_to_graph(shapes_graph)
         else:
             self.create_graph(shapes_graph)
 
-        self.context.report.update(
+        operation_desc = "shape created" if shapes_count == 1 else "shapes created"
+        context.report.update(
             ExecutionReport(
                 entity_count=shapes_count,
                 operation="write",
-                operation_desc="shapes created",
+                operation_desc=operation_desc,
             )
         )
         if self.import_shapes:
