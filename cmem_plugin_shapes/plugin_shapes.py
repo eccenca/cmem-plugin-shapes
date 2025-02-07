@@ -143,6 +143,10 @@ class ShapesPlugin(WorkflowPlugin):
         self.existing_graph = existing_graph
         self.import_shapes = import_shapes
         self.prefix_cc = prefix_cc
+        if existing_graph == "stop":
+            self.replace = False
+        else:
+            self.replace = True
         self.input_ports = FixedNumberOfInputs([])
         self.output_port = None
 
@@ -349,7 +353,7 @@ class ShapesPlugin(WorkflowPlugin):
         post_streamed(
             self.shapes_graph_iri,
             nt_file,
-            replace=True,
+            replace=self.replace,
             content_type="application/n-triples",
         )
         now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
@@ -419,7 +423,6 @@ class ShapesPlugin(WorkflowPlugin):
         setup_cmempy_user_access(context.user)
 
         graph_exists = self.shapes_graph_iri in [graph["iri"] for graph in get_graphs_list()]
-
         if self.existing_graph == "stop" and graph_exists:
             raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists.")
 
@@ -431,10 +434,14 @@ class ShapesPlugin(WorkflowPlugin):
         shapes_graph, shapes_count = self.create_shapes(shapes_graph)
 
         setup_cmempy_user_access(context.user)
-        if self.existing_graph != "add" or not graph_exists:
+        if self.existing_graph != "add":
             self.create_graph(shapes_graph)
         else:
-            self.add_to_graph(shapes_graph)
+            graph_exists = self.shapes_graph_iri in [graph["iri"] for graph in get_graphs_list()]
+            if graph_exists:
+                self.add_to_graph(shapes_graph)
+            else:
+                self.create_graph(shapes_graph)
 
         self.context.report.update(
             ExecutionReport(

@@ -12,7 +12,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Replaced the bool parameter "Overwrite Shape Catalog" with the parameter "Handle existing output graph" with the 
 options to replace the graph or add the result shapes to the graph, or stop the workflow if the specified output graph 
 already exists.
-- Allow custom entries for Input data graph parameter
+- Allow custom entries for Input data graph parameter.
+- Recheck if graph exists before importing created shapes graph.
 
 ### Added
 
@@ -20,7 +21,7 @@ already exists.
 
 ### Fixed
 
-- Fixed prefixes from prefix.cc not used correctly
+- Fixed issue with prefixes from prefix.cc not used correctly.
 
 ## [1.0.0] 2025-02-03
 
