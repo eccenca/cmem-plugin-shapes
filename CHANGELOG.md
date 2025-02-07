@@ -17,6 +17,9 @@ already exists.
 
 - Add dcterms:created datetime for new/replaced output graphs or dcterms:modified datetime for updated output graphs
 
+### Fixed
+
+- Fixed prefixes from prefix.cc not used correctly
 
 ## [1.0.0] 2025-02-03
 
