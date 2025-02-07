@@ -143,10 +143,13 @@ class ShapesPlugin(WorkflowPlugin):
         self.existing_graph = existing_graph
         self.import_shapes = import_shapes
         self.prefix_cc = prefix_cc
-        if existing_graph == "stop":
-            self.replace = False
-        else:
+        self.replace = False
+        if existing_graph == "replace":
             self.replace = True
+        if existing_graph not in ("stop", "replace", "add"):
+            raise ValueError(
+                f"Handle existing output graph parameter is invalid '{existing_graph}'."
+            )
         self.input_ports = FixedNumberOfInputs([])
         self.output_port = None
 
@@ -436,12 +439,10 @@ class ShapesPlugin(WorkflowPlugin):
         setup_cmempy_user_access(context.user)
         if self.existing_graph != "add":
             self.create_graph(shapes_graph)
+        elif self.shapes_graph_iri in [graph["iri"] for graph in get_graphs_list()]:
+            self.add_to_graph(shapes_graph)
         else:
-            graph_exists = self.shapes_graph_iri in [graph["iri"] for graph in get_graphs_list()]
-            if graph_exists:
-                self.add_to_graph(shapes_graph)
-            else:
-                self.create_graph(shapes_graph)
+            self.create_graph(shapes_graph)
 
         self.context.report.update(
             ExecutionReport(
