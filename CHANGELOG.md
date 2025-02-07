@@ -12,10 +12,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Replaced the bool parameter "Overwrite Shape Catalog" with the parameter "Handle existing output graph" with the 
 options to replace the graph or add the result shapes to the graph, or stop the workflow if the specified output graph 
 already exists.
+- Allow custom entries for Input data graph parameter
 
 ### Added
 
-- Add dcterms:created datetime for new/replaced output graphs or dcterms:modified datetime for updated output graphs
+- Add dcterms:created datetime for new/replaced output graphs or dcterms:modified datetime for updated output graphs.
 
 ### Fixed
 

@@ -64,7 +64,7 @@ def str2bool(value: str) -> bool:
     documentation=SHAPES_DOC,
     parameters=[
         PluginParameter(
-            param_type=GraphParameterType(),
+            param_type=GraphParameterType(allow_only_autocompleted_values=False),
             name="data_graph_iri",
             label="Input data graph",
             description="The Knowledge Graph containing the instance data to "
@@ -77,7 +77,7 @@ def str2bool(value: str) -> bool:
             ),
             name="shapes_graph_iri",
             label="Output Shape Catalog",
-            description="The Knowledge Graph, the generated shapes will be added to.",
+            description="The Knowledge Graph the generated shapes will be added to.",
         ),
         PluginParameter(
             param_type=ChoiceParameterType(
