@@ -301,7 +301,7 @@ class ShapesPlugin(WorkflowPlugin):
 
             for prop in properties:
                 prop_uuid = uuid5(
-                    NAMESPACE_URL, f'{prop["property"]}{"inverse" if prop["inverse"] else ""}'
+                    NAMESPACE_URL, f"{prop['property']}{'inverse' if prop['inverse'] else ''}"
                 )
                 property_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{prop_uuid}")
 
