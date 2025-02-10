@@ -130,7 +130,9 @@ def test_workflow_execution_add_graph_not_exists(graph_setup: GraphSetupFixture)
 
 
 @pytest.mark.parametrize("add_to_graph", [True])
-def test_workflow_execution_add_graph_exists(graph_setup: GraphSetupFixture, add_to_graph: bool) -> None:
+def test_workflow_execution_add_graph_exists(
+    graph_setup: GraphSetupFixture, add_to_graph: bool
+) -> None:
     """Test plugin execution with "add to graph" setting with existing graph"""
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
@@ -139,6 +141,7 @@ def test_workflow_execution_add_graph_exists(graph_setup: GraphSetupFixture, add
         import_shapes=False,
         prefix_cc=False,
     )
+    assert graph_setup.add_to_graph == add_to_graph
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
     regexp = rf"<{graph_setup.shapes_iri}> <http://purl.org/dc/terms/modified> .* \."
