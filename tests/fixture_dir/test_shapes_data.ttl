@@ -13,3 +13,4 @@
 <http://docker.localhost/my-persons/Seebi> a foaf:Person;
   rdfs:label "Seebi";
   foaf:familyName "Tramp" .
+

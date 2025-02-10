@@ -2,8 +2,9 @@
 
 import json
 import re
+from collections import OrderedDict
 from collections.abc import Sequence
-from http import HTTPStatus
+from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote_plus
@@ -19,6 +20,7 @@ from cmem.cmempy.workspace.projects.project import get_prefixes
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.description import Icon, Plugin, PluginParameter
 from cmem_plugin_base.dataintegration.entity import Entities
+from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.graph import GraphParameterType
 from cmem_plugin_base.dataintegration.parameter.multiline import MultilineStringParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
@@ -62,7 +64,7 @@ def str2bool(value: str) -> bool:
     documentation=SHAPES_DOC,
     parameters=[
         PluginParameter(
-            param_type=GraphParameterType(),
+            param_type=GraphParameterType(allow_only_autocompleted_values=False),
             name="data_graph_iri",
             label="Input data graph",
             description="The Knowledge Graph containing the instance data to "
@@ -75,15 +77,23 @@ def str2bool(value: str) -> bool:
             ),
             name="shapes_graph_iri",
             label="Output Shape Catalog",
-            description="The Knowledge Graph, the generated shapes will be added to.",
+            description="The Knowledge Graph the generated shapes will be added to.",
         ),
         PluginParameter(
-            param_type=BoolParameterType(),
-            name="overwrite",
-            label="Overwrite Shape Catalog",
-            description="""Overwrite the output graph if it exists. If disabled and
-            the graph exists, the execution will fail.""",
-            default_value=False,
+            param_type=ChoiceParameterType(
+                OrderedDict(
+                    {
+                        "add": "add result to graph",
+                        "replace": "replace existing graph with result",
+                        "stop": "stop workflow if output graph exists",
+                    }
+                )
+            ),
+            name="existing_graph",
+            label="Handle existing output graph",
+            description="Add result to the existing graph, overwrite the existing graph with the "
+            "result, or stop the workflow if the output graph already exists",
+            default_value="stop",
         ),
         PluginParameter(
             param_type=BoolParameterType(),
@@ -114,7 +124,7 @@ class ShapesPlugin(WorkflowPlugin):
         self,
         data_graph_iri: str = "",
         shapes_graph_iri: str = "",
-        overwrite: bool = False,
+        existing_graph: str = "stop",
         import_shapes: bool = False,
         prefix_cc: bool = True,
         ignore_properties: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
@@ -130,9 +140,16 @@ class ShapesPlugin(WorkflowPlugin):
             if not url(_):
                 raise ValueError(f"Ignored property IRI invalid: '{_}'")
             self.ignore_properties.append(_)
-        self.overwrite = overwrite
+        self.existing_graph = existing_graph
         self.import_shapes = import_shapes
         self.prefix_cc = prefix_cc
+        self.replace = False
+        if existing_graph == "replace":
+            self.replace = True
+        if existing_graph not in ("stop", "replace", "add"):
+            raise ValueError(
+                f"Handle existing output graph parameter is invalid '{existing_graph}'."
+            )
         self.input_ports = FixedNumberOfInputs([])
         self.output_port = None
 
@@ -155,16 +172,19 @@ class ShapesPlugin(WorkflowPlugin):
             try:
                 res = urlopen(PREFIX_CC)  # noqa: S310
                 self.log.info("prefixes fetched from https://prefix.cc")
-                prefixes_cc = self.format_prefixes(json.loads(res.read()), prefixes)
+                prefixes_cc = json.loads(res.read())
             except Exception as exc:  # noqa: BLE001
                 self.log.warning(
                     f"failed to fetch prefixes from https://prefix.cc ({exc}) - using local file"
                 )
         if not prefixes_cc or not self.prefix_cc:
             with (Path(__path__[0]) / "prefix_cc.json").open("r", encoding="utf-8") as json_file:
-                prefixes_cc = self.format_prefixes(json.load(json_file), prefixes)
+                prefixes_cc = json.load(json_file)
 
-        return {k: tuple(sorted(set(v))) for k, v in prefixes.items()}
+        if prefixes_cc:
+            prefixes = self.format_prefixes(prefixes_cc, prefixes)
+
+        return {k: tuple(v) for k, v in prefixes.items()}
 
     def get_name(self, iri: str) -> str:
         """Generate shape name from IRI"""
@@ -281,7 +301,7 @@ class ShapesPlugin(WorkflowPlugin):
 
             for prop in properties:
                 prop_uuid = uuid5(
-                    NAMESPACE_URL, f'{prop["property"]}{"inverse" if prop["inverse"] else ""}'
+                    NAMESPACE_URL, f"{prop['property']}{'inverse' if prop['inverse'] else ''}"
                 )
                 property_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{prop_uuid}")
 
@@ -330,35 +350,109 @@ class ShapesPlugin(WorkflowPlugin):
         setup_cmempy_user_access(self.context.user)
         post_update(query)
 
-    def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:
-        """Execute plugin"""
-        _ = inputs
-        setup_cmempy_user_access(context.user)
+    def create_graph(self, shapes_graph: Graph) -> None:
+        """Create or replace SHACL shapes graph"""
+        post_streamed(
+            self.shapes_graph_iri,
+            BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8")),
+            replace=self.replace,
+            content_type="application/n-triples",
+        )
+        now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
+        query_add_created = f"""
+            PREFIX dcterms: <http://purl.org/dc/terms/>
+            PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+            INSERT DATA {{
+                GRAPH <{self.shapes_graph_iri}> {{
+                    <{self.shapes_graph_iri}> dcterms:created "{now}"^^xsd:dateTime
+                }}
+            }}
+        """
+        post_update(query_add_created)
 
-        if not self.overwrite and self.shapes_graph_iri in [
-            graph["iri"] for graph in get_graphs_list()
-        ]:
+    def add_to_graph(self, shapes_graph: Graph) -> None:
+        """Add SHACL shapes to existing graph"""
+        query_data = f"""
+        INSERT DATA {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                {shapes_graph.serialize(format="nt", encoding="utf-8").decode()}
+            }}
+        }}"""
+        post_update(query_data)
+        now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
+
+        query_remove_modified = f"""
+        PREFIX dcterms: <http://purl.org/dc/terms/>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+        DELETE {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                <{self.shapes_graph_iri}> dcterms:modified ?previous
+            }}
+        }}
+        WHERE {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                OPTIONAL {{
+                    <{self.shapes_graph_iri}> dcterms:modified ?previous
+                    FILTER(?previous < xsd:dateTime("{now}"))
+                }}
+            }}
+        }}
+        """
+        setup_cmempy_user_access(self.context.user)
+        post_update(query_remove_modified)
+
+        query_add_modified = f"""
+        PREFIX dcterms: <http://purl.org/dc/terms/>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+        INSERT {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                <{self.shapes_graph_iri}> dcterms:modified ?current
+            }}
+        }}
+        WHERE {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                OPTIONAL {{ <{self.shapes_graph_iri}> dcterms:modified ?datetime }}
+            }}
+            VALUES ?undef {{ UNDEF }}
+            BIND(IF(!BOUND(?datetime), xsd:dateTime("{now}"), ?undef) AS ?current)
+        }}
+        """  # noqa: S608
+        post_update(query_add_modified)
+
+    def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:  # noqa: ARG002
+        """Execute plugin"""
+        context.report.update(
+            ExecutionReport(
+                entity_count=0,
+                operation="write",
+                operation_desc="shapes created",
+            )
+        )
+        setup_cmempy_user_access(context.user)
+        graph_exists = self.shapes_graph_iri in [_["iri"] for _ in get_graphs_list()]
+        if self.existing_graph == "stop" and graph_exists:
             raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists.")
 
         self.context = context
-        self.dp_api_endpoint = get_dp_api_endpoint()
         self.prefixes = self.get_prefixes()
-
         shapes_graph = self.init_shapes_graph()
+        self.dp_api_endpoint = get_dp_api_endpoint()
         shapes_graph, shapes_count = self.create_shapes(shapes_graph)
 
-        nt_file = BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8"))
-        post_streamed(
-            self.shapes_graph_iri,
-            nt_file,
-            replace=self.overwrite,
-            content_type="application/n-triples",
-        )
-        self.context.report.update(
+        setup_cmempy_user_access(context.user)
+        if self.existing_graph != "add":
+            self.create_graph(shapes_graph)
+        elif self.shapes_graph_iri in [_["iri"] for _ in get_graphs_list()]:
+            self.add_to_graph(shapes_graph)
+        else:
+            self.create_graph(shapes_graph)
+
+        operation_desc = "shape created" if shapes_count == 1 else "shapes created"
+        context.report.update(
             ExecutionReport(
                 entity_count=shapes_count,
                 operation="write",
-                operation_desc="shapes created",
+                operation_desc=operation_desc,
             )
         )
         if self.import_shapes:

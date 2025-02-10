@@ -4,16 +4,37 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+
+## [2.0.0] 2025-02-10
+
+### Changed
+
+- Replaced the bool parameter "Overwrite Shape Catalog" with the parameter "Handle existing output graph" with the followin options
+  - replace the graph
+  - add the result shapes to the graph
+  - stop the workflow if the specified output graph already exists
+- Allow custom entries for Input data graph parameter
+- Recheck if graph exists before importing created shapes graph
+
+### Added
+
+- Add dcterms:created datetime for new/replaced output graphs or dcterms:modified datetime for updated output graphs
+
+### Fixed
+
+- Fixed issue with prefixes from prefix.cc not used correctly
+
+
 ## [1.0.0] 2025-02-03
 
 ### Fixed
 
-- Fixed summary report.
+- Fixed summary report
 
 ### Added
 
-- Added shui:showAlways to all property shapes.
-- Introduced the `ignore properties` parameter to exclude specific properties from the shape graph.
+- Added shui:showAlways to all property shapes
+- Introduced the `ignore properties` parameter to exclude specific properties from the shape graph
 
 ### Changed
 
