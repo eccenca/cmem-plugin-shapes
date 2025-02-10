@@ -29,6 +29,7 @@ DATETIME_PATTERN = re.compile(
 class GraphSetupFixture:
     """Graph Setup Fixture"""
 
+    add_to_graph: bool = True
     project_name: str = "shapes_plugin_test"
     shapes_iri: str = "http://docker.localhost/my-persons-shapes"
     shapes_file: str = str(FIXTURE_DIR / "test_shapes.ttl")
@@ -48,7 +49,10 @@ ASK
 
 @pytest.fixture
 def add_to_graph() -> bool:
-    """Add to graph parameter fixture"""
+    """Add to graph parameter fixture
+
+    this parameter is used to allow different graph_setup fixtures
+    """
     return False
 
 
@@ -59,6 +63,7 @@ def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixtu
         pytest.skip("Needs CMEM configuration")
     # make backup and delete all GRAPHS
     _ = GraphSetupFixture()
+    _.add_to_graph = add_to_graph
     export_zip = str(tmp_path / "export.store.zip")
     run(["admin", "store", "export", export_zip])
     run(["graph", "import", _.dataset_file, _.dataset_iri])
@@ -69,11 +74,6 @@ def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixtu
     yield _
     # remove test GRAPHS
     run(["admin", "store", "import", export_zip])
-
-
-def test_setup(graph_setup: GraphSetupFixture) -> None:
-    """Test plugin execution"""
-    _ = graph_setup
 
 
 def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
@@ -130,7 +130,7 @@ def test_workflow_execution_add_graph_not_exists(graph_setup: GraphSetupFixture)
 
 
 @pytest.mark.parametrize("add_to_graph", [True])
-def test_workflow_execution_add_graph_exists(graph_setup: GraphSetupFixture) -> None:
+def test_workflow_execution_add_graph_exists(graph_setup: GraphSetupFixture, add_to_graph: bool) -> None:
     """Test plugin execution with "add to graph" setting with existing graph"""
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
