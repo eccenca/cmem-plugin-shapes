@@ -59,7 +59,7 @@ def str2bool(value: str) -> bool:
 
 @Plugin(
     label="Generate SHACL shapes from data",
-    icon=Icon(file_name="shacl.jpg", package=__package__),
+    icon=Icon(file_name="shapes.svg", package=__package__),
     description="Generate SHACL node and property shapes from a data graph",
     documentation=SHAPES_DOC,
     parameters=[
@@ -160,6 +160,7 @@ class ShapesPlugin(WorkflowPlugin):
             formatted_prefixes = {}
         for prefix, namespace in prefixes.items():
             formatted_prefixes.setdefault(namespace, []).append(prefix + ":")
+
         return formatted_prefixes
 
     def get_prefixes(self) -> dict:
@@ -180,7 +181,6 @@ class ShapesPlugin(WorkflowPlugin):
         if not prefixes_cc or not self.prefix_cc:
             with (Path(__path__[0]) / "prefix_cc.json").open("r", encoding="utf-8") as json_file:
                 prefixes_cc = json.load(json_file)
-
         if prefixes_cc:
             prefixes = self.format_prefixes(prefixes_cc, prefixes)
 
@@ -214,13 +214,11 @@ class ShapesPlugin(WorkflowPlugin):
                     except IndexError as exc:
                         raise IndexError(f"{title_json['title']} {prefixes}") from exc
             title += f" ({prefix})"
-
         return title
 
     def init_shapes_graph(self) -> Graph:
         """Initialize SHACL shapes graph"""
-        shapes_graph = Graph()
-        shapes_graph.add((URIRef(self.shapes_graph_iri), RDF.type, SHUI.ShapeCatalog))
+        shapes_graph = Graph().add((URIRef(self.shapes_graph_iri), RDF.type, SHUI.ShapeCatalog))
         shapes_graph.add(
             (
                 URIRef(self.shapes_graph_iri),
@@ -240,6 +238,7 @@ class ShapesPlugin(WorkflowPlugin):
         if not iris:
             return ""
         iris_quoted = [f"<{_}>" for _ in iris]
+
         return f"FILTER (?{name} {filter_} ({', '.join(iris_quoted)}))"
 
     def get_class_dict(self) -> dict:
@@ -292,6 +291,7 @@ class ShapesPlugin(WorkflowPlugin):
             node_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{class_uuid}")
 
             if class_uuid not in class_uuids:
+                shapes_count += 1
                 shapes_graph.add((node_shape_uri, RDF.type, SH.NodeShape))
                 shapes_graph.add((node_shape_uri, SH.targetClass, URIRef(cls)))
                 name = self.get_name(cls)
@@ -304,7 +304,6 @@ class ShapesPlugin(WorkflowPlugin):
                     NAMESPACE_URL, f"{prop['property']}{'inverse' if prop['inverse'] else ''}"
                 )
                 property_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{prop_uuid}")
-
                 if prop_uuid not in prop_uuids:
                     shapes_count += 1
                     name = self.get_name(prop["property"])
@@ -332,7 +331,6 @@ class ShapesPlugin(WorkflowPlugin):
                     shapes_graph.add((property_shape_uri, SH.name, Literal(name, lang="en")))
                     shapes_graph.add((property_shape_uri, RDFS.label, Literal(name, lang="en")))
                     prop_uuids.add(prop_uuid)
-
                 shapes_graph.add((node_shape_uri, SH.property, property_shape_uri))
 
         return shapes_graph, shapes_count

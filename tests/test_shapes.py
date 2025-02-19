@@ -149,11 +149,13 @@ def test_workflow_execution_add_graph_exists(
     assert len(modified) == 1
     datetime = modified[0].split()[-2]
     assert DATETIME_PATTERN.match(datetime)
-    assert datetime != '"2025-02-05T13:28:07.246Z"^^<http://www.w3.org/2001/XMLSchema#dateTime>'
     result_graph = Graph().parse(data=result_graph_turtle)
+    test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
+    assert result_graph.value(
+        subject=URIRef(graph_setup.shapes_iri), predicate=DCTERMS.modified
+    ) != test.value(subject=URIRef(graph_setup.shapes_iri), predicate=DCTERMS.modified)
     assert len(list(result_graph.objects(predicate=DCTERMS.created))) == 0
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
-    test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
     test.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
     assert isomorphic(result_graph, test)
 

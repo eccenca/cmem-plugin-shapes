@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+## [2.0.1] 2025-02-19
+
+### Changed
+
+- Also count node shapes for the execution report
+- New icon
 
 ## [2.0.0] 2025-02-10
 
