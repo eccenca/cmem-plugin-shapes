@@ -59,7 +59,7 @@ def str2bool(value: str) -> bool:
 
 @Plugin(
     label="Generate SHACL shapes from data",
-    icon=Icon(file_name="shacl.jpg", package=__package__),
+    icon=Icon(file_name="shapes.svg", package=__package__),
     description="Generate SHACL node and property shapes from a data graph",
     documentation=SHAPES_DOC,
     parameters=[
