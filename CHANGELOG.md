@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Changed
 
 - Also count node shapes for the execution report
+- New icon
 
 ## [2.0.0] 2025-02-10
 
