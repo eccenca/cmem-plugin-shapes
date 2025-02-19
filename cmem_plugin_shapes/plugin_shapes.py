@@ -51,7 +51,7 @@ def str2bool(value: str) -> bool:
     value = value.lower()
     if value in TRUE_SET:
         return True
-    elif value in FALSE_SET:
+    if value in FALSE_SET:
         return False
     allowed_values = '", "'.join(TRUE_SET | FALSE_SET)
     raise ValueError(f'Expected one of: "{allowed_values}"')
