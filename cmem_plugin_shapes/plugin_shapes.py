@@ -12,6 +12,7 @@ from urllib.parse import quote_plus
 from urllib.request import urlopen
 from uuid import NAMESPACE_URL, uuid5
 
+import validators.url
 from cmem.cmempy.api import send_request
 from cmem.cmempy.config import get_dp_api_endpoint
 from cmem.cmempy.dp.proxy.graph import get_graphs_list, post_streamed
@@ -30,7 +31,6 @@ from cmem_plugin_base.dataintegration.types import BoolParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
 from rdflib import DCTERMS, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
-from validators import url
 
 from cmem_plugin_shapes.doc import SHAPES_DOC
 
@@ -131,15 +131,15 @@ class ShapesPlugin(WorkflowPlugin):
         prefix_cc: bool = True,
         ignore_properties: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
     ) -> None:
-        if not url(data_graph_iri):
+        if not validators.url(data_graph_iri):
             raise ValueError("Data graph IRI parameter is invalid.")
         self.data_graph_iri = data_graph_iri
-        if not url(shapes_graph_iri):
+        if not validators.url(shapes_graph_iri):
             raise ValueError("Shapes graph IRI parameter is invalid.")
         self.shapes_graph_iri = shapes_graph_iri
         self.ignore_properties = []
         for _ in ignore_properties.split("\n"):
-            if not url(_):
+            if not validators.url(_):
                 raise ValueError(f"Ignored property IRI invalid: '{_}'")
             self.ignore_properties.append(_)
         self.existing_graph = existing_graph
@@ -437,13 +437,6 @@ class ShapesPlugin(WorkflowPlugin):
 
     def create_graph(self) -> None:
         """Create or replace SHACL shapes graph"""
-        self.shapes_graph.add(
-            (
-                URIRef(self.shapes_graph_iri),
-                RDFS.label,
-                Literal(f"Shapes for: {self.data_graph_iri}"),
-            )
-        )
         post_streamed(
             self.shapes_graph_iri,
             BytesIO(self.shapes_graph.serialize(format="nt", encoding="utf-8")),
@@ -462,7 +455,17 @@ class ShapesPlugin(WorkflowPlugin):
         """
         post_update(query_add_created)
 
-    def add_label(self) -> None:
+    def create_label(self) -> None:
+        """Create label in shapes graph"""
+        self.shapes_graph.add(
+            (
+                URIRef(self.shapes_graph_iri),
+                RDFS.label,
+                Literal(f"Shapes for: {self.data_graph_iri}"),
+            )
+        )
+
+    def add_to_label(self) -> None:
         """Add source graph to label"""
         query_remove_label = """
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -483,17 +486,18 @@ class ShapesPlugin(WorkflowPlugin):
         old_label = [  # noqa: RUF015
             _["label"]["title"] for _ in self.graphs_list if _["iri"] == self.shapes_graph_iri
         ][0]
-        if not old_label or not old_label.startswith("Shapes for:"):
-            self.shapes_graph.add(
-                (
-                    URIRef(self.shapes_graph_iri),
-                    RDFS.label,
-                    Literal(f"Shapes for: {self.data_graph_iri}"),
-                )
-            )
+        if not old_label:
+            self.log.warning("No label in existing shapes graph.")
+            self.create_label()
+        elif not old_label.startswith("Shapes for:"):
+            self.log.warning("Malformed label in existing shapes graph.")
+            self.create_label()
         else:
             source_graphs = old_label[12:].split(", ")
-            if self.shapes_graph_iri not in source_graphs:
+            if {validators.url(_) for _ in source_graphs} != {True}:
+                self.log.warning("Malformed label in existing shapes graph.")
+                self.create_label()
+            elif self.shapes_graph_iri not in source_graphs:
                 new_label = f"{old_label}, {self.data_graph_iri}"
                 post_update(
                     query_remove_label.format(
@@ -510,8 +514,7 @@ class ShapesPlugin(WorkflowPlugin):
 
     def add_to_graph(self) -> None:
         """Add SHACL shapes to existing graph"""
-        self.add_label()
-
+        self.add_to_label()
         query_data = f"""
         INSERT DATA {{
             GRAPH <{self.shapes_graph_iri}> {{
