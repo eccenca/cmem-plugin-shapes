@@ -225,13 +225,6 @@ class ShapesPlugin(WorkflowPlugin):
         shapes_graph.add(
             (
                 URIRef(self.shapes_graph_iri),
-                RDFS.label,
-                Literal(f"Shapes for {self.data_graph_iri}"),
-            )
-        )
-        shapes_graph.add(
-            (
-                URIRef(self.shapes_graph_iri),
                 DCTERMS.source,
                 URIRef(self.data_graph_iri),
             )
@@ -291,7 +284,7 @@ class ShapesPlugin(WorkflowPlugin):
             )
         return class_dict
 
-    def create_shapes(self, shapes_graph: Graph) -> tuple[Graph, int]:
+    def create_shapes(self) -> int:
         """Create SHACL node and property shapes"""
         class_uuids = set()
         prop_uuids = set()
@@ -302,11 +295,11 @@ class ShapesPlugin(WorkflowPlugin):
 
             if class_uuid not in class_uuids:
                 shapes_count += 1
-                shapes_graph.add((node_shape_uri, RDF.type, SH.NodeShape))
-                shapes_graph.add((node_shape_uri, SH.targetClass, URIRef(cls)))
+                self.shapes_graph.add((node_shape_uri, RDF.type, SH.NodeShape))
+                self.shapes_graph.add((node_shape_uri, SH.targetClass, URIRef(cls)))
                 name = self.get_name(cls)
-                shapes_graph.add((node_shape_uri, SH.name, Literal(name, lang="en")))
-                shapes_graph.add((node_shape_uri, RDFS.label, Literal(name, lang="en")))
+                self.shapes_graph.add((node_shape_uri, SH.name, Literal(name, lang="en")))
+                self.shapes_graph.add((node_shape_uri, RDFS.label, Literal(name, lang="en")))
                 class_uuids.add(class_uuid)
 
             for prop in properties:
@@ -317,12 +310,12 @@ class ShapesPlugin(WorkflowPlugin):
                 if prop_uuid not in prop_uuids:
                     shapes_count += 1
                     name = self.get_name(prop["property"])
-                    shapes_graph.add((property_shape_uri, RDF.type, SH.PropertyShape))
-                    shapes_graph.add((property_shape_uri, SH.path, URIRef(prop["property"])))
-                    shapes_graph.add(
+                    self.shapes_graph.add((property_shape_uri, RDF.type, SH.PropertyShape))
+                    self.shapes_graph.add((property_shape_uri, SH.path, URIRef(prop["property"])))
+                    self.shapes_graph.add(
                         (property_shape_uri, SH.nodeKind, SH.Literal if prop["data"] else SH.IRI)
                     )
-                    shapes_graph.add(
+                    self.shapes_graph.add(
                         (
                             property_shape_uri,
                             SHUI.showAlways,
@@ -330,7 +323,7 @@ class ShapesPlugin(WorkflowPlugin):
                         )
                     )
                     if prop["inverse"]:
-                        shapes_graph.add(
+                        self.shapes_graph.add(
                             (
                                 property_shape_uri,
                                 SHUI.inversePath,
@@ -338,12 +331,14 @@ class ShapesPlugin(WorkflowPlugin):
                             )
                         )
                         name = "← " + name
-                    shapes_graph.add((property_shape_uri, SH.name, Literal(name, lang="en")))
-                    shapes_graph.add((property_shape_uri, RDFS.label, Literal(name, lang="en")))
+                    self.shapes_graph.add((property_shape_uri, SH.name, Literal(name, lang="en")))
+                    self.shapes_graph.add(
+                        (property_shape_uri, RDFS.label, Literal(name, lang="en"))
+                    )
                     prop_uuids.add(prop_uuid)
-                shapes_graph.add((node_shape_uri, SH.property, property_shape_uri))
+                self.shapes_graph.add((node_shape_uri, SH.property, property_shape_uri))
 
-        return shapes_graph, shapes_count
+        return shapes_count
 
     def import_shapes_graph(self) -> None:
         """Import SHACL shapes graph to catalog"""
@@ -440,11 +435,18 @@ class ShapesPlugin(WorkflowPlugin):
 
         return prov
 
-    def create_graph(self, shapes_graph: Graph) -> None:
+    def create_graph(self) -> None:
         """Create or replace SHACL shapes graph"""
+        self.shapes_graph.add(
+            (
+                URIRef(self.shapes_graph_iri),
+                RDFS.label,
+                Literal(f"Shapes for: {self.data_graph_iri}"),
+            )
+        )
         post_streamed(
             self.shapes_graph_iri,
-            BytesIO(shapes_graph.serialize(format="nt", encoding="utf-8")),
+            BytesIO(self.shapes_graph.serialize(format="nt", encoding="utf-8")),
             replace=self.replace,
             content_type="application/n-triples",
         )
@@ -460,17 +462,65 @@ class ShapesPlugin(WorkflowPlugin):
         """
         post_update(query_add_created)
 
-    def add_to_graph(self, shapes_graph: Graph) -> None:
+    def add_label(self) -> None:
+        """Add source graph to label"""
+        query_remove_label = """
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        DELETE DATA {{
+            GRAPH <{shapes_graph_iri}> {{
+                <{shapes_graph_iri}> rdfs:label "{label}"
+            }}
+        }}
+        """
+        query_add_label = """
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        INSERT DATA {{
+            GRAPH <{shapes_graph_iri}> {{
+                <{shapes_graph_iri}> rdfs:label "{label}"
+            }}
+        }}
+        """
+        old_label = [  # noqa: RUF015
+            _["label"]["title"] for _ in self.graphs_list if _["iri"] == self.shapes_graph_iri
+        ][0]
+        if not old_label or not old_label.startswith("Shapes for:"):
+            self.shapes_graph.add(
+                (
+                    URIRef(self.shapes_graph_iri),
+                    RDFS.label,
+                    Literal(f"Shapes for: {self.data_graph_iri}"),
+                )
+            )
+        else:
+            source_graphs = old_label[12:].split(", ")
+            if self.shapes_graph_iri not in source_graphs:
+                new_label = f"{old_label}, {self.data_graph_iri}"
+                post_update(
+                    query_remove_label.format(
+                        shapes_graph_iri=self.shapes_graph_iri,
+                        label=old_label,
+                    )
+                )
+                post_update(
+                    query_add_label.format(
+                        shapes_graph_iri=self.shapes_graph_iri,
+                        label=new_label,
+                    )
+                )
+
+    def add_to_graph(self) -> None:
         """Add SHACL shapes to existing graph"""
+        self.add_label()
+
         query_data = f"""
         INSERT DATA {{
             GRAPH <{self.shapes_graph_iri}> {{
-                {shapes_graph.serialize(format="nt", encoding="utf-8").decode()}
+                {self.shapes_graph.serialize(format="nt", encoding="utf-8").decode()}
             }}
         }}"""
         post_update(query_data)
-        now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
 
+        now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
         query_remove_modified = f"""
         PREFIX dcterms: <http://purl.org/dc/terms/>
         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
@@ -519,23 +569,26 @@ class ShapesPlugin(WorkflowPlugin):
             )
         )
         setup_cmempy_user_access(context.user)
-        graph_exists = self.shapes_graph_iri in [_["iri"] for _ in get_graphs_list()]
+        self.graphs_list = get_graphs_list()
+        graph_exists = self.shapes_graph_iri in [_["iri"] for _ in self.graphs_list]
         if self.existing_graph == "stop" and graph_exists:
             raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists.")
 
         self.context = context
         self.prefixes = self.get_prefixes()
-        shapes_graph = self.init_shapes_graph()
+        self.shapes_graph = self.init_shapes_graph()
         self.dp_api_endpoint = get_dp_api_endpoint()
-        shapes_graph, shapes_count = self.create_shapes(shapes_graph)
+        shapes_count = self.create_shapes()
 
         setup_cmempy_user_access(context.user)
         if self.existing_graph != "add":
-            self.create_graph(shapes_graph)
-        elif self.shapes_graph_iri in [_["iri"] for _ in get_graphs_list()]:
-            self.add_to_graph(shapes_graph)
+            self.create_graph()
         else:
-            self.create_graph(shapes_graph)
+            self.graphs_list = get_graphs_list()
+            if self.shapes_graph_iri in [_["iri"] for _ in self.graphs_list]:
+                self.add_to_graph()
+            else:
+                self.create_graph()
 
         self.post_provenance()
 

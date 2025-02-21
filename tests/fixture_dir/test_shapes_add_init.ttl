@@ -16,9 +16,9 @@
   sh:targetClass foaf:Person .
 
 <http://docker.localhost/my-persons-shapes> a ns1:ShapeCatalog;
-  rdfs:label "Shapes for http://docker.localhost/my-persons" ;
+  rdfs:label "Shapes for: http://docker.localhost/my-persons0" ;
   dcterms:modified "2025-02-05T13:28:07.246Z"^^xsd:dateTime ;
-  dcterms:source <http://docker.localhost/my-persons> .
+  dcterms:source <http://docker.localhost/my-persons0> .
 
 
 <http://docker.localhost/my-persons-shapes/da1b0b28-9c51-55c3-a963-2337006693de> a

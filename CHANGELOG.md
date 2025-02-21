@@ -7,9 +7,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased] 
 
+### Fixed
+
+- When adding to existing graph the source graph IRI is added to the label instead of replacing the source graph IRI
+
 ### Added
 
-- add dcterms:source and plugin provenance
+- Add dcterms:source and plugin provenance
 
 ## [2.0.1] 2025-02-19
 
