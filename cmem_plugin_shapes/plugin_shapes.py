@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
+from secrets import token_hex
 from urllib.parse import quote_plus
 from urllib.request import urlopen
 from uuid import NAMESPACE_URL, uuid5
@@ -27,7 +28,7 @@ from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import BoolParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
-from rdflib import RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
+from rdflib import DCTERMS, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
 from validators import url
 
@@ -39,6 +40,7 @@ SHUI = Namespace("https://vocab.eccenca.com/shui/")
 PREFIX_CC = "https://prefix.cc/popular/all.file.json"
 TRUE_SET = {"yes", "true", "t", "y", "1"}
 FALSE_SET = {"no", "false", "f", "n", "0"}
+LABEL = "Generate SHACL shapes from data"
 
 
 def format_namespace(iri: str) -> str:
@@ -58,7 +60,7 @@ def str2bool(value: str) -> bool:
 
 
 @Plugin(
-    label="Generate SHACL shapes from data",
+    label=LABEL,
     icon=Icon(file_name="shapes.svg", package=__package__),
     description="Generate SHACL node and property shapes from a data graph",
     documentation=SHAPES_DOC,
@@ -150,6 +152,7 @@ class ShapesPlugin(WorkflowPlugin):
             raise ValueError(
                 f"Handle existing output graph parameter is invalid '{existing_graph}'."
             )
+        self.label = LABEL
         self.input_ports = FixedNumberOfInputs([])
         self.output_port = None
 
@@ -224,6 +227,13 @@ class ShapesPlugin(WorkflowPlugin):
                 URIRef(self.shapes_graph_iri),
                 RDFS.label,
                 Literal(f"Shapes for {self.data_graph_iri}"),
+            )
+        )
+        shapes_graph.add(
+            (
+                URIRef(self.shapes_graph_iri),
+                DCTERMS.source,
+                URIRef(self.data_graph_iri),
             )
         )
         return shapes_graph
@@ -348,6 +358,88 @@ class ShapesPlugin(WorkflowPlugin):
         setup_cmempy_user_access(self.context.user)
         post_update(query)
 
+    def post_provenance(self) -> None:
+        """Post provenance"""
+        prov = self.get_provenance()
+        if prov:
+            param_sparql = ""
+            for name, iri in prov["parameters"].items():
+                param_sparql += f'\n<{prov["plugin_iri"]}> <{iri}> "{self.__dict__[name]}" .'
+            insert_query = f"""
+                INSERT DATA {{
+                    GRAPH <{self.shapes_graph_iri}> {{
+                        <{self.shapes_graph_iri}> <http://purl.org/dc/terms/creator>
+                            <{prov["plugin_iri"]}> .
+                        <{prov["plugin_iri"]}> a <{prov["plugin_type"]}>,
+                            <https://vocab.eccenca.com/di/CustomTask> .
+                        <{prov["plugin_iri"]}> <http://www.w3.org/2000/01/rdf-schema#label>
+                            "{prov["plugin_label"]}" .
+                        {param_sparql}
+                    }}
+                }}
+            """
+            post_update(query=insert_query)
+
+    def get_provenance(self) -> dict | None:
+        """Get provenance information"""
+        plugin_iri = (
+            f"http://dataintegration.eccenca.com/{self.context.task.project_id()}/"
+            f"{self.context.task.task_id()}"
+        )
+        project_graph = f"http://di.eccenca.com/project/{self.context.task.project_id()}"
+
+        type_query = f"""
+            SELECT ?type {{
+                GRAPH <{project_graph}> {{
+                    <{plugin_iri}> a ?type .
+                    FILTER(STRSTARTS(STR(?type), "https://vocab.eccenca.com/di/functions/"))
+                }}
+            }}
+        """
+
+        result = json.loads(post_sparql(query=type_query))
+
+        try:
+            plugin_type = result["results"]["bindings"][0]["type"]["value"]
+        except IndexError:
+            self.log.warning("Could not add provenance data to output graph.")
+            return None
+
+        param_split = (
+            plugin_type.replace(
+                "https://vocab.eccenca.com/di/functions/Plugin_",
+                "https://vocab.eccenca.com/di/functions/param_",
+            )
+            + "_"
+        )
+
+        parameter_query = f"""
+            SELECT ?parameter {{
+                GRAPH <{project_graph}> {{
+                    <{plugin_iri}> ?parameter ?o .
+                    FILTER(STRSTARTS(STR(?parameter), "https://vocab.eccenca.com/di/functions/param_"))
+                }}
+            }}
+        """
+
+        new_plugin_iri = f"{'_'.join(plugin_iri.split('_')[:-1])}_{token_hex(8)}"
+        label = f"{self.label} plugin"
+        result = json.loads(post_sparql(query=parameter_query))
+
+        prov = {
+            "plugin_iri": new_plugin_iri,
+            "plugin_label": label,
+            "plugin_type": plugin_type,
+            "parameters": {},
+        }
+
+        for binding in result["results"]["bindings"]:
+            param_iri = binding["parameter"]["value"]
+            param_name = param_iri.split(param_split)[1]
+            prov["parameters"][param_name] = param_iri
+
+        return prov
+
     def create_graph(self, shapes_graph: Graph) -> None:
         """Create or replace SHACL shapes graph"""
         post_streamed(
@@ -444,6 +536,8 @@ class ShapesPlugin(WorkflowPlugin):
             self.add_to_graph(shapes_graph)
         else:
             self.create_graph(shapes_graph)
+
+        self.post_provenance()
 
         operation_desc = "shape created" if shapes_count == 1 else "shapes created"
         context.report.update(
