@@ -154,7 +154,7 @@ class ShapesPlugin(WorkflowPlugin):
             )
         self.label = LABEL
         self.shapes_count = 0
-        self.graphs_list = []
+        self.graphs_list: list = []
         self.input_ports = FixedNumberOfInputs([])
         self.output_port = None
 
@@ -485,34 +485,38 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}
         """
-        label = next(
+        shapes_graph_metadata = [_ for _ in self.graphs_list if _["iri"] == self.shapes_graph_iri]
+        if shapes_graph_metadata:
+            metadata = shapes_graph_metadata[0]
+            if "label" not in metadata or "title" not in metadata["label"]:
+                self.log.warning("No label in existing shapes graph.")
+                return self.create_label()
+        label: str = next(
             _["label"]["title"] for _ in self.graphs_list if _["iri"] == self.shapes_graph_iri
         )
         if not label or not label.startswith("Shapes for:"):
             self.log.warning("No label in existing shapes graph.")
-            label = self.create_label()
-        else:
-            source_graphs = label[12:].split(", ")
-            if {validators.url(_) for _ in source_graphs} != {True}:
-                self.log.warning("Malformed label in existing shapes graph.")
-                label = self.create_label()
-            elif self.data_graph_iri in source_graphs:
-                return label
-            else:
-                old_label = label
-                label = f"{label}, {self.data_graph_iri}"
-                post_update(
-                    query_remove_label.format(
-                        shapes_graph_iri=self.shapes_graph_iri,
-                        label=old_label,
-                    )
-                )
-                post_update(
-                    query_add_label.format(
-                        shapes_graph_iri=self.shapes_graph_iri,
-                        label=label,
-                    )
-                )
+            return self.create_label()
+        source_graphs = label[12:].split(", ")
+        if {validators.url(_) for _ in source_graphs} != {True}:
+            self.log.warning("Malformed label in existing shapes graph.")
+            return self.create_label()
+        if self.data_graph_iri in source_graphs:
+            return label
+        old_label = label
+        label = f"{label}, {self.data_graph_iri}"
+        post_update(
+            query_remove_label.format(
+                shapes_graph_iri=self.shapes_graph_iri,
+                label=old_label,
+            )
+        )
+        post_update(
+            query_add_label.format(
+                shapes_graph_iri=self.shapes_graph_iri,
+                label=label,
+            )
+        )
         return label
 
     def add_to_graph(self) -> None:
