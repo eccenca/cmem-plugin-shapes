@@ -154,6 +154,7 @@ class ShapesPlugin(WorkflowPlugin):
             )
         self.label = LABEL
         self.shapes_count = 0
+        self.graphs_list = []
         self.input_ports = FixedNumberOfInputs([])
         self.output_port = None
 
@@ -454,17 +455,19 @@ class ShapesPlugin(WorkflowPlugin):
         """
         post_update(query_add_created)
 
-    def create_label(self) -> None:
+    def create_label(self) -> str:
         """Create label in shapes graph"""
+        label = f"Shapes for: {self.data_graph_iri}"
         self.shapes_graph.add(
             (
                 URIRef(self.shapes_graph_iri),
                 RDFS.label,
-                Literal(f"Shapes for: {self.data_graph_iri}"),
+                Literal(label),
             )
         )
+        return label
 
-    def add_to_label(self) -> None:
+    def add_to_label(self) -> str:
         """Add source graph to label"""
         query_remove_label = """
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -482,32 +485,35 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}
         """
-        old_label = next(
+        label = next(
             _["label"]["title"] for _ in self.graphs_list if _["iri"] == self.shapes_graph_iri
         )
-        source_graphs = old_label[12:].split(", ")
-        if not old_label:
+        if not label or not label.startswith("Shapes for:"):
             self.log.warning("No label in existing shapes graph.")
-            self.create_label()
-        elif not old_label.startswith("Shapes for:") or False in {
-            validators.url(_) for _ in source_graphs
-        }:
-            self.log.warning("Malformed label in existing shapes graph.")
-            self.create_label()
-        elif self.shapes_graph_iri not in source_graphs:
-            new_label = f"{old_label}, {self.data_graph_iri}"
-            post_update(
-                query_remove_label.format(
-                    shapes_graph_iri=self.shapes_graph_iri,
-                    label=old_label,
+            label = self.create_label()
+        else:
+            source_graphs = label[12:].split(", ")
+            if {validators.url(_) for _ in source_graphs} != {True}:
+                self.log.warning("Malformed label in existing shapes graph.")
+                label = self.create_label()
+            elif self.data_graph_iri in source_graphs:
+                return label
+            else:
+                old_label = label
+                label = f"{label}, {self.data_graph_iri}"
+                post_update(
+                    query_remove_label.format(
+                        shapes_graph_iri=self.shapes_graph_iri,
+                        label=old_label,
+                    )
                 )
-            )
-            post_update(
-                query_add_label.format(
-                    shapes_graph_iri=self.shapes_graph_iri,
-                    label=new_label,
+                post_update(
+                    query_add_label.format(
+                        shapes_graph_iri=self.shapes_graph_iri,
+                        label=label,
+                    )
                 )
-            )
+        return label
 
     def add_to_graph(self) -> None:
         """Add SHACL shapes to existing graph"""

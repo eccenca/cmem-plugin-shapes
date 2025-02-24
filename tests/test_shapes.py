@@ -76,6 +76,20 @@ def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixtu
     run(["admin", "store", "import", export_zip])
 
 
+@pytest.fixture
+def graph_setup_label(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]:
+    """Graph setup fixture for add-to-label tests"""
+    if os.environ.get("CMEM_BASE_URI", "") == "":
+        pytest.skip("Needs CMEM configuration")
+    # make backup and delete all GRAPHS
+    _ = GraphSetupFixture()
+    export_zip = str(tmp_path / "export.store.zip")
+    run(["admin", "store", "export", export_zip])
+    yield _
+    # remove test GRAPHS
+    run(["admin", "store", "import", export_zip])
+
+
 def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
     """Test plugin execution"""
     plugin = ShapesPlugin(
@@ -255,3 +269,56 @@ def test_filter_creation() -> None:
         ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], name="sfsdf sdf")
     with pytest.raises(ValueError, match="filter_ must be"):
         ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="XXX")
+
+
+def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
+    """Test add to label"""
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup_label.dataset_iri,
+        shapes_graph_iri=graph_setup_label.shapes_iri,
+        existing_graph="add",
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    plugin.graphs_list = [
+        {
+            "iri": graph_setup_label.shapes_iri,
+            "label": {"title": "Shapes for: https://docker.localhost/test"},
+        }
+    ]
+    label = ShapesPlugin.add_to_label(plugin)
+    assert label == f"Shapes for: https://docker.localhost/test, {graph_setup_label.dataset_iri}"
+
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup_label.dataset_iri,
+        shapes_graph_iri=graph_setup_label.shapes_iri,
+        existing_graph="add",
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    plugin.shapes_graph = Graph()
+    plugin.graphs_list = [
+        {
+            "iri": graph_setup_label.shapes_iri,
+            "label": {"title": "Shapes for: invalid iri"},
+        }
+    ]
+    label = ShapesPlugin.add_to_label(plugin)
+    assert label == f"Shapes for: {graph_setup_label.dataset_iri}"
+
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup_label.dataset_iri,
+        shapes_graph_iri=graph_setup_label.shapes_iri,
+        existing_graph="add",
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    plugin.shapes_graph = Graph()
+    plugin.graphs_list = [
+        {
+            "iri": graph_setup_label.shapes_iri,
+            "label": {"title": f"Shapes for: {graph_setup_label.dataset_iri}"},
+        }
+    ]
+    label = ShapesPlugin.add_to_label(plugin)
+    assert label == f"Shapes for: {graph_setup_label.dataset_iri}"
