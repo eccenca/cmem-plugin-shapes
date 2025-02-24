@@ -477,15 +477,13 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}
         """
-        shapes_graph_metadata = [_ for _ in self.graphs_list if _["iri"] == self.shapes_graph_iri]
-        if shapes_graph_metadata:
-            metadata = shapes_graph_metadata[0]
-            if "label" not in metadata or "title" not in metadata["label"]:
-                self.log.warning("No label in existing shapes graph.")
-                return self.create_label()
-        label: str = next(
-            _["label"]["title"] for _ in self.graphs_list if _["iri"] == self.shapes_graph_iri
+        shapes_graph_metadata = next(
+            _ for _ in self.graphs_list if _["iri"] == self.shapes_graph_iri
         )
+        if "label" not in shapes_graph_metadata or "title" not in shapes_graph_metadata["label"]:
+            self.log.warning("No label in existing shapes graph.")
+            return self.create_label()
+        label: str = shapes_graph_metadata["label"]["title"]
         if not label:
             self.log.warning("No label in existing shapes graph.")
             return self.create_label()
