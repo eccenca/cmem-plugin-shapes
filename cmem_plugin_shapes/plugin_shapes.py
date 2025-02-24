@@ -494,8 +494,11 @@ class ShapesPlugin(WorkflowPlugin):
         label: str = next(
             _["label"]["title"] for _ in self.graphs_list if _["iri"] == self.shapes_graph_iri
         )
-        if not label or not label.startswith("Shapes for:"):
+        if not label:
             self.log.warning("No label in existing shapes graph.")
+            return self.create_label()
+        elif not label.startswith("Shapes for:"):
+            self.log.warning("Malformed label in existing shapes graph.")
             return self.create_label()
         source_graphs = label[12:].split(", ")
         if {validators.url(_) for _ in source_graphs} != {True}:
