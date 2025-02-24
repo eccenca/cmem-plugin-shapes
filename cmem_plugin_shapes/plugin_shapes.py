@@ -497,7 +497,7 @@ class ShapesPlugin(WorkflowPlugin):
         if not label:
             self.log.warning("No label in existing shapes graph.")
             return self.create_label()
-        elif not label.startswith("Shapes for:"):
+        if not label.startswith("Shapes for:"):
             self.log.warning("Malformed label in existing shapes graph.")
             return self.create_label()
         source_graphs = label[12:].split(", ")
