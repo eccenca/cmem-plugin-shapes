@@ -154,7 +154,6 @@ class ShapesPlugin(WorkflowPlugin):
             )
         self.label = LABEL
         self.shapes_count = 0
-        self.graphs_list: list = []
         self.input_ports = FixedNumberOfInputs([])
         self.output_port = None
 
@@ -455,9 +454,10 @@ class ShapesPlugin(WorkflowPlugin):
         """
         post_update(query_add_created)
 
-    def create_label(self) -> str:
+    def create_label(self, label: str = "") -> str:
         """Create label in shapes graph"""
-        label = f"Shapes for: {self.data_graph_iri}"
+        if not label:
+            label = f"Shapes for: {self.data_graph_iri}"
         self.shapes_graph.add(
             (
                 URIRef(self.shapes_graph_iri),
@@ -472,14 +472,6 @@ class ShapesPlugin(WorkflowPlugin):
         query_remove_label = """
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         DELETE DATA {{
-            GRAPH <{shapes_graph_iri}> {{
-                <{shapes_graph_iri}> rdfs:label "{label}"
-            }}
-        }}
-        """
-        query_add_label = """
-        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-        INSERT DATA {{
             GRAPH <{shapes_graph_iri}> {{
                 <{shapes_graph_iri}> rdfs:label "{label}"
             }}
@@ -506,21 +498,14 @@ class ShapesPlugin(WorkflowPlugin):
             return self.create_label()
         if self.data_graph_iri in source_graphs:
             return label
-        old_label = label
-        label = f"{label}, {self.data_graph_iri}"
+        new_label = f"{label}, {self.data_graph_iri}"
         post_update(
             query_remove_label.format(
-                shapes_graph_iri=self.shapes_graph_iri,
-                label=old_label,
-            )
-        )
-        post_update(
-            query_add_label.format(
                 shapes_graph_iri=self.shapes_graph_iri,
                 label=label,
             )
         )
-        return label
+        return self.create_label(label=new_label)
 
     def add_to_graph(self) -> None:
         """Add SHACL shapes to existing graph"""

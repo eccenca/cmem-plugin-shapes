@@ -280,6 +280,8 @@ def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
         import_shapes=False,
         prefix_cc=False,
     )
+    plugin.shapes_graph = Graph()
+
     plugin.graphs_list = [
         {
             "iri": graph_setup_label.shapes_iri,
@@ -289,14 +291,6 @@ def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
     label = ShapesPlugin.add_to_label(plugin)
     assert label == f"Shapes for: https://docker.localhost/test, {graph_setup_label.dataset_iri}"
 
-    plugin = ShapesPlugin(
-        data_graph_iri=graph_setup_label.dataset_iri,
-        shapes_graph_iri=graph_setup_label.shapes_iri,
-        existing_graph="add",
-        import_shapes=False,
-        prefix_cc=False,
-    )
-    plugin.shapes_graph = Graph()
     plugin.graphs_list = [
         {
             "iri": graph_setup_label.shapes_iri,
@@ -306,14 +300,6 @@ def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
     label = ShapesPlugin.add_to_label(plugin)
     assert label == f"Shapes for: {graph_setup_label.dataset_iri}"
 
-    plugin = ShapesPlugin(
-        data_graph_iri=graph_setup_label.dataset_iri,
-        shapes_graph_iri=graph_setup_label.shapes_iri,
-        existing_graph="add",
-        import_shapes=False,
-        prefix_cc=False,
-    )
-    plugin.shapes_graph = Graph()
     plugin.graphs_list = [
         {
             "iri": graph_setup_label.shapes_iri,
@@ -323,26 +309,10 @@ def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
     label = ShapesPlugin.add_to_label(plugin)
     assert label == f"Shapes for: {graph_setup_label.dataset_iri}"
 
-    plugin = ShapesPlugin(
-        data_graph_iri=graph_setup_label.dataset_iri,
-        shapes_graph_iri=graph_setup_label.shapes_iri,
-        existing_graph="add",
-        import_shapes=False,
-        prefix_cc=False,
-    )
-    plugin.shapes_graph = Graph()
     plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri}]
     label = ShapesPlugin.add_to_label(plugin)
     assert label == f"Shapes for: {graph_setup_label.dataset_iri}"
 
-    plugin = ShapesPlugin(
-        data_graph_iri=graph_setup_label.dataset_iri,
-        shapes_graph_iri=graph_setup_label.shapes_iri,
-        existing_graph="add",
-        import_shapes=False,
-        prefix_cc=False,
-    )
-    plugin.shapes_graph = Graph()
     plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri, "label": {"title": None}}]
     label = ShapesPlugin.add_to_label(plugin)
     assert label == f"Shapes for: {graph_setup_label.dataset_iri}"
