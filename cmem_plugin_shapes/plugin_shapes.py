@@ -153,13 +153,14 @@ class ShapesPlugin(WorkflowPlugin):
                 f"Handle existing output graph parameter is invalid '{existing_graph}'."
             )
         self.label = LABEL
+        self.shapes_count = 0
         self.input_ports = FixedNumberOfInputs([])
         self.output_port = None
 
     @staticmethod
     def format_prefixes(prefixes: dict, formatted_prefixes: dict | None = None) -> dict:
         """Format prefix dictionary for consistency"""
-        if formatted_prefixes is None:
+        if not formatted_prefixes:
             formatted_prefixes = {}
         for prefix, namespace in prefixes.items():
             formatted_prefixes.setdefault(namespace, []).append(prefix + ":")
@@ -284,17 +285,16 @@ class ShapesPlugin(WorkflowPlugin):
             )
         return class_dict
 
-    def create_shapes(self) -> int:
+    def create_shapes(self) -> None:
         """Create SHACL node and property shapes"""
         class_uuids = set()
         prop_uuids = set()
-        shapes_count = 0
         for cls, properties in self.get_class_dict().items():
             class_uuid = uuid5(NAMESPACE_URL, cls)
             node_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{class_uuid}")
 
             if class_uuid not in class_uuids:
-                shapes_count += 1
+                self.shapes_count += 1
                 self.shapes_graph.add((node_shape_uri, RDF.type, SH.NodeShape))
                 self.shapes_graph.add((node_shape_uri, SH.targetClass, URIRef(cls)))
                 name = self.get_name(cls)
@@ -308,7 +308,7 @@ class ShapesPlugin(WorkflowPlugin):
                 )
                 property_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{prop_uuid}")
                 if prop_uuid not in prop_uuids:
-                    shapes_count += 1
+                    self.shapes_count += 1
                     name = self.get_name(prop["property"])
                     self.shapes_graph.add((property_shape_uri, RDF.type, SH.PropertyShape))
                     self.shapes_graph.add((property_shape_uri, SH.path, URIRef(prop["property"])))
@@ -337,8 +337,6 @@ class ShapesPlugin(WorkflowPlugin):
                     )
                     prop_uuids.add(prop_uuid)
                 self.shapes_graph.add((node_shape_uri, SH.property, property_shape_uri))
-
-        return shapes_count
 
     def import_shapes_graph(self) -> None:
         """Import SHACL shapes graph to catalog"""
@@ -484,16 +482,16 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}
         """
-        old_label = [  # noqa: RUF015
+        old_label = next(
             _["label"]["title"] for _ in self.graphs_list if _["iri"] == self.shapes_graph_iri
-        ][0]
+        )
         source_graphs = old_label[12:].split(", ")
         if not old_label:
             self.log.warning("No label in existing shapes graph.")
             self.create_label()
-        elif not old_label.startswith("Shapes for:") or {
+        elif not old_label.startswith("Shapes for:") or False in {
             validators.url(_) for _ in source_graphs
-        } != {True}:
+        }:
             self.log.warning("Malformed label in existing shapes graph.")
             self.create_label()
         elif self.shapes_graph_iri not in source_graphs:
@@ -561,26 +559,29 @@ class ShapesPlugin(WorkflowPlugin):
         """  # noqa: S608
         post_update(query_add_modified)
 
-    def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:  # noqa: ARG002
-        """Execute plugin"""
-        context.report.update(
+    def update_execution_report(self) -> None:
+        """Update execution report"""
+        self.context.report.update(
             ExecutionReport(
-                entity_count=0,
+                entity_count=self.shapes_count,
                 operation="write",
                 operation_desc="shapes created",
             )
         )
+
+    def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:  # noqa: ARG002
+        """Execute plugin"""
+        self.context = context
+        self.update_execution_report()
         setup_cmempy_user_access(context.user)
-        self.graphs_list = get_graphs_list()
-        graph_exists = self.shapes_graph_iri in [_["iri"] for _ in self.graphs_list]
+        graph_exists = self.shapes_graph_iri in [_["iri"] for _ in get_graphs_list()]
         if self.existing_graph == "stop" and graph_exists:
             raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists.")
 
-        self.context = context
         self.prefixes = self.get_prefixes()
         self.shapes_graph = self.init_shapes_graph()
         self.dp_api_endpoint = get_dp_api_endpoint()
-        shapes_count = self.create_shapes()
+        self.create_shapes()
 
         setup_cmempy_user_access(context.user)
         if self.existing_graph != "add":
@@ -591,16 +592,8 @@ class ShapesPlugin(WorkflowPlugin):
                 self.add_to_graph()
             else:
                 self.create_graph()
-
+        self.update_execution_report()
         self.post_provenance()
 
-        operation_desc = "shape created" if shapes_count == 1 else "shapes created"
-        context.report.update(
-            ExecutionReport(
-                entity_count=shapes_count,
-                operation="write",
-                operation_desc=operation_desc,
-            )
-        )
         if self.import_shapes:
             self.import_shapes_graph()
