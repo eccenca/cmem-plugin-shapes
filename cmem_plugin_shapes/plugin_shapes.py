@@ -437,6 +437,7 @@ class ShapesPlugin(WorkflowPlugin):
 
     def create_graph(self) -> None:
         """Create or replace SHACL shapes graph"""
+        self.create_label()
         post_streamed(
             self.shapes_graph_iri,
             BytesIO(self.shapes_graph.serialize(format="nt", encoding="utf-8")),
