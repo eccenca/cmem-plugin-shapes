@@ -486,31 +486,29 @@ class ShapesPlugin(WorkflowPlugin):
         old_label = [  # noqa: RUF015
             _["label"]["title"] for _ in self.graphs_list if _["iri"] == self.shapes_graph_iri
         ][0]
+        source_graphs = old_label[12:].split(", ")
         if not old_label:
             self.log.warning("No label in existing shapes graph.")
             self.create_label()
-        elif not old_label.startswith("Shapes for:"):
+        elif not old_label.startswith("Shapes for:") or {
+            validators.url(_) for _ in source_graphs
+        } != {True}:
             self.log.warning("Malformed label in existing shapes graph.")
             self.create_label()
-        else:
-            source_graphs = old_label[12:].split(", ")
-            if {validators.url(_) for _ in source_graphs} != {True}:
-                self.log.warning("Malformed label in existing shapes graph.")
-                self.create_label()
-            elif self.shapes_graph_iri not in source_graphs:
-                new_label = f"{old_label}, {self.data_graph_iri}"
-                post_update(
-                    query_remove_label.format(
-                        shapes_graph_iri=self.shapes_graph_iri,
-                        label=old_label,
-                    )
+        elif self.shapes_graph_iri not in source_graphs:
+            new_label = f"{old_label}, {self.data_graph_iri}"
+            post_update(
+                query_remove_label.format(
+                    shapes_graph_iri=self.shapes_graph_iri,
+                    label=old_label,
                 )
-                post_update(
-                    query_add_label.format(
-                        shapes_graph_iri=self.shapes_graph_iri,
-                        label=new_label,
-                    )
+            )
+            post_update(
+                query_add_label.format(
+                    shapes_graph_iri=self.shapes_graph_iri,
+                    label=new_label,
                 )
+            )
 
     def add_to_graph(self) -> None:
         """Add SHACL shapes to existing graph"""
