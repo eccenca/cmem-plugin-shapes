@@ -1364,15 +1364,15 @@ files = [
 
 [[package]]
 name = "textual"
-version = "2.1.0"
+version = "2.1.1"
 description = "Modern Text User Interface framework"
 optional = false
 python-versions = "<4.0.0,>=3.8.1"
 groups = ["dev"]
 markers = "platform_system != \"Windows\""
 files = [
-    {file = "textual-2.1.0-py3-none-any.whl", hash = "sha256:c061604f4ca639ea660671213ea2b6db6139e04528b2e9a6210b1063ba467114"},
-    {file = "textual-2.1.0.tar.gz", hash = "sha256:0b1d45cbe351ccd68bfeefd22defa33a59811436089de048bab9fb8b4657bd87"},
+    {file = "textual-2.1.1-py3-none-any.whl", hash = "sha256:789c9ba1b2f6b78224ea0fe396e5188feb6882ca43894fc15f6ebbd237525263"},
+    {file = "textual-2.1.1.tar.gz", hash = "sha256:c1dd54fce53c3abe87a021735efbbfd8af5313191f0729a02ecdb3083367cf62"},
 ]
 
 [package.dependencies]
