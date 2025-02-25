@@ -14,9 +14,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Changed
 
-- When adding to existing graph the source graph IRI is appended to the label. If the original label does not conform
-to the format "Shapes for: [IRI], [IRI2], ..." it is prefixed with "Previous label:" and a new label is added with the
-new data graph IRI.
+- When adding to existing graph the source graph IRI is appended to the label. If the existing label does not conform
+to the format `"Shapes for: [IRI], [IRI2], ..."` it is stored as `rdfs:comment "Previous label: [previous label]"` and a label with the
+new data graph IRI is added.
 
 ## [2.0.1] 2025-02-19
 

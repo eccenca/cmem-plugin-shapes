@@ -475,6 +475,16 @@ class ShapesPlugin(WorkflowPlugin):
             )
         )
 
+    def backup_label(self, label) -> None:
+        """Store previous malformed label with rdfs:comment in shapes graph"""
+        self.shapes_graph.add(
+            (
+                URIRef(self.shapes_graph_iri),
+                RDFS.comment,
+                Literal(f"Previous label: {label}"),
+            )
+        )
+
     def remove_label(self, label: str) -> None:
         """Remove label from shapes graph"""
         query = f"""
@@ -507,7 +517,7 @@ class ShapesPlugin(WorkflowPlugin):
             "Shapes for: "
         ):
             self.log.warning("Malformed label in existing shapes graph.")
-            self.create_label(f"Previous label: {label}")
+            self.backup_label(label)
             return self.create_label()
         return self.create_label(label=f"{label}, {self.data_graph_iri}")
 
