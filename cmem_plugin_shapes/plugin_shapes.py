@@ -475,7 +475,7 @@ class ShapesPlugin(WorkflowPlugin):
             )
         )
 
-    def backup_label(self, label) -> None:
+    def backup_label(self, label: str) -> None:
         """Store previous malformed label with rdfs:comment in shapes graph"""
         self.shapes_graph.add(
             (
