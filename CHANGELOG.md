@@ -7,14 +7,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased] 
 
-- Add dcterms:source [data graph IRI] to the shapes graph
-- When adding to existing graph the source graph IRI is appended to the label. If the original label does not conform
-to the format "Shapes for: [IRI], [IRI2], ..." it is prefixed with "Previous label:" and a new label is added with the
-new data graph IRI.
-
 ### Added
 
 - Add dcterms:source and plugin provenance
+
+### Changed
+
+- When adding to existing graph the source graph IRI is appended to the label. If the original label does not conform
+to the format "Shapes for: [IRI], [IRI2], ..." it is prefixed with "Previous label:" and a new label is added with the
+new data graph IRI.
 
 ## [2.0.1] 2025-02-19
 
