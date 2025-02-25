@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from cmem.cmempy.dp.proxy.graph import get
+from cmem.cmempy.dp.proxy.graph import get, get_graphs_list
 from cmem.cmempy.dp.proxy.sparql import get as ask
 from rdflib import DCTERMS, RDFS, Graph, Literal, URIRef
 from rdflib.compare import isomorphic
@@ -82,10 +82,15 @@ def graph_setup_label(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]
     if os.environ.get("CMEM_BASE_URI", "") == "":
         pytest.skip("Needs CMEM configuration")
     _ = GraphSetupFixture()
-    export_zip = str(tmp_path / "export.store.zip")
-    run(["admin", "store", "export", export_zip])
+    export_file = str(tmp_path / "shapes_graph.ttl")
+
+    graphs_exists = False
+    if _.shapes_iri in [g["iri"] for g in get_graphs_list()]:
+        graphs_exists = True
+        run(["graph", "export", "--output-file", export_file, _.shapes_iri])
     yield _
-    run(["admin", "store", "import", export_zip])
+    if graphs_exists:
+        run(["graph", "import", "--replace", export_file, _.shapes_iri])
 
 
 def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
