@@ -70,7 +70,7 @@ new data graph IRI.
 - preserve multiple prefixes for one namespace in prefix.cc list
 
 
-### [1.0.0beta2] 2024-12-03
+## [1.0.0beta2] 2024-12-03
 
 - removed dependency str2bool
 - use GraphParameterType for Shapes graph 
