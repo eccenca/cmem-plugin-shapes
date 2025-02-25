@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from cmem.cmempy.dp.proxy.graph import get
 from cmem.cmempy.dp.proxy.sparql import get as ask
-from rdflib import DCTERMS, Graph, URIRef
+from rdflib import DCTERMS, RDFS, Graph, URIRef
 from rdflib.compare import isomorphic
 
 from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
@@ -85,7 +85,7 @@ def graph_setup_label(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]
     # make backup and delete all GRAPHS
     _ = GraphSetupFixture()
     export_zip = str(tmp_path / "export.store.zip")
-    run(["admin", "store", "export", export_zip])
+    # run(["admin", "store", "export", export_zip])
     yield _
     # remove test GRAPHS
     run(["admin", "store", "import", export_zip])
@@ -283,14 +283,27 @@ def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
     )
     plugin.shapes_graph = Graph()
 
+    invalid_label = "invalid"
     plugin.graphs_list = [
         {
             "iri": graph_setup_label.shapes_iri,
-            "label": {"title": graph_setup_label.label},
+            "label": {"title": invalid_label},
         }
     ]
-    label = ShapesPlugin.add_to_label(plugin)
+    label, backup_label = ShapesPlugin.add_to_label(plugin)
     assert label == graph_setup_label.label
+    assert backup_label == f"Previous label: {invalid_label}"
+
+    invalid_label = "Shapes for: invalid"
+    plugin.graphs_list = [
+        {
+            "iri": graph_setup_label.shapes_iri,
+            "label": {"title": invalid_label},
+        }
+    ]
+    label, backup_label = ShapesPlugin.add_to_label(plugin)
+    assert label == graph_setup_label.label
+    assert backup_label == f"Previous label: {invalid_label}"
 
     plugin.graphs_list = [
         {
@@ -298,13 +311,13 @@ def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
             "label": {"title": graph_setup_label.label},
         }
     ]
-    label = ShapesPlugin.add_to_label(plugin)
+    label, _ = ShapesPlugin.add_to_label(plugin)
     assert label == graph_setup_label.label
 
     plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri}]
-    label = ShapesPlugin.add_to_label(plugin)
+    label, _ = ShapesPlugin.add_to_label(plugin)
     assert label == graph_setup_label.label
 
     plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri, "label": {"title": None}}]
-    label = ShapesPlugin.add_to_label(plugin)
+    label, _ = ShapesPlugin.add_to_label(plugin)
     assert label == graph_setup_label.label

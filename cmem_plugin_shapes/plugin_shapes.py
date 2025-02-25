@@ -467,43 +467,69 @@ class ShapesPlugin(WorkflowPlugin):
         )
         return label
 
-    def add_to_label(self) -> str:
-        """Add source graph to label"""
-        query_remove_label = """
+    def remove_label(self, label: str) -> None:
+        """Remmove label from shapes graph"""
+        query = f"""
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         DELETE DATA {{
-            GRAPH <{shapes_graph_iri}> {{
-                <{shapes_graph_iri}> rdfs:label "{label}"
+            GRAPH <{self.shapes_graph_iri}> {{
+                <{self.shapes_graph_iri}> rdfs:label "{label}"
             }}
         }}
         """
+        post_update(query=query)
+
+    def backup_label(self, label: str) -> str:
+        """Add 'previous label' to original shapes graph label when adding to shapes graph if
+        the label did not conform to format
+        """
+        backup_label = f"Previous label: {label}"
+        query_delete = f"""
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        DELETE DATA {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                <{self.shapes_graph_iri}> rdfs:label "{label}"
+            }}
+        }}
+        """
+        post_update(query=query_delete)
+        query_insert = f"""
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        INSERT DATA {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                <{self.shapes_graph_iri}> rdfs:label "{backup_label}"
+            }}
+        }}
+        """
+        post_update(query=query_insert)
+        return backup_label
+
+    def add_to_label(self) -> tuple[str, str | None]:
+        """Add source graph to label"""
         shapes_graph_metadata = next(
             _ for _ in self.graphs_list if _["iri"] == self.shapes_graph_iri
         )
         if "label" not in shapes_graph_metadata or "title" not in shapes_graph_metadata["label"]:
             self.log.warning("No label in existing shapes graph.")
-            return self.create_label()
+            return self.create_label(), None
         label: str = shapes_graph_metadata["label"]["title"]
         if not label:
             self.log.warning("No label in existing shapes graph.")
-            return self.create_label()
+            return self.create_label(), None
         if not label.startswith("Shapes for:"):
             self.log.warning("Malformed label in existing shapes graph.")
-            return self.create_label()
+            backup_label = self.backup_label(label)
+            return self.create_label(), backup_label
         source_graphs = label[12:].split(", ")
         if {validators.url(_) for _ in source_graphs} != {True}:
             self.log.warning("Malformed label in existing shapes graph.")
-            return self.create_label()
+            backup_label = self.backup_label(label)
+            return self.create_label(), backup_label
         if self.data_graph_iri in source_graphs:
-            return label
+            return label, None
         new_label = f"{label}, {self.data_graph_iri}"
-        post_update(
-            query_remove_label.format(
-                shapes_graph_iri=self.shapes_graph_iri,
-                label=label,
-            )
-        )
-        return self.create_label(label=new_label)
+        self.remove_label(label)
+        return self.create_label(label=new_label), None
 
     def add_to_graph(self) -> None:
         """Add SHACL shapes to existing graph"""
