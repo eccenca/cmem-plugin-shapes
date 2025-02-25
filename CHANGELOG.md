@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Added
 
-- Add dcterms:source and plugin provenance
+- Add dcterms:source [data graph IRI] and plugin provenance
 
 ### Changed
 
