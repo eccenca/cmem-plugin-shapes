@@ -64,7 +64,6 @@ def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixtu
         pytest.skip("Needs CMEM configuration")
     # make backup and delete all GRAPHS
     _ = GraphSetupFixture()
-    _.add_to_graph = add_to_graph
     export_zip = str(tmp_path / "export.store.zip")
     run(["admin", "store", "export", export_zip])
     run(["graph", "import", _.dataset_file, _.dataset_iri])
@@ -78,9 +77,15 @@ def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixtu
 
 
 @pytest.fixture
-def graph_setup_label() -> GraphSetupFixture:
+def graph_setup_label(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]:
     """Graph setup fixture for add-to-label tests"""
-    return GraphSetupFixture()
+    if os.environ.get("CMEM_BASE_URI", "") == "":
+        pytest.skip("Needs CMEM configuration")
+    _ = GraphSetupFixture()
+    export_zip = str(tmp_path / "export.store.zip")
+    run(["admin", "store", "export", export_zip])
+    yield _
+    run(["admin", "store", "import", export_zip])
 
 
 def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
