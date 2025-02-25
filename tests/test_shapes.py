@@ -10,8 +10,8 @@ from typing import Any
 
 import pytest
 from cmem.cmempy.dp.proxy.graph import get
-from cmem.cmempy.dp.proxy.sparql import get as ask
-from rdflib import DCTERMS, RDFS, Graph, URIRef
+from cmem.cmempy.dp.proxy.sparql import get as get_sparql
+from rdflib import DCTERMS, RDFS, Graph, Literal, URIRef
 from rdflib.compare import isomorphic
 
 from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
@@ -78,17 +78,9 @@ def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixtu
 
 
 @pytest.fixture
-def graph_setup_label(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]:
+def graph_setup_label() -> GraphSetupFixture:
     """Graph setup fixture for add-to-label tests"""
-    if os.environ.get("CMEM_BASE_URI", "") == "":
-        pytest.skip("Needs CMEM configuration")
-    # make backup and delete all GRAPHS
-    _ = GraphSetupFixture()
-    export_zip = str(tmp_path / "export.store.zip")
-    run(["admin", "store", "export", export_zip])
-    yield _
-    # remove test GRAPHS
-    run(["admin", "store", "import", export_zip])
+    return GraphSetupFixture()
 
 
 def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
@@ -234,7 +226,7 @@ def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
         import_shapes=False,
         prefix_cc=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    assert not json.loads(ask(query=graph_setup.ask_query)).get("boolean", True)
+    assert not json.loads(get_sparql(query=graph_setup.ask_query)).get("boolean", True)
     ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
@@ -242,7 +234,7 @@ def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
         import_shapes=True,
         prefix_cc=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    assert json.loads(ask(query=graph_setup.ask_query)).get("boolean", False)
+    assert json.loads(get_sparql(query=graph_setup.ask_query)).get("boolean", False)
 
 
 def test_filter_creation() -> None:
@@ -282,7 +274,6 @@ def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
         prefix_cc=False,
     )
     plugin.shapes_graph = Graph()
-
     invalid_label = "invalid"
     plugin.graphs_list = [
         {
@@ -290,10 +281,13 @@ def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
             "label": {"title": invalid_label},
         }
     ]
-    label, backup_label = ShapesPlugin.add_to_label(plugin)
-    assert label == graph_setup_label.label
-    assert backup_label == f"Previous label: {invalid_label}"
+    ShapesPlugin.add_to_label(plugin)
+    labels = list(plugin.shapes_graph.objects(predicate=RDFS.label))
+    assert len(labels) == 2  # noqa: PLR2004
+    assert Literal(graph_setup_label.label) in labels
+    assert Literal(f"Previous label: {invalid_label}") in labels
 
+    plugin.shapes_graph = Graph()
     invalid_label = "Shapes for: invalid"
     plugin.graphs_list = [
         {
@@ -301,26 +295,30 @@ def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
             "label": {"title": invalid_label},
         }
     ]
-    label, backup_label = ShapesPlugin.add_to_label(plugin)
-    assert label == graph_setup_label.label
-    assert backup_label == f"Previous label: {invalid_label}"
+    ShapesPlugin.add_to_label(plugin)
+    labels = list(plugin.shapes_graph.objects(predicate=RDFS.label))
+    assert len(labels) == 2  # noqa: PLR2004
+    assert Literal(graph_setup_label.label) in labels
+    assert Literal(f"Previous label: {invalid_label}") in labels
 
+    plugin.shapes_graph = Graph()
     plugin.graphs_list = [
         {
             "iri": graph_setup_label.shapes_iri,
             "label": {"title": graph_setup_label.label},
         }
     ]
-    label, backup_label = ShapesPlugin.add_to_label(plugin)
-    assert label == graph_setup_label.label
-    assert backup_label is None
+    ShapesPlugin.add_to_label(plugin)
+    assert list(plugin.shapes_graph.objects(predicate=RDFS.label)) == []
 
+    plugin.shapes_graph = Graph()
     plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri}]
-    label, backup_label = ShapesPlugin.add_to_label(plugin)
-    assert label == graph_setup_label.label
-    assert backup_label is None
+    ShapesPlugin.add_to_label(plugin)
+    labels = list(plugin.shapes_graph.objects(predicate=RDFS.label))
+    assert labels == [Literal(graph_setup_label.label)]
 
+    plugin.shapes_graph = Graph()
     plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri, "label": {"title": None}}]
-    label, backup_label = ShapesPlugin.add_to_label(plugin)
-    assert label == graph_setup_label.label
-    assert backup_label is None
+    ShapesPlugin.add_to_label(plugin)
+    labels = list(plugin.shapes_graph.objects(predicate=RDFS.label))
+    assert labels == [Literal(graph_setup_label.label)]
