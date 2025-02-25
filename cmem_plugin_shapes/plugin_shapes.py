@@ -468,7 +468,7 @@ class ShapesPlugin(WorkflowPlugin):
         return label
 
     def remove_label(self, label: str) -> None:
-        """Remmove label from shapes graph"""
+        """Remove label from shapes graph"""
         query = f"""
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         DELETE DATA {{
@@ -480,8 +480,10 @@ class ShapesPlugin(WorkflowPlugin):
         post_update(query=query)
 
     def backup_label(self, label: str) -> str:
-        """Add 'previous label' to original shapes graph label when adding to shapes graph if
-        the label did not conform to format
+        """Backup malformed label in shapes graph
+
+        Add 'previous label' to original shapes graph label when adding to shapes graph if the
+        original label does not conform to format
         """
         backup_label = f"Previous label: {label}"
         query_delete = f"""

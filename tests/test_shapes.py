@@ -85,7 +85,7 @@ def graph_setup_label(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]
     # make backup and delete all GRAPHS
     _ = GraphSetupFixture()
     export_zip = str(tmp_path / "export.store.zip")
-    # run(["admin", "store", "export", export_zip])
+    run(["admin", "store", "export", export_zip])
     yield _
     # remove test GRAPHS
     run(["admin", "store", "import", export_zip])
