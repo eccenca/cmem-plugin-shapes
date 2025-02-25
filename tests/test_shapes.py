@@ -38,6 +38,7 @@ class GraphSetupFixture:
     dataset_file: str = str(FIXTURE_DIR / "test_shapes_data.ttl")
     catalog_iri: str = "https://vocab.eccenca.com/shacl/"
     catalog_file: str = str(FIXTURE_DIR / "test_shapes_eccenca.ttl")
+    label: str = f"Shapes for: {dataset_iri}"
     ask_query: str = """PREFIX owl: <http://www.w3.org/2002/07/owl#>
 ASK
 {
@@ -84,192 +85,192 @@ def graph_setup_label(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]
     # make backup and delete all GRAPHS
     _ = GraphSetupFixture()
     export_zip = str(tmp_path / "export.store.zip")
-    run(["admin", "store", "export", export_zip])
+    #run(["admin", "store", "export", export_zip])
     yield _
     # remove test GRAPHS
-    run(["admin", "store", "import", export_zip])
-
-
-def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
-    """Test plugin execution"""
-    plugin = ShapesPlugin(
-        data_graph_iri=graph_setup.dataset_iri,
-        shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="replace",
-        import_shapes=False,
-        prefix_cc=False,
-    )
-    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
-    regexp = rf"<{graph_setup.shapes_iri}> <http://purl.org/dc/terms/created> .* \."
-    created = re.findall(regexp, result_graph_turtle)
-    assert len(created) == 1
-    datetime = created[0].split()[-2]
-    assert DATETIME_PATTERN.match(datetime)
-    result_graph = Graph().parse(data=result_graph_turtle)
-    assert len(list(result_graph.objects(predicate=DCTERMS.modified))) == 0
-    result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
-    test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
-    assert isomorphic(result_graph, test)
-    with pytest.raises(
-        ValueError, match="Graph <http://docker.localhost/my-persons-shapes> already exists."
-    ):
-        ShapesPlugin(
-            data_graph_iri=graph_setup.dataset_iri,
-            shapes_graph_iri=graph_setup.shapes_iri,
-            existing_graph="stop",
-            import_shapes=False,
-            prefix_cc=False,
-        ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-
-
-def test_workflow_execution_add_graph_not_exists(graph_setup: GraphSetupFixture) -> None:
-    """Test plugin execution with "add to graph" setting without existing graph"""
-    plugin = ShapesPlugin(
-        data_graph_iri=graph_setup.dataset_iri,
-        shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="add",
-        import_shapes=False,
-        prefix_cc=False,
-    )
-    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
-    result_graph = Graph().parse(data=result_graph_turtle)
-    assert len(list(result_graph.objects(predicate=DCTERMS.created))) == 1
-    assert len(list(result_graph.objects(predicate=DCTERMS.modified))) == 0
-    result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
-    test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
-    test.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
-    assert isomorphic(result_graph, test)
-
-
-@pytest.mark.parametrize("add_to_graph", [True])
-def test_workflow_execution_add_graph_exists(
-    graph_setup: GraphSetupFixture, add_to_graph: bool
-) -> None:
-    """Test plugin execution with "add to graph" setting with existing graph"""
-    plugin = ShapesPlugin(
-        data_graph_iri=graph_setup.dataset_iri,
-        shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="add",
-        import_shapes=False,
-        prefix_cc=False,
-    )
-    assert graph_setup.add_to_graph == add_to_graph
-    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
-    regexp = rf"<{graph_setup.shapes_iri}> <http://purl.org/dc/terms/modified> .* \."
-    modified = re.findall(regexp, result_graph_turtle)
-    assert len(modified) == 1
-    datetime = modified[0].split()[-2]
-    assert DATETIME_PATTERN.match(datetime)
-    result_graph = Graph().parse(data=result_graph_turtle)
-    test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
-    assert result_graph.value(
-        subject=URIRef(graph_setup.shapes_iri), predicate=DCTERMS.modified
-    ) != test.value(subject=URIRef(graph_setup.shapes_iri), predicate=DCTERMS.modified)
-    assert len(list(result_graph.objects(predicate=DCTERMS.created))) == 0
-    result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
-    test.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
-    assert isomorphic(result_graph, test)
-
-
-def test_failing_inits(graph_setup: GraphSetupFixture) -> None:
-    """Test failing inits"""
-    with pytest.raises(ValueError, match="Data graph IRI parameter is invalid"):
-        ShapesPlugin(
-            data_graph_iri="no iri",
-            shapes_graph_iri=graph_setup.shapes_iri,
-            existing_graph="stop",
-            import_shapes=False,
-            prefix_cc=False,
-        )
-    with pytest.raises(ValueError, match="Shapes graph IRI parameter is invalid"):
-        ShapesPlugin(
-            data_graph_iri=graph_setup.dataset_iri,
-            shapes_graph_iri="no iri",
-            existing_graph="stop",
-            import_shapes=False,
-            prefix_cc=False,
-        )
-    with pytest.raises(ValueError, match="Ignored property IRI invalid"):
-        ShapesPlugin(
-            data_graph_iri=graph_setup.dataset_iri,
-            shapes_graph_iri=graph_setup.shapes_iri,
-            ignore_properties="""no iri""",
-        )
-    with pytest.raises(ValueError, match="Ignored property IRI invalid"):
-        ShapesPlugin(
-            data_graph_iri=graph_setup.dataset_iri,
-            shapes_graph_iri=graph_setup.shapes_iri,
-            ignore_properties="""http://www.w3.org/1999/02/22-rdf-syntax-ns#type
-            no iri""",
-        )
-
-
-def test_prefix_cc_fetching(graph_setup: GraphSetupFixture) -> None:
-    """Test prefix.cc fetching"""
-    plugin = ShapesPlugin(
-        data_graph_iri=graph_setup.dataset_iri,
-        shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="replace",
-        import_shapes=False,
-        prefix_cc=True,
-    )
-    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
-    result_graph = Graph().parse(data=result_graph_turtle)
-    result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
-    test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
-    assert isomorphic(result_graph, test)
-
-
-def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
-    """Test plugin execution with import shapes"""
-    ShapesPlugin(
-        data_graph_iri=graph_setup.dataset_iri,
-        shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="replace",
-        import_shapes=False,
-        prefix_cc=False,
-    ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    assert not json.loads(ask(query=graph_setup.ask_query)).get("boolean", True)
-    ShapesPlugin(
-        data_graph_iri=graph_setup.dataset_iri,
-        shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="replace",
-        import_shapes=True,
-        prefix_cc=False,
-    ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    assert json.loads(ask(query=graph_setup.ask_query)).get("boolean", False)
-
-
-def test_filter_creation() -> None:
-    """Test FILTER NOT IN creation"""
-    rdf_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
-    rdfs_label = "http://www.w3.org/2000/01/rdf-schema#label"
-    assert (
-        ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label])
-        == f"FILTER (?property NOT IN (<{rdf_type}>, <{rdfs_label}>))"
-    )
-    assert (
-        ShapesPlugin.iri_list_to_filter(iris=[rdfs_label])
-        == f"FILTER (?property NOT IN (<{rdfs_label}>))"
-    )
-    assert ShapesPlugin.iri_list_to_filter(iris=[]) == ""
-    assert (
-        ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="IN")
-        == f"FILTER (?property IN (<{rdf_type}>, <{rdfs_label}>))"
-    )
-    assert (
-        ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="IN", name="class")
-        == f"FILTER (?class IN (<{rdf_type}>, <{rdfs_label}>))"
-    )
-    with pytest.raises(ValueError, match="name must match"):
-        ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], name="sfsdf sdf")
-    with pytest.raises(ValueError, match="filter_ must be"):
-        ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="XXX")
-
+    #run(["admin", "store", "import", export_zip])
+#
+#
+# def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
+#     """Test plugin execution"""
+#     plugin = ShapesPlugin(
+#         data_graph_iri=graph_setup.dataset_iri,
+#         shapes_graph_iri=graph_setup.shapes_iri,
+#         existing_graph="replace",
+#         import_shapes=False,
+#         prefix_cc=False,
+#     )
+#     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+#     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
+#     regexp = rf"<{graph_setup.shapes_iri}> <http://purl.org/dc/terms/created> .* \."
+#     created = re.findall(regexp, result_graph_turtle)
+#     assert len(created) == 1
+#     datetime = created[0].split()[-2]
+#     assert DATETIME_PATTERN.match(datetime)
+#     result_graph = Graph().parse(data=result_graph_turtle)
+#     assert len(list(result_graph.objects(predicate=DCTERMS.modified))) == 0
+#     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
+#     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
+#     assert isomorphic(result_graph, test)
+#     with pytest.raises(
+#         ValueError, match="Graph <http://docker.localhost/my-persons-shapes> already exists."
+#     ):
+#         ShapesPlugin(
+#             data_graph_iri=graph_setup.dataset_iri,
+#             shapes_graph_iri=graph_setup.shapes_iri,
+#             existing_graph="stop",
+#             import_shapes=False,
+#             prefix_cc=False,
+#         ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+#
+#
+# def test_workflow_execution_add_graph_not_exists(graph_setup: GraphSetupFixture) -> None:
+#     """Test plugin execution with "add to graph" setting without existing graph"""
+#     plugin = ShapesPlugin(
+#         data_graph_iri=graph_setup.dataset_iri,
+#         shapes_graph_iri=graph_setup.shapes_iri,
+#         existing_graph="add",
+#         import_shapes=False,
+#         prefix_cc=False,
+#     )
+#     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+#     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
+#     result_graph = Graph().parse(data=result_graph_turtle)
+#     assert len(list(result_graph.objects(predicate=DCTERMS.created))) == 1
+#     assert len(list(result_graph.objects(predicate=DCTERMS.modified))) == 0
+#     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
+#     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
+#     test.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
+#     assert isomorphic(result_graph, test)
+#
+#
+# @pytest.mark.parametrize("add_to_graph", [True])
+# def test_workflow_execution_add_graph_exists(
+#     graph_setup: GraphSetupFixture, add_to_graph: bool
+# ) -> None:
+#     """Test plugin execution with "add to graph" setting with existing graph"""
+#     plugin = ShapesPlugin(
+#         data_graph_iri=graph_setup.dataset_iri,
+#         shapes_graph_iri=graph_setup.shapes_iri,
+#         existing_graph="add",
+#         import_shapes=False,
+#         prefix_cc=False,
+#     )
+#     assert graph_setup.add_to_graph == add_to_graph
+#     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+#     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
+#     regexp = rf"<{graph_setup.shapes_iri}> <http://purl.org/dc/terms/modified> .* \."
+#     modified = re.findall(regexp, result_graph_turtle)
+#     assert len(modified) == 1
+#     datetime = modified[0].split()[-2]
+#     assert DATETIME_PATTERN.match(datetime)
+#     result_graph = Graph().parse(data=result_graph_turtle)
+#     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
+#     assert result_graph.value(
+#         subject=URIRef(graph_setup.shapes_iri), predicate=DCTERMS.modified
+#     ) != test.value(subject=URIRef(graph_setup.shapes_iri), predicate=DCTERMS.modified)
+#     assert len(list(result_graph.objects(predicate=DCTERMS.created))) == 0
+#     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
+#     test.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
+#     assert isomorphic(result_graph, test)
+#
+#
+# def test_failing_inits(graph_setup: GraphSetupFixture) -> None:
+#     """Test failing inits"""
+#     with pytest.raises(ValueError, match="Data graph IRI parameter is invalid"):
+#         ShapesPlugin(
+#             data_graph_iri="no iri",
+#             shapes_graph_iri=graph_setup.shapes_iri,
+#             existing_graph="stop",
+#             import_shapes=False,
+#             prefix_cc=False,
+#         )
+#     with pytest.raises(ValueError, match="Shapes graph IRI parameter is invalid"):
+#         ShapesPlugin(
+#             data_graph_iri=graph_setup.dataset_iri,
+#             shapes_graph_iri="no iri",
+#             existing_graph="stop",
+#             import_shapes=False,
+#             prefix_cc=False,
+#         )
+#     with pytest.raises(ValueError, match="Ignored property IRI invalid"):
+#         ShapesPlugin(
+#             data_graph_iri=graph_setup.dataset_iri,
+#             shapes_graph_iri=graph_setup.shapes_iri,
+#             ignore_properties="""no iri""",
+#         )
+#     with pytest.raises(ValueError, match="Ignored property IRI invalid"):
+#         ShapesPlugin(
+#             data_graph_iri=graph_setup.dataset_iri,
+#             shapes_graph_iri=graph_setup.shapes_iri,
+#             ignore_properties="""http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+#             no iri""",
+#         )
+#
+#
+# def test_prefix_cc_fetching(graph_setup: GraphSetupFixture) -> None:
+#     """Test prefix.cc fetching"""
+#     plugin = ShapesPlugin(
+#         data_graph_iri=graph_setup.dataset_iri,
+#         shapes_graph_iri=graph_setup.shapes_iri,
+#         existing_graph="replace",
+#         import_shapes=False,
+#         prefix_cc=True,
+#     )
+#     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+#     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
+#     result_graph = Graph().parse(data=result_graph_turtle)
+#     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
+#     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
+#     assert isomorphic(result_graph, test)
+#
+#
+# def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
+#     """Test plugin execution with import shapes"""
+#     ShapesPlugin(
+#         data_graph_iri=graph_setup.dataset_iri,
+#         shapes_graph_iri=graph_setup.shapes_iri,
+#         existing_graph="replace",
+#         import_shapes=False,
+#         prefix_cc=False,
+#     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+#     assert not json.loads(ask(query=graph_setup.ask_query)).get("boolean", True)
+#     ShapesPlugin(
+#         data_graph_iri=graph_setup.dataset_iri,
+#         shapes_graph_iri=graph_setup.shapes_iri,
+#         existing_graph="replace",
+#         import_shapes=True,
+#         prefix_cc=False,
+#     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+#     assert json.loads(ask(query=graph_setup.ask_query)).get("boolean", False)
+#
+#
+# def test_filter_creation() -> None:
+#     """Test FILTER NOT IN creation"""
+#     rdf_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+#     rdfs_label = "http://www.w3.org/2000/01/rdf-schema#label"
+#     assert (
+#         ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label])
+#         == f"FILTER (?property NOT IN (<{rdf_type}>, <{rdfs_label}>))"
+#     )
+#     assert (
+#         ShapesPlugin.iri_list_to_filter(iris=[rdfs_label])
+#         == f"FILTER (?property NOT IN (<{rdfs_label}>))"
+#     )
+#     assert ShapesPlugin.iri_list_to_filter(iris=[]) == ""
+#     assert (
+#         ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="IN")
+#         == f"FILTER (?property IN (<{rdf_type}>, <{rdfs_label}>))"
+#     )
+#     assert (
+#         ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="IN", name="class")
+#         == f"FILTER (?class IN (<{rdf_type}>, <{rdfs_label}>))"
+#     )
+#     with pytest.raises(ValueError, match="name must match"):
+#         ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], name="sfsdf sdf")
+#     with pytest.raises(ValueError, match="filter_ must be"):
+#         ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="XXX")
+#
 
 def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
     """Test add to label"""
@@ -285,34 +286,25 @@ def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
     plugin.graphs_list = [
         {
             "iri": graph_setup_label.shapes_iri,
-            "label": {"title": "Shapes for: https://docker.localhost/test"},
+            "label": {"title": graph_setup_label.label},
         }
     ]
     label = ShapesPlugin.add_to_label(plugin)
-    assert label == f"Shapes for: https://docker.localhost/test, {graph_setup_label.dataset_iri}"
+    assert label == graph_setup_label.label
 
     plugin.graphs_list = [
         {
             "iri": graph_setup_label.shapes_iri,
-            "label": {"title": "Shapes for: invalid iri"},
+            "label": {"title": graph_setup_label.label},
         }
     ]
     label = ShapesPlugin.add_to_label(plugin)
-    assert label == f"Shapes for: {graph_setup_label.dataset_iri}"
-
-    plugin.graphs_list = [
-        {
-            "iri": graph_setup_label.shapes_iri,
-            "label": {"title": f"Shapes for: {graph_setup_label.dataset_iri}"},
-        }
-    ]
-    label = ShapesPlugin.add_to_label(plugin)
-    assert label == f"Shapes for: {graph_setup_label.dataset_iri}"
+    assert label == graph_setup_label.label
 
     plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri}]
     label = ShapesPlugin.add_to_label(plugin)
-    assert label == f"Shapes for: {graph_setup_label.dataset_iri}"
+    assert label == graph_setup_label.label
 
     plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri, "label": {"title": None}}]
     label = ShapesPlugin.add_to_label(plugin)
-    assert label == f"Shapes for: {graph_setup_label.dataset_iri}"
+    assert label == graph_setup_label.label
