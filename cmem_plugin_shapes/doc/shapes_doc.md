@@ -10,10 +10,10 @@ The Knowledge Graph containing the instance data to be analyzed for the SHACL sh
 
 The Knowledge Graph, the generated shapes will be added to.
 
-**<a id="parameter_doc_overwrite">Overwrite Shape Catalog</a>**
+**<a id="parameter_doc_existing_graph">Handle existing output graph</a>**
 
-Overwrite the output SHACL shapes graph if it exists.
-If disabled and the graph exists, the plugin execution fails.
+Add result to the existing graph (add result to graph), overwrite the existing graph with the result (replace existing
+graph with result), or stop the workflow if the output graph already exists (stop workflow if output graph exists).
 
 **<a id="parameter_doc_import_shapes">Import the output graph into the central Shapes Catalog</a>**
 
@@ -36,3 +36,7 @@ Example:
 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
 http://xmlns.com/foaf/0.1/familyName
 ```
+
+**<a id="parameter_doc_plugin_provenance">Include plugin provenance</a>**
+
+Add information about the plugin and plugin settings to the shapes graph.

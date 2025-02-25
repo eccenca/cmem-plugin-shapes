@@ -117,6 +117,13 @@ def str2bool(value: str) -> bool:
             description="Provide the list of properties (as IRIs) to ignore.",
             advanced=True,
         ),
+        PluginParameter(
+            param_type=BoolParameterType(),
+            name="plugin_provenance",
+            label="Include plugin provenance",
+            description="Add information about the plugin and plugin settings to the shapes graph.",
+            advanced=True,
+        ),
     ],
 )
 class ShapesPlugin(WorkflowPlugin):
@@ -130,6 +137,7 @@ class ShapesPlugin(WorkflowPlugin):
         import_shapes: bool = False,
         prefix_cc: bool = True,
         ignore_properties: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+        plugin_provenance: bool = True,
     ) -> None:
         if not validators.url(data_graph_iri):
             raise ValueError("Data graph IRI parameter is invalid.")
@@ -146,6 +154,7 @@ class ShapesPlugin(WorkflowPlugin):
         self.import_shapes = import_shapes
         self.prefix_cc = prefix_cc
         self.replace = False
+        self.plugin_provenance = plugin_provenance
         if existing_graph == "replace":
             self.replace = True
         if existing_graph not in ("stop", "replace", "add"):
@@ -617,7 +626,7 @@ class ShapesPlugin(WorkflowPlugin):
             else:
                 self.create_graph()
         self.update_execution_report()
-        self.post_provenance()
-
+        if self.plugin_provenance:
+            self.post_provenance()
         if self.import_shapes:
             self.import_shapes_graph()
