@@ -311,13 +311,16 @@ def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
             "label": {"title": graph_setup_label.label},
         }
     ]
-    label, _ = ShapesPlugin.add_to_label(plugin)
+    label, backup_label = ShapesPlugin.add_to_label(plugin)
     assert label == graph_setup_label.label
+    assert backup_label is None
 
     plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri}]
-    label, _ = ShapesPlugin.add_to_label(plugin)
+    label, backup_label = ShapesPlugin.add_to_label(plugin)
     assert label == graph_setup_label.label
+    assert backup_label is None
 
     plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri, "label": {"title": None}}]
-    label, _ = ShapesPlugin.add_to_label(plugin)
+    label, backup_label = ShapesPlugin.add_to_label(plugin)
     assert label == graph_setup_label.label
+    assert backup_label is None
