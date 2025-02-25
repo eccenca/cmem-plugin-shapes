@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 from cmem.cmempy.dp.proxy.graph import get
-from cmem.cmempy.dp.proxy.sparql import get as get_sparql
+from cmem.cmempy.dp.proxy.sparql import get as ask
 from rdflib import DCTERMS, RDFS, Graph, Literal, URIRef
 from rdflib.compare import isomorphic
 
@@ -226,7 +226,7 @@ def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
         import_shapes=False,
         prefix_cc=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    assert not json.loads(get_sparql(query=graph_setup.ask_query)).get("boolean", True)
+    assert not json.loads(ask(query=graph_setup.ask_query)).get("boolean", True)
     ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
@@ -234,7 +234,7 @@ def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
         import_shapes=True,
         prefix_cc=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    assert json.loads(get_sparql(query=graph_setup.ask_query)).get("boolean", False)
+    assert json.loads(ask(query=graph_setup.ask_query)).get("boolean", False)
 
 
 def test_filter_creation() -> None:
