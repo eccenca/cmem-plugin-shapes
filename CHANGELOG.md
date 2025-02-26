@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Added
 
-- Add dcterms:source [data graph IRI] to the shapes graph
+- Add `dcterms:source [data graph IRI]` to the shapes graph
 - Option to add plugin provenance to the shapes graph
 
 ### Changed
