@@ -1005,6 +1005,7 @@
   "fso": "https://w3id.org/fso#",
   "fssp": "http://linkeddata.fssprus.ru/resource/",
   "ftcontent": "http://www.ft.com/ontology/content/",
+  "fti": "http://franz.com/ns/allegrograph/2.2/textindex/",
   "ftr": "https://w3id.org/ftr#",
   "fun": "http://w3id.org/sparql-generate/fn/",
   "func": "http://www.w3.org/2007/rif-builtin-function#",

@@ -258,26 +258,26 @@ class ShapesPlugin(WorkflowPlugin):
         """Retrieve classes and associated properties"""
         setup_cmempy_user_access(self.context.user)
         query = f"""
-            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-            SELECT DISTINCT ?class ?property ?data ?inverse
-            FROM <{self.data_graph_iri}> {{
-                {{
-                    ?subject a ?class .
-                    ?subject ?property ?object .
-                    {self.iri_list_to_filter(self.ignore_properties)}
-                    BIND(isLiteral(?object) AS ?data)
-                    BIND("false" AS ?inverse)
-                }}
-            UNION
-                {{
-                    ?object a ?class .
-                    ?subject ?property ?object .
-                    {self.iri_list_to_filter(self.ignore_properties)}
-                    BIND("false" AS ?data)
-                    BIND("true" AS ?inverse)
-                }}
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        SELECT DISTINCT ?class ?property ?data ?inverse
+        FROM <{self.data_graph_iri}> {{
+            {{
+                ?subject a ?class .
+                ?subject ?property ?object .
+                {self.iri_list_to_filter(self.ignore_properties)}
+                BIND(isLiteral(?object) AS ?data)
+                BIND("false" AS ?inverse)
             }}
-        """  # noqa: S608
+        UNION
+            {{
+                ?object a ?class .
+                ?subject ?property ?object .
+                {self.iri_list_to_filter(self.ignore_properties)}
+                BIND("false" AS ?data)
+                BIND("true" AS ?inverse)
+            }}
+        }}"""  # noqa: S608
+
         results = json.loads(post_sparql(query))
 
         class_dict: dict = {}
@@ -355,32 +355,36 @@ class ShapesPlugin(WorkflowPlugin):
                 <https://vocab.eccenca.com/shacl/> <http://www.w3.org/2002/07/owl#imports>
                     <{self.shapes_graph_iri}> .
             }}
-        }}
-        """
+        }}"""
+
         setup_cmempy_user_access(self.context.user)
         post_update(query)
 
-    def post_provenance(self) -> None:
+    def post_provenance(self, now: str) -> None:
         """Post provenance"""
         prov = self.get_provenance()
-        if prov:
-            param_sparql = ""
-            for name, iri in prov["parameters"].items():
-                param_sparql += f'\n<{prov["plugin_iri"]}> <{iri}> "{self.__dict__[name]}" .'
-            insert_query = f"""
-                INSERT DATA {{
-                    GRAPH <{self.shapes_graph_iri}> {{
-                        <{self.shapes_graph_iri}> <http://purl.org/dc/terms/creator>
-                            <{prov["plugin_iri"]}> .
-                        <{prov["plugin_iri"]}> a <{prov["plugin_type"]}>,
-                            <https://vocab.eccenca.com/di/CustomTask> .
-                        <{prov["plugin_iri"]}> <http://www.w3.org/2000/01/rdf-schema#label>
-                            "{prov["plugin_label"]}" .
-                        {param_sparql}
-                    }}
-                }}
-            """
-            post_update(query=insert_query)
+        if not prov:
+            return
+        param_sparql = ""
+        for name, iri in prov["parameters"].items():
+            param_sparql += f'\n<{prov["plugin_iri"]}> <{iri}> "{self.__dict__[name]}" .'
+
+        insert_query = f"""
+        PREFIX dcterms: <http://purl.org/dc/terms/>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        INSERT DATA {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                <{self.shapes_graph_iri}> dcterms:creator <{prov["plugin_iri"]}> .
+                <{prov["plugin_iri"]}> a <{prov["plugin_type"]}>,
+                        <https://vocab.eccenca.com/di/CustomTask> ;
+                    rdfs:label "{prov["plugin_label"]}" ;
+                    dcterms:date "{now}"^^xsd:dateTime .
+                {param_sparql}
+            }}
+        }}"""
+
+        post_update(query=insert_query)
 
     def get_provenance(self) -> dict | None:
         """Get provenance information"""
@@ -391,13 +395,12 @@ class ShapesPlugin(WorkflowPlugin):
         project_graph = f"http://di.eccenca.com/project/{self.context.task.project_id()}"
 
         type_query = f"""
-            SELECT ?type {{
-                GRAPH <{project_graph}> {{
-                    <{plugin_iri}> a ?type .
-                    FILTER(STRSTARTS(STR(?type), "https://vocab.eccenca.com/di/functions/"))
-                }}
+        SELECT ?type {{
+            GRAPH <{project_graph}> {{
+                <{plugin_iri}> a ?type .
+                FILTER(STRSTARTS(STR(?type), "https://vocab.eccenca.com/di/functions/"))
             }}
-        """
+        }}"""
 
         result = json.loads(post_sparql(query=type_query))
 
@@ -416,13 +419,12 @@ class ShapesPlugin(WorkflowPlugin):
         )
 
         parameter_query = f"""
-            SELECT ?parameter {{
-                GRAPH <{project_graph}> {{
-                    <{plugin_iri}> ?parameter ?o .
-                    FILTER(STRSTARTS(STR(?parameter), "https://vocab.eccenca.com/di/functions/param_"))
-                }}
+        SELECT ?parameter {{
+            GRAPH <{project_graph}> {{
+                <{plugin_iri}> ?parameter ?o .
+                FILTER(STRSTARTS(STR(?parameter), "https://vocab.eccenca.com/di/functions/param_"))
             }}
-        """
+        }}"""
 
         new_plugin_iri = f"{'_'.join(plugin_iri.split('_')[:-1])}_{token_hex(8)}"
         label = f"{self.label} plugin"
@@ -442,7 +444,7 @@ class ShapesPlugin(WorkflowPlugin):
 
         return prov
 
-    def create_graph(self) -> None:
+    def create_graph(self) -> str:
         """Create or replace SHACL shapes graph"""
         self.create_label()
         post_streamed(
@@ -453,15 +455,16 @@ class ShapesPlugin(WorkflowPlugin):
         )
         now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
         query_add_created = f"""
-            PREFIX dcterms: <http://purl.org/dc/terms/>
-            PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-            INSERT DATA {{
-                GRAPH <{self.shapes_graph_iri}> {{
-                    <{self.shapes_graph_iri}> dcterms:created "{now}"^^xsd:dateTime
-                }}
+        PREFIX dcterms: <http://purl.org/dc/terms/>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+        INSERT DATA {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                <{self.shapes_graph_iri}> dcterms:created "{now}"^^xsd:dateTime
             }}
-        """
+        }}"""
+
         post_update(query_add_created)
+        return now
 
     def create_label(self, label: str = "") -> None:
         """Create label in shapes graph"""
@@ -493,8 +496,8 @@ class ShapesPlugin(WorkflowPlugin):
             GRAPH <{self.shapes_graph_iri}> {{
                 <{self.shapes_graph_iri}> rdfs:label "{label}"
             }}
-        }}
-        """
+        }}"""
+
         post_update(query=query)
 
     def add_to_label(self) -> None:
@@ -502,7 +505,7 @@ class ShapesPlugin(WorkflowPlugin):
         shapes_graph_metadata = next(
             _ for _ in self.graphs_list if _["iri"] == self.shapes_graph_iri
         )
-        if "label" not in shapes_graph_metadata or "title" not in shapes_graph_metadata["label"]:
+        if shapes_graph_metadata["label"]["fromIri"]:
             self.log.warning("No label in existing shapes graph.")
             return self.create_label()
         label: str = shapes_graph_metadata["label"]["title"]
@@ -521,7 +524,7 @@ class ShapesPlugin(WorkflowPlugin):
             return self.create_label()
         return self.create_label(label=f"{label}, {self.data_graph_iri}")
 
-    def add_to_graph(self) -> None:
+    def add_to_graph(self) -> str:
         """Add SHACL shapes to existing graph"""
         self.add_to_label()
         query_data = f"""
@@ -530,6 +533,7 @@ class ShapesPlugin(WorkflowPlugin):
                 {self.shapes_graph.serialize(format="nt", encoding="utf-8").decode()}
             }}
         }}"""
+
         post_update(query_data)
 
         now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
@@ -548,8 +552,8 @@ class ShapesPlugin(WorkflowPlugin):
                     FILTER(?previous < xsd:dateTime("{now}"))
                 }}
             }}
-        }}
-        """
+        }}"""
+
         setup_cmempy_user_access(self.context.user)
         post_update(query_remove_modified)
 
@@ -567,9 +571,10 @@ class ShapesPlugin(WorkflowPlugin):
             }}
             VALUES ?undef {{ UNDEF }}
             BIND(IF(!BOUND(?datetime), xsd:dateTime("{now}"), ?undef) AS ?current)
-        }}
-        """  # noqa: S608
+        }}"""  # noqa: S608
+
         post_update(query_add_modified)
+        return now
 
     def update_execution_report(self) -> None:
         """Update execution report"""
@@ -597,15 +602,15 @@ class ShapesPlugin(WorkflowPlugin):
 
         setup_cmempy_user_access(context.user)
         if self.existing_graph != "add":
-            self.create_graph()
+            now = self.create_graph()
         else:
             self.graphs_list = get_graphs_list()
             if self.shapes_graph_iri in [_["iri"] for _ in self.graphs_list]:
-                self.add_to_graph()
+                now = self.add_to_graph()
             else:
-                self.create_graph()
+                now = self.create_graph()
         self.update_execution_report()
         if self.plugin_provenance:
-            self.post_provenance()
+            self.post_provenance(now)
         if self.import_shapes:
             self.import_shapes_graph()

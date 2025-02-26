@@ -84,9 +84,8 @@ def graph_setup_label(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]
     _ = GraphSetupFixture()
     export_file = str(tmp_path / "shapes_graph.ttl")
 
-    graphs_exists = False
-    if _.shapes_iri in [g["iri"] for g in get_graphs_list()]:
-        graphs_exists = True
+    graphs_exists = _.shapes_iri in [g["iri"] for g in get_graphs_list()]
+    if graphs_exists:
         run(["graph", "export", "--output-file", export_file, _.shapes_iri])
     yield _
     if graphs_exists:
@@ -288,7 +287,7 @@ def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
     plugin.graphs_list = [
         {
             "iri": graph_setup_label.shapes_iri,
-            "label": {"title": invalid_label},
+            "label": {"title": invalid_label, "fromIri": False},
         }
     ]
     ShapesPlugin.add_to_label(plugin)
@@ -304,7 +303,7 @@ def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
     plugin.graphs_list = [
         {
             "iri": graph_setup_label.shapes_iri,
-            "label": {"title": invalid_label},
+            "label": {"title": invalid_label, "fromIri": False},
         }
     ]
     ShapesPlugin.add_to_label(plugin)
@@ -319,7 +318,7 @@ def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
     plugin.graphs_list = [
         {
             "iri": graph_setup_label.shapes_iri,
-            "label": {"title": graph_setup_label.label},
+            "label": {"title": graph_setup_label.label, "fromIri": False},
         }
     ]
     ShapesPlugin.add_to_label(plugin)
@@ -327,15 +326,7 @@ def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
     assert list(plugin.shapes_graph.objects(predicate=RDFS.comment)) == []
 
     plugin.shapes_graph = Graph()
-    plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri}]
-    ShapesPlugin.add_to_label(plugin)
-    assert list(plugin.shapes_graph.objects(predicate=RDFS.label)) == [
-        Literal(graph_setup_label.label)
-    ]
-    assert list(plugin.shapes_graph.objects(predicate=RDFS.comment)) == []
-
-    plugin.shapes_graph = Graph()
-    plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri, "label": {"title": None}}]
+    plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri, "label": {"fromIri": True}}]
     ShapesPlugin.add_to_label(plugin)
     assert list(plugin.shapes_graph.objects(predicate=RDFS.label)) == [
         Literal(graph_setup_label.label)
