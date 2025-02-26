@@ -29,7 +29,7 @@ new data graph IRI is added.
 
 ### Changed
 
-- Replaced the bool parameter "Overwrite Shape Catalog" with the parameter "Handle existing output graph" with the followin options
+- Replaced the bool parameter "Overwrite Shape Catalog" with the parameter "Handle existing output graph" with the options:
   - replace the graph
   - add the result shapes to the graph
   - stop the workflow if the specified output graph already exists
