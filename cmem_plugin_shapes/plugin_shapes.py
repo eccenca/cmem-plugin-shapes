@@ -107,13 +107,6 @@ def str2bool(value: str) -> bool:
             "language tag are considered.",
         ),
         PluginParameter(
-            param_type=StringParameterType(),
-            name="label",
-            label="Output shape catalog label",
-            description="The label for the shape catalog graph. If no label is specified or no "
-            "label exists in the existng graph, a label will be generated.",
-        ),
-        PluginParameter(
             param_type=BoolParameterType(),
             name="import_shapes",
             label="Import the output graph into the central Shapes Catalog",
