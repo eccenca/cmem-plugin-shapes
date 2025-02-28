@@ -146,7 +146,7 @@ class ShapesPlugin(WorkflowPlugin):
         import_shapes: bool = False,
         prefix_cc: bool = True,
         ignore_properties: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-        plugin_provenance: bool = True,
+        plugin_provenance: bool = False,
     ) -> None:
         if not validators.url(data_graph_iri):
             raise ValueError("Data graph IRI parameter is invalid.")
