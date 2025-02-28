@@ -27,7 +27,7 @@ from cmem_plugin_base.dataintegration.parameter.graph import GraphParameterType
 from cmem_plugin_base.dataintegration.parameter.multiline import MultilineStringParameterType
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
-from cmem_plugin_base.dataintegration.types import BoolParameterType
+from cmem_plugin_base.dataintegration.types import BoolParameterType, StringParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
 from rdflib import DCTERMS, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
@@ -38,9 +38,9 @@ from . import __path__
 
 SHUI = Namespace("https://vocab.eccenca.com/shui/")
 PREFIX_CC = "https://prefix.cc/popular/all.file.json"
+PLUGIN_LABEL = "Generate SHACL shapes from data"
 TRUE_SET = {"yes", "true", "t", "y", "1"}
 FALSE_SET = {"no", "false", "f", "n", "0"}
-LABEL = "Generate SHACL shapes from data"
 
 
 def format_namespace(iri: str) -> str:
@@ -60,7 +60,7 @@ def str2bool(value: str) -> bool:
 
 
 @Plugin(
-    label=LABEL,
+    label=PLUGIN_LABEL,
     icon=Icon(file_name="shapes.svg", package=__package__),
     description="Generate SHACL node and property shapes from a data graph",
     documentation=SHAPES_DOC,
@@ -89,19 +89,34 @@ def str2bool(value: str) -> bool:
                         "replace": "replace existing graph with result",
                         "stop": "stop workflow if output graph exists",
                     }
-                )
+                ),
             ),
             name="existing_graph",
             label="Handle existing output graph",
             description="Add result to the existing graph, overwrite the existing graph with the "
             "result, or stop the workflow if the output graph already exists",
-            default_value="stop",
+        ),
+        PluginParameter(
+            param_type=StringParameterType(),
+            name="label",
+            label="Output shape catalog label",
+            description="The label for the shape catalog graph. If no label is specified for a new "
+            "shapes graph, a label will be generated. If no label is specified when adding to a "
+            "shapes graph, the original label will be kept or a label will be generated if there "
+            'is no label in the existing graph. Only labels with language tag "en" or without '
+            "language tag are considered.",
+        ),
+        PluginParameter(
+            param_type=StringParameterType(),
+            name="label",
+            label="Output shape catalog label",
+            description="The label for the shape catalog graph. If no label is specified or no "
+            "label exists in the existng graph, a label will be generated.",
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="import_shapes",
             label="Import the output graph into the central Shapes Catalog",
-            default_value=False,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
@@ -133,6 +148,7 @@ class ShapesPlugin(WorkflowPlugin):
         self,
         data_graph_iri: str = "",
         shapes_graph_iri: str = "",
+        label: str = "",
         existing_graph: str = "stop",
         import_shapes: bool = False,
         prefix_cc: bool = True,
@@ -161,7 +177,7 @@ class ShapesPlugin(WorkflowPlugin):
             raise ValueError(
                 f"Handle existing output graph parameter is invalid '{existing_graph}'."
             )
-        self.label = LABEL
+        self.label = label
         self.shapes_count = 0
         self.input_ports = FixedNumberOfInputs([])
         self.output_port = None
@@ -427,7 +443,7 @@ class ShapesPlugin(WorkflowPlugin):
         }}"""
 
         new_plugin_iri = f"{'_'.join(plugin_iri.split('_')[:-1])}_{token_hex(8)}"
-        label = f"{self.label} plugin"
+        label = f"{PLUGIN_LABEL} plugin"
         result = json.loads(post_sparql(query=parameter_query))
 
         prov = {
@@ -466,67 +482,49 @@ class ShapesPlugin(WorkflowPlugin):
         post_update(query_add_created)
         return now
 
-    def create_label(self, label: str = "") -> None:
+    def create_label(self) -> None:
         """Create label in shapes graph"""
-        if not label:
-            label = f"Shapes for: {self.data_graph_iri}"
+        label = self.label or f"Shapes for {self.shapes_graph_iri}"
         self.shapes_graph.add(
             (
                 URIRef(self.shapes_graph_iri),
                 RDFS.label,
-                Literal(label),
+                Literal(label, lang="en"),
             )
         )
-
-    def backup_label(self, label: str) -> None:
-        """Store previous malformed label with rdfs:comment in shapes graph"""
-        self.shapes_graph.add(
-            (
-                URIRef(self.shapes_graph_iri),
-                RDFS.comment,
-                Literal(f"Previous label: {label}"),
-            )
-        )
-
-    def remove_label(self, label: str) -> None:
-        """Remove label from shapes graph"""
-        query = f"""
-        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-        DELETE DATA {{
-            GRAPH <{self.shapes_graph_iri}> {{
-                <{self.shapes_graph_iri}> rdfs:label "{label}"
-            }}
-        }}"""
-
-        post_update(query=query)
-
-    def add_to_label(self) -> None:
-        """Add source graph to label"""
-        shapes_graph_metadata = next(
-            _ for _ in self.graphs_list if _["iri"] == self.shapes_graph_iri
-        )
-        if shapes_graph_metadata["label"]["fromIri"]:
-            self.log.warning("No label in existing shapes graph.")
-            return self.create_label()
-        label: str = shapes_graph_metadata["label"]["title"]
-        if not label:
-            self.log.warning("No label in existing shapes graph.")
-            return self.create_label()
-        source_graphs = label.split("Shapes for: ")[-1].split(", ")
-        if self.data_graph_iri in source_graphs:
-            return None
-        self.remove_label(label)
-        if {validators.url(_) for _ in source_graphs} != {True} or not label.startswith(
-            "Shapes for: "
-        ):
-            self.log.warning("Malformed label in existing shapes graph.")
-            self.backup_label(label)
-            return self.create_label()
-        return self.create_label(label=f"{label}, {self.data_graph_iri}")
 
     def add_to_graph(self) -> str:
         """Add SHACL shapes to existing graph"""
-        self.add_to_label()
+        query_ask_label = f"""
+                PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                ASK {{
+                    GRAPH <{self.shapes_graph_iri}> {{
+                         <{self.shapes_graph_iri}> rdfs:label ?label
+                         FILTER(LANG(?label) in ("en", ""))
+                    }}
+                }}"""
+
+        query_remove_label = f"""
+        PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        DELETE {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                 <{self.shapes_graph_iri}> rdfs:label ?label
+            }}
+        }}
+        WHERE {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                 <{self.shapes_graph_iri}> rdfs:label ?label
+                 FILTER(LANG(?label) in ("en", ""))
+            }}
+        }}"""
+
+        has_label = json.loads(post_sparql(query=query_ask_label)).get("boolean", False)
+
+        if self.label and has_label:
+            post_update(query=query_remove_label)
+        if self.label or not has_label:
+            self.create_label()
+
         query_data = f"""
         INSERT DATA {{
             GRAPH <{self.shapes_graph_iri}> {{

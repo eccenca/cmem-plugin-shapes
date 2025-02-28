@@ -273,62 +273,62 @@ def test_filter_creation() -> None:
         ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="XXX")
 
 
-def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
-    """Test add to label"""
-    plugin = ShapesPlugin(
-        data_graph_iri=graph_setup_label.dataset_iri,
-        shapes_graph_iri=graph_setup_label.shapes_iri,
-        existing_graph="add",
-        import_shapes=False,
-        prefix_cc=False,
-    )
-    plugin.shapes_graph = Graph()
-    invalid_label = "invalid"
-    plugin.graphs_list = [
-        {
-            "iri": graph_setup_label.shapes_iri,
-            "label": {"title": invalid_label, "fromIri": False},
-        }
-    ]
-    ShapesPlugin.add_to_label(plugin)
-    assert list(plugin.shapes_graph.objects(predicate=RDFS.label)) == [
-        Literal(graph_setup_label.label)
-    ]
-    assert list(plugin.shapes_graph.objects(predicate=RDFS.comment)) == [
-        Literal(f"Previous label: {invalid_label}")
-    ]
-
-    plugin.shapes_graph = Graph()
-    invalid_label = "Shapes for: invalid"
-    plugin.graphs_list = [
-        {
-            "iri": graph_setup_label.shapes_iri,
-            "label": {"title": invalid_label, "fromIri": False},
-        }
-    ]
-    ShapesPlugin.add_to_label(plugin)
-    assert list(plugin.shapes_graph.objects(predicate=RDFS.label)) == [
-        Literal(graph_setup_label.label)
-    ]
-    assert list(plugin.shapes_graph.objects(predicate=RDFS.comment)) == [
-        Literal(f"Previous label: {invalid_label}")
-    ]
-
-    plugin.shapes_graph = Graph()
-    plugin.graphs_list = [
-        {
-            "iri": graph_setup_label.shapes_iri,
-            "label": {"title": graph_setup_label.label, "fromIri": False},
-        }
-    ]
-    ShapesPlugin.add_to_label(plugin)
-    assert list(plugin.shapes_graph.objects(predicate=RDFS.label)) == []
-    assert list(plugin.shapes_graph.objects(predicate=RDFS.comment)) == []
-
-    plugin.shapes_graph = Graph()
-    plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri, "label": {"fromIri": True}}]
-    ShapesPlugin.add_to_label(plugin)
-    assert list(plugin.shapes_graph.objects(predicate=RDFS.label)) == [
-        Literal(graph_setup_label.label)
-    ]
-    assert list(plugin.shapes_graph.objects(predicate=RDFS.comment)) == []
+# def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
+#     """Test add to label"""
+#     plugin = ShapesPlugin(
+#         data_graph_iri=graph_setup_label.dataset_iri,
+#         shapes_graph_iri=graph_setup_label.shapes_iri,
+#         existing_graph="add",
+#         import_shapes=False,
+#         prefix_cc=False,
+#     )
+#     plugin.shapes_graph = Graph()
+#     invalid_label = "invalid"
+#     plugin.graphs_list = [
+#         {
+#             "iri": graph_setup_label.shapes_iri,
+#             "label": {"title": invalid_label, "fromIri": False},
+#         }
+#     ]
+#     ShapesPlugin.add_to_label(plugin)
+#     assert list(plugin.shapes_graph.objects(predicate=RDFS.label)) == [
+#         Literal(graph_setup_label.label)
+#     ]
+#     assert list(plugin.shapes_graph.objects(predicate=RDFS.comment)) == [
+#         Literal(f"Previous label: {invalid_label}")
+#     ]
+#
+#     plugin.shapes_graph = Graph()
+#     invalid_label = "Shapes for: invalid"
+#     plugin.graphs_list = [
+#         {
+#             "iri": graph_setup_label.shapes_iri,
+#             "label": {"title": invalid_label, "fromIri": False},
+#         }
+#     ]
+#     ShapesPlugin.add_to_label(plugin)
+#     assert list(plugin.shapes_graph.objects(predicate=RDFS.label)) == [
+#         Literal(graph_setup_label.label)
+#     ]
+#     assert list(plugin.shapes_graph.objects(predicate=RDFS.comment)) == [
+#         Literal(f"Previous label: {invalid_label}")
+#     ]
+#
+#     plugin.shapes_graph = Graph()
+#     plugin.graphs_list = [
+#         {
+#             "iri": graph_setup_label.shapes_iri,
+#             "label": {"title": graph_setup_label.label, "fromIri": False},
+#         }
+#     ]
+#     ShapesPlugin.add_to_label(plugin)
+#     assert list(plugin.shapes_graph.objects(predicate=RDFS.label)) == []
+#     assert list(plugin.shapes_graph.objects(predicate=RDFS.comment)) == []
+#
+#     plugin.shapes_graph = Graph()
+#     plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri, "label": {"fromIri": True}}]
+#     ShapesPlugin.add_to_label(plugin)
+#     assert list(plugin.shapes_graph.objects(predicate=RDFS.label)) == [
+#         Literal(graph_setup_label.label)
+#     ]
+#     assert list(plugin.shapes_graph.objects(predicate=RDFS.comment)) == []
