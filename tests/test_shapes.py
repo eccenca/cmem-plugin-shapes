@@ -293,6 +293,7 @@ def test_add_to_graph_label(graph_setup: GraphSetupFixture, add_to_graph: bool) 
         label="",
     )
     plugin.context = TestExecutionContext()
+
     plugin.shapes_graph = Graph()
     ShapesPlugin.add_to_graph(plugin)
     bindings = json.loads(sparql_get(query=graph_setup.label_query))["results"]["bindings"]
@@ -306,15 +307,8 @@ def test_add_to_graph_label(graph_setup: GraphSetupFixture, add_to_graph: bool) 
     assert len(bindings) == 1
     assert bindings[0]["label"]["value"] == f"Shapes for {graph_setup.dataset_iri}"
 
-    plugin = ShapesPlugin(
-        data_graph_iri=graph_setup.dataset_iri,
-        shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="add",
-        import_shapes=False,
-        prefix_cc=False,
-        label="New label",
-    )
-    plugin.context = TestExecutionContext()
+    plugin.label = "New label"
+
     plugin.shapes_graph = Graph()
     ShapesPlugin.add_to_graph(plugin)
     bindings = json.loads(sparql_get(query=graph_setup.label_query))["results"]["bindings"]
