@@ -105,6 +105,7 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
         existing_graph="replace",
         import_shapes=False,
         prefix_cc=False,
+        plugin_provenance=True,
     )
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
