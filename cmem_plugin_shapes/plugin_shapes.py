@@ -93,8 +93,9 @@ def str2bool(value: str) -> bool:
             ),
             name="existing_graph",
             label="Handle existing output graph",
-            description="Add result to the existing graph, overwrite the existing graph with the "
-            "result, or stop the workflow if the output graph already exists",
+            description="Add result to the existing graph (add result to graph), overwrite the "
+            "existing graph with the result (replace existing graph with result), or stop the "
+            "workflow if the output graph already exists (stop workflow if output graph exists).",
         ),
         PluginParameter(
             param_type=StringParameterType(),
@@ -110,11 +111,17 @@ def str2bool(value: str) -> bool:
             param_type=BoolParameterType(),
             name="import_shapes",
             label="Import the output graph into the central Shapes Catalog",
+            description="Import the SHACL shapes graph in the CMEM Shapes catalog by adding an "
+            "`owl:imports` statement to the central CMEM Shapes Catalog. If the graph is not "
+            "imported, the new shapes are not activated and used.",
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="prefix_cc",
-            label="Additionally fetch namespace prefixes from prefix.cc",
+            label="Fetch namespace prefixes from prefix.cc",
+            description="Attempt to fetch namespace prefixes from prefix.cc instead of from the "
+            "local database. If this fails, fall back on local database. Prefixes defined in the "
+            "Corporate Memory project will override prefixes defined in the external database.",
             default_value=False,
             advanced=True,
         ),

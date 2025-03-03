@@ -10,7 +10,7 @@ The Knowledge Graph containing the instance data to be analyzed for the SHACL sh
 
 The Knowledge Graph, the generated shapes will be added to.
 
-**<a id="label">Label</a>**
+**<a id="parameter_doc_label">Output shape catalog label</a>**
 
 The label for the shape catalog graph. If no label is specified for a new shapes graph, a label will be generated. If
 no label is specified when adding to a shapes graph, the original label will be kept, or, if the existing graph does not have
@@ -24,13 +24,12 @@ graph with result), or stop the workflow if the output graph already exists (sto
 **<a id="parameter_doc_import_shapes">Import the output graph into the central Shapes Catalog</a>**
 
 Import the SHACL shapes graph in the CMEM Shapes catalog by adding an `owl:imports` statement to the central CMEM Shapes Catalog.
-If not imported, the new shapes are not activated and used.
+If the graph is not imported, the new shapes are not activated and used.
 
-**<a id="parameter_doc_prefix_cc">Additionally fetch namespace prefixes from prefix.cc</a>**
+**<a id="parameter_doc_prefix_cc">Fetch namespace prefixes from prefix.cc</a>**
 
-Attempt to fetch namespace prefixes from prefix.cc instead of  from the local database.
-If this fails, fall back on local database.
-Prefixes defined in the Corporate Memory project will override prefixes defined in the external database.
+Attempt to fetch namespace prefixes from prefix.cc instead of from the local database. If this fails, fall back on local
+database. Prefixes defined in the Corporate Memory project will override prefixes defined in the external database.
             
 WARNING: Enabling this flag reveals information to an external service.
 
