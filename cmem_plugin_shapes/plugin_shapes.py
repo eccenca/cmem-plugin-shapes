@@ -130,7 +130,7 @@ def str2bool(value: str) -> bool:
             name="plugin_provenance",
             label="Include plugin provenance",
             description="Add information about the plugin and plugin settings to the shapes graph.",
-            advanced=False,
+            advanced=True,
         ),
     ],
 )
