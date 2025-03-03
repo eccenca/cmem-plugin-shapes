@@ -64,7 +64,6 @@ class GraphSetupFixture:
     WHERE {{
         GRAPH <{shapes_iri}> {{
             <{shapes_iri}> rdfs:label ?label
-            FILTER(LANG(?label) = "en")
         }}
     }}"""
 
