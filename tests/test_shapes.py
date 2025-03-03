@@ -9,9 +9,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from cmem.cmempy.dp.proxy.graph import get, get_graphs_list
-from cmem.cmempy.dp.proxy.sparql import get as ask
-from rdflib import DCTERMS, RDFS, Graph, Literal, URIRef
+from cmem.cmempy.dp.proxy.graph import get
+from cmem.cmempy.dp.proxy.sparql import get as sparql_get
+from cmem.cmempy.dp.proxy.update import post
+from rdflib import DCTERMS, Graph, URIRef
 from rdflib.compare import isomorphic
 
 from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
@@ -38,14 +39,34 @@ class GraphSetupFixture:
     dataset_file: str = str(FIXTURE_DIR / "test_shapes_data.ttl")
     catalog_iri: str = "https://vocab.eccenca.com/shacl/"
     catalog_file: str = str(FIXTURE_DIR / "test_shapes_eccenca.ttl")
-    label: str = f"Shapes for: {dataset_iri}"
-    ask_query: str = """PREFIX owl: <http://www.w3.org/2002/07/owl#>
-ASK
-{
-  GRAPH <https://vocab.eccenca.com/shacl/> {
-    <https://vocab.eccenca.com/shacl/> owl:imports <http://docker.localhost/my-persons-shapes>
-  }
-}"""
+    ask_query: str = """
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    ASK {
+      GRAPH <https://vocab.eccenca.com/shacl/> {
+        <https://vocab.eccenca.com/shacl/> owl:imports <http://docker.localhost/my-persons-shapes>
+      }
+    }"""
+    label_query: str = f"""
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    SELECT ?label {{
+        GRAPH <{shapes_iri}> {{
+            <{shapes_iri}> rdfs:label ?label
+            FILTER(LANG(?label) = "en")
+        }}
+    }}"""
+    remove_label_query: str = f"""
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    DELETE {{
+        GRAPH <{shapes_iri}> {{
+            <{shapes_iri}> rdfs:label ?label
+        }}
+    }}
+    WHERE {{
+        GRAPH <{shapes_iri}> {{
+            <{shapes_iri}> rdfs:label ?label
+            FILTER(LANG(?label) = "en")
+        }}
+    }}"""
 
 
 @pytest.fixture
@@ -66,30 +87,14 @@ def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixtu
     _ = GraphSetupFixture()
     export_zip = str(tmp_path / "export.store.zip")
     run(["admin", "store", "export", export_zip])
-    run(["graph", "import", _.dataset_file, _.dataset_iri])
+    run(["graph", "import", "--replace", _.dataset_file, _.dataset_iri])
     if add_to_graph:
-        run(["graph", "import", _.shapes_file_add_init, _.shapes_iri])
+        run(["graph", "import", "--replace", _.shapes_file_add_init, _.shapes_iri])
     run_without_assertion(["project", "delete", _.project_name])
     run(["project", "create", _.project_name])
     yield _
     # remove test GRAPHS
     run(["admin", "store", "import", export_zip])
-
-
-@pytest.fixture
-def graph_setup_label(tmp_path: Path) -> Generator[GraphSetupFixture, Any, None]:
-    """Graph setup fixture for add-to-label tests"""
-    if os.environ.get("CMEM_BASE_URI", "") == "":
-        pytest.skip("Needs CMEM configuration")
-    _ = GraphSetupFixture()
-    export_file = str(tmp_path / "shapes_graph.ttl")
-
-    graphs_exists = _.shapes_iri in [g["iri"] for g in get_graphs_list()]
-    if graphs_exists:
-        run(["graph", "export", "--output-file", export_file, _.shapes_iri])
-    yield _
-    if graphs_exists:
-        run(["graph", "import", "--replace", export_file, _.shapes_iri])
 
 
 def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
@@ -156,6 +161,7 @@ def test_workflow_execution_add_graph_exists(
         existing_graph="add",
         import_shapes=False,
         prefix_cc=False,
+        label="New label",
     )
     assert graph_setup.add_to_graph == add_to_graph
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
@@ -235,7 +241,7 @@ def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
         import_shapes=False,
         prefix_cc=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    assert not json.loads(ask(query=graph_setup.ask_query)).get("boolean", True)
+    assert not json.loads(sparql_get(query=graph_setup.ask_query)).get("boolean", True)
     ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
@@ -243,7 +249,7 @@ def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
         import_shapes=True,
         prefix_cc=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    assert json.loads(ask(query=graph_setup.ask_query)).get("boolean", False)
+    assert json.loads(sparql_get(query=graph_setup.ask_query)).get("boolean", False)
 
 
 def test_filter_creation() -> None:
@@ -270,65 +276,53 @@ def test_filter_creation() -> None:
     with pytest.raises(ValueError, match="name must match"):
         ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], name="sfsdf sdf")
     with pytest.raises(ValueError, match="filter_ must be"):
-        ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="XXX")
+        ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="XX")
 
 
-# def test_add_to_label(graph_setup_label: GraphSetupFixture) -> None:
-#     """Test add to label"""
-#     plugin = ShapesPlugin(
-#         data_graph_iri=graph_setup_label.dataset_iri,
-#         shapes_graph_iri=graph_setup_label.shapes_iri,
-#         existing_graph="add",
-#         import_shapes=False,
-#         prefix_cc=False,
-#     )
-#     plugin.shapes_graph = Graph()
-#     invalid_label = "invalid"
-#     plugin.graphs_list = [
-#         {
-#             "iri": graph_setup_label.shapes_iri,
-#             "label": {"title": invalid_label, "fromIri": False},
-#         }
-#     ]
-#     ShapesPlugin.add_to_label(plugin)
-#     assert list(plugin.shapes_graph.objects(predicate=RDFS.label)) == [
-#         Literal(graph_setup_label.label)
-#     ]
-#     assert list(plugin.shapes_graph.objects(predicate=RDFS.comment)) == [
-#         Literal(f"Previous label: {invalid_label}")
-#     ]
-#
-#     plugin.shapes_graph = Graph()
-#     invalid_label = "Shapes for: invalid"
-#     plugin.graphs_list = [
-#         {
-#             "iri": graph_setup_label.shapes_iri,
-#             "label": {"title": invalid_label, "fromIri": False},
-#         }
-#     ]
-#     ShapesPlugin.add_to_label(plugin)
-#     assert list(plugin.shapes_graph.objects(predicate=RDFS.label)) == [
-#         Literal(graph_setup_label.label)
-#     ]
-#     assert list(plugin.shapes_graph.objects(predicate=RDFS.comment)) == [
-#         Literal(f"Previous label: {invalid_label}")
-#     ]
-#
-#     plugin.shapes_graph = Graph()
-#     plugin.graphs_list = [
-#         {
-#             "iri": graph_setup_label.shapes_iri,
-#             "label": {"title": graph_setup_label.label, "fromIri": False},
-#         }
-#     ]
-#     ShapesPlugin.add_to_label(plugin)
-#     assert list(plugin.shapes_graph.objects(predicate=RDFS.label)) == []
-#     assert list(plugin.shapes_graph.objects(predicate=RDFS.comment)) == []
-#
-#     plugin.shapes_graph = Graph()
-#     plugin.graphs_list = [{"iri": graph_setup_label.shapes_iri, "label": {"fromIri": True}}]
-#     ShapesPlugin.add_to_label(plugin)
-#     assert list(plugin.shapes_graph.objects(predicate=RDFS.label)) == [
-#         Literal(graph_setup_label.label)
-#     ]
-#     assert list(plugin.shapes_graph.objects(predicate=RDFS.comment)) == []
+@pytest.mark.parametrize("add_to_graph", [True])
+def test_add_to_graph_label(graph_setup: GraphSetupFixture, add_to_graph: bool) -> None:
+    """Test add to label"""
+    assert graph_setup.add_to_graph == add_to_graph
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph="add",
+        import_shapes=False,
+        prefix_cc=False,
+        label="",
+    )
+    plugin.context = TestExecutionContext()
+    plugin.shapes_graph = Graph()
+    ShapesPlugin.add_to_graph(plugin)
+    bindings = json.loads(sparql_get(query=graph_setup.label_query))["results"]["bindings"]
+    assert len(bindings) == 1
+    assert bindings[0]["label"]["value"] == f"Shapes for {graph_setup.dataset_iri}"
+
+    post(query=graph_setup.remove_label_query)
+    plugin.shapes_graph = Graph()
+    ShapesPlugin.add_to_graph(plugin)
+    bindings = json.loads(sparql_get(query=graph_setup.label_query))["results"]["bindings"]
+    assert len(bindings) == 1
+    assert bindings[0]["label"]["value"] == f"Shapes for {graph_setup.dataset_iri}"
+
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph="add",
+        import_shapes=False,
+        prefix_cc=False,
+        label="New label",
+    )
+    plugin.context = TestExecutionContext()
+    plugin.shapes_graph = Graph()
+    ShapesPlugin.add_to_graph(plugin)
+    bindings = json.loads(sparql_get(query=graph_setup.label_query))["results"]["bindings"]
+    assert len(bindings) == 1
+    assert bindings[0]["label"]["value"] == "New label"
+
+    post(query=graph_setup.remove_label_query)
+    plugin.shapes_graph = Graph()
+    ShapesPlugin.add_to_graph(plugin)
+    bindings = json.loads(sparql_get(query=graph_setup.label_query))["results"]["bindings"]
+    assert len(bindings) == 1
+    assert bindings[0]["label"]["value"] == "New label"

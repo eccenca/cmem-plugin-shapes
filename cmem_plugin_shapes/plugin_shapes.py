@@ -130,7 +130,7 @@ def str2bool(value: str) -> bool:
             name="plugin_provenance",
             label="Include plugin provenance",
             description="Add information about the plugin and plugin settings to the shapes graph.",
-            advanced=True,
+            advanced=False,
         ),
     ],
 )
@@ -477,7 +477,7 @@ class ShapesPlugin(WorkflowPlugin):
 
     def create_label(self) -> None:
         """Create label in shapes graph"""
-        label = self.label or f"Shapes for {self.shapes_graph_iri}"
+        label = self.label or f"Shapes for {self.data_graph_iri}"
         self.shapes_graph.add(
             (
                 URIRef(self.shapes_graph_iri),
@@ -489,13 +489,13 @@ class ShapesPlugin(WorkflowPlugin):
     def add_to_graph(self) -> str:
         """Add SHACL shapes to existing graph"""
         query_ask_label = f"""
-                PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-                ASK {{
-                    GRAPH <{self.shapes_graph_iri}> {{
-                         <{self.shapes_graph_iri}> rdfs:label ?label
-                         FILTER(LANG(?label) in ("en", ""))
-                    }}
-                }}"""
+        PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        ASK {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                 <{self.shapes_graph_iri}> rdfs:label ?label
+                 FILTER(LANG(?label) in ("en", ""))
+            }}
+        }}"""
 
         query_remove_label = f"""
         PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -512,7 +512,6 @@ class ShapesPlugin(WorkflowPlugin):
         }}"""
 
         has_label = json.loads(post_sparql(query=query_ask_label)).get("boolean", False)
-
         if self.label and has_label:
             post_update(query=query_remove_label)
         if self.label or not has_label:

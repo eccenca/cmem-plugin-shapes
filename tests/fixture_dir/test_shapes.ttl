@@ -27,7 +27,7 @@
   ns1:inversePath true .
 
 <http://docker.localhost/my-persons-shapes> a ns1:ShapeCatalog;
-  rdfs:label "Shapes for: http://docker.localhost/my-persons" ;
+  rdfs:label "Shapes for http://docker.localhost/my-persons"@en ;
   dcterms:source <http://docker.localhost/my-persons> .
 
 <http://docker.localhost/my-persons-shapes/63efb8eb-7402-52f6-a3cf-107cb1c54b1e> a
