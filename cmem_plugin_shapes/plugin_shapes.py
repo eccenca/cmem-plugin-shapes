@@ -102,9 +102,9 @@ def str2bool(value: str) -> bool:
             label="Output shape catalog label",
             description="The label for the shape catalog graph. If no label is specified for a new "
             "shapes graph, a label will be generated. If no label is specified when adding to a "
-            "shapes graph, the original label will be kept or a label will be generated if there "
-            'is no label in the existing graph. Only labels with language tag "en" or without '
-            "language tag are considered.",
+            "shapes graph, the original label will be kept, or, if the existing graph does not "
+            'have a label, a label will be generated. Only labels with language tag "en" or '
+            "without language tag are considered.",
         ),
         PluginParameter(
             param_type=BoolParameterType(),

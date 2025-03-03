@@ -10,6 +10,12 @@ The Knowledge Graph containing the instance data to be analyzed for the SHACL sh
 
 The Knowledge Graph, the generated shapes will be added to.
 
+**<a id="label">Label</a>**
+
+The label for the shape catalog graph. If no label is specified for a new shapes graph, a label will be generated. If
+no label is specified when adding to a shapes graph, the original label will be kept, or, if the existing graph does not have
+a label, a label will be generated. Only labels with language tag "en" or without language tag are considered.
+
 **<a id="parameter_doc_existing_graph">Handle existing output graph</a>**
 
 Add result to the existing graph (add result to graph), overwrite the existing graph with the result (replace existing

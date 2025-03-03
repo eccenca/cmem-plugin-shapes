@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cmem-plugin-shapes"
-version = "2.1.0b3.dev10+d003597"
+version = "2.0.2.dev5+3aef0ea.dirty"
 license = "Apache-2.0"
 description = "Generate SHACL shapes from an instance data graph."
 authors = ["eccenca GmbH <cmempy-developer@eccenca.com>"]
@@ -43,7 +43,7 @@ requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
 build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.poetry-dynamic-versioning]
-enable = false
+enable = true
 vcs = "git"
 dirty = true
 bump = true
