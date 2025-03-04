@@ -4,11 +4,11 @@ A task to generate SHACL node and property shapes from an instance data knowledg
 
 **<a id="parameter_doc_data_graph_iri">Input data graph</a>**
 
-The Knowledge Graph containing the instance data to be analyzed for the SHACL shapes generation.
+The knowledge graph containing the instance data to be analyzed for the SHACL shapes generation.
 
 **<a id="parameter_doc_shapes_graph_iri">Output Shape Catalog</a>**
 
-The Knowledge Graph, the generated shapes will be added to.
+The knowledge graph, the generated shapes will be added to.
 
 **<a id="parameter_doc_label">Output shape catalog label</a>**
 
@@ -21,9 +21,9 @@ a label, a label will be generated. Only labels with language tag "en" or withou
 Add result to the existing graph (add result to graph), overwrite the existing graph with the result (replace existing
 graph with result), or stop the workflow if the output graph already exists (stop workflow if output graph exists).
 
-**<a id="parameter_doc_import_shapes">Import the output graph into the central Shapes Catalog</a>**
+**<a id="parameter_doc_import_shapes">Import the output graph into the central shapes catalog</a>**
 
-Import the SHACL shapes graph in the CMEM Shapes catalog by adding an `owl:imports` statement to the central CMEM Shapes Catalog.
+Import the SHACL shapes graph in the CMEM shapes catalog by adding an `owl:imports` statement to the central CMEM shapes catalog.
 If the graph is not imported, the new shapes are not activated and used.
 
 **<a id="parameter_doc_prefix_cc">Fetch namespace prefixes from prefix.cc</a>**

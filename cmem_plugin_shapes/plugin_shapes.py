@@ -69,7 +69,7 @@ def str2bool(value: str) -> bool:
             param_type=GraphParameterType(allow_only_autocompleted_values=False),
             name="data_graph_iri",
             label="Input data graph",
-            description="The Knowledge Graph containing the instance data to "
+            description="The knowledge graph containing the instance data to "
             "be analyzed for the SHACL shapes generation.",
         ),
         PluginParameter(
@@ -78,8 +78,8 @@ def str2bool(value: str) -> bool:
                 allow_only_autocompleted_values=False,
             ),
             name="shapes_graph_iri",
-            label="Output Shape Catalog",
-            description="The Knowledge Graph the generated shapes will be added to.",
+            label="Output shape catalog",
+            description="The knowledge graph the generated shapes will be added to.",
         ),
         PluginParameter(
             param_type=ChoiceParameterType(
@@ -110,9 +110,9 @@ def str2bool(value: str) -> bool:
         PluginParameter(
             param_type=BoolParameterType(),
             name="import_shapes",
-            label="Import the output graph into the central Shapes Catalog",
-            description="Import the SHACL shapes graph in the CMEM Shapes catalog by adding an "
-            "`owl:imports` statement to the central CMEM Shapes Catalog. If the graph is not "
+            label="Import the output graph into the central shapes catalog",
+            description="Import the SHACL shapes graph in the CMEM shapes catalog by adding an "
+            "`owl:imports` statement to the central CMEM shapes catalog. If the graph is not "
             "imported, the new shapes are not activated and used.",
         ),
         PluginParameter(
@@ -146,8 +146,8 @@ class ShapesPlugin(WorkflowPlugin):
 
     def __init__(  # noqa: PLR0913
         self,
-        data_graph_iri: str = "",
-        shapes_graph_iri: str = "",
+        data_graph_iri: str,
+        shapes_graph_iri: str,
         label: str = "",
         existing_graph: str = "stop",
         import_shapes: bool = False,
@@ -156,28 +156,37 @@ class ShapesPlugin(WorkflowPlugin):
         plugin_provenance: bool = False,
     ) -> None:
         if not validators.url(data_graph_iri):
-            raise ValueError("Data graph IRI parameter is invalid.")
+            raise ValueError("Invalid value for parameter 'Input data graph'")
         self.data_graph_iri = data_graph_iri
+
         if not validators.url(shapes_graph_iri):
-            raise ValueError("Shapes graph IRI parameter is invalid.")
+            raise ValueError("Invalid value for parameter 'Output shape catalog'")
         self.shapes_graph_iri = shapes_graph_iri
+
+        if shapes_graph_iri == data_graph_iri:
+            raise ValueError("Shapes graph IRI cannot be the same as data graph IRI")
+
+        self.label = label
+
+        existing_graph = existing_graph.lower()
+        if existing_graph not in ("stop", "replace", "add"):
+            raise ValueError("Invalid value for parameter 'Handle existing output graph'")
+        self.replace = False
+        if existing_graph == "replace":
+            self.replace = True
+        self.existing_graph = existing_graph
+
+        self.import_shapes = import_shapes
+        self.prefix_cc = prefix_cc
+
         self.ignore_properties = []
         for _ in ignore_properties.split("\n"):
             if not validators.url(_):
-                raise ValueError(f"Ignored property IRI invalid: '{_}'")
+                raise ValueError(f"Invalid property IRI ({_}) in parameter 'Properties to ignore'")
             self.ignore_properties.append(_)
-        self.existing_graph = existing_graph
-        self.import_shapes = import_shapes
-        self.prefix_cc = prefix_cc
-        self.replace = False
+
         self.plugin_provenance = plugin_provenance
-        if existing_graph == "replace":
-            self.replace = True
-        if existing_graph not in ("stop", "replace", "add"):
-            raise ValueError(
-                f"Handle existing output graph parameter is invalid '{existing_graph}'."
-            )
-        self.label = label
+
         self.shapes_count = 0
         self.input_ports = FixedNumberOfInputs([])
         self.output_port = None

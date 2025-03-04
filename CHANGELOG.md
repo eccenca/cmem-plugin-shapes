@@ -9,14 +9,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Added
 
+- Parameter to specify the label of the shapes graph. If the shapes graph exists, its label can be overwitten or kept.
 - Add `dcterms:source [data graph IRI]` to the shapes graph
 - Option to add plugin provenance to the shapes graph
 
-### Changed
-
-- When adding to existing graph the source graph IRI is appended to the label. If the existing label does not conform
-to the format `"Shapes for: [IRI], [IRI2], ..."` it is stored as `rdfs:comment "Previous label: [previous label]"` and a label with the
-new data graph IRI is added.
 
 ## [2.0.1] 2025-02-19
 

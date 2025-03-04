@@ -182,34 +182,41 @@ def test_workflow_execution_add_graph_exists(
     assert isomorphic(result_graph, test)
 
 
-def test_failing_inits(graph_setup: GraphSetupFixture) -> None:
+def test_failing_inits() -> None:
     """Test failing inits"""
-    with pytest.raises(ValueError, match="Data graph IRI parameter is invalid"):
+    iri1 = "http://example.com/1"
+    iri2 = "http://example.com/2"
+    with pytest.raises(ValueError, match="Invalid value for parameter 'Input data graph'"):
         ShapesPlugin(
             data_graph_iri="no iri",
-            shapes_graph_iri=graph_setup.shapes_iri,
-            existing_graph="stop",
-            import_shapes=False,
-            prefix_cc=False,
+            shapes_graph_iri=iri1,
         )
-    with pytest.raises(ValueError, match="Shapes graph IRI parameter is invalid"):
+    with pytest.raises(ValueError, match="Invalid value for parameter 'Output shape catalog'"):
         ShapesPlugin(
-            data_graph_iri=graph_setup.dataset_iri,
+            data_graph_iri=iri1,
             shapes_graph_iri="no iri",
-            existing_graph="stop",
-            import_shapes=False,
-            prefix_cc=False,
         )
-    with pytest.raises(ValueError, match="Ignored property IRI invalid"):
+    with pytest.raises(ValueError, match="Shapes graph IRI cannot be the same as data graph IRI"):
         ShapesPlugin(
-            data_graph_iri=graph_setup.dataset_iri,
-            shapes_graph_iri=graph_setup.shapes_iri,
+            data_graph_iri=iri1,
+            shapes_graph_iri=iri1,
+        )
+    with pytest.raises(ValueError, match="Invalid value for parameter 'Handle existing output"):
+        ShapesPlugin(
+            data_graph_iri=iri1,
+            shapes_graph_iri=iri2,
+            existing_graph="invalid",
+        )
+    with pytest.raises(ValueError, match="Invalid property IRI"):
+        ShapesPlugin(
+            data_graph_iri=iri1,
+            shapes_graph_iri=iri2,
             ignore_properties="""no iri""",
         )
-    with pytest.raises(ValueError, match="Ignored property IRI invalid"):
+    with pytest.raises(ValueError, match="Invalid property IRI"):
         ShapesPlugin(
-            data_graph_iri=graph_setup.dataset_iri,
-            shapes_graph_iri=graph_setup.shapes_iri,
+            data_graph_iri=iri1,
+            shapes_graph_iri=iri2,
             ignore_properties="""http://www.w3.org/1999/02/22-rdf-syntax-ns#type
             no iri""",
         )
