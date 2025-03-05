@@ -2259,6 +2259,7 @@
   "qb": "http://purl.org/linked-data/cube#",
   "qb4o": "http://purl.org/olap#",
   "qbe": "http://citydata.wu.ac.at/qb-equations#",
+  "qcy": "https://qaecy.com/dev/ont#",
   "qdoslf": "http://foaf.qdos.com/lastfm/schema/",
   "qk": "http://qudt.org/vocab/quantitykind/",
   "qkdv": "http://qudt.org/vocab/dimensionvector/",
