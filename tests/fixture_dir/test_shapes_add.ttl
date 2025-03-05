@@ -4,6 +4,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix void: <http://rdfs.org/ns/void#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
 
 
 <http://docker.localhost/my-persons-shapes/7daca3e6-86fc-515e-a96e-1d44e5b2828e> a
@@ -27,7 +28,8 @@
   ns1:inversePath true .
 
 <http://docker.localhost/my-persons-shapes> a ns1:ShapeCatalog;
-  rdfs:label "Shapes for http://docker.localhost/my-persons" .
+  rdfs:label "New label"@en ;
+  dcterms:source <http://docker.localhost/my-persons0>, <http://docker.localhost/my-persons> .
 
 <http://docker.localhost/my-persons-shapes/63efb8eb-7402-52f6-a3cf-107cb1c54b1e> a
     sh:PropertyShape;
