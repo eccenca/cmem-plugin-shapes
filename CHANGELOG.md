@@ -5,14 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
 
-## [Unreleased] 
+[3.0.0] 2025-03-05
 
 ### Added
 
-- Parameter to specify the label of the shapes graph. If the shapes graph exists, its label can be overwitten or kept.
+- Parameter to specify the label of the shapes graph. If no label is given for a new graph, a label is generated.
+If the shapes graph exists, its label can be overwritten or kept.
 - Add `dcterms:source [data graph IRI]` to the shapes graph
 - Option to add plugin provenance to the shapes graph
-
 
 ## [2.0.1] 2025-02-19
 
