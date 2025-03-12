@@ -8,7 +8,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Fixed
 
-- Fixed error when "Properties to ignore" field is empty (or contains empty lines) 
+- Fixed error when "Properties to ignore" field is empty (or contains empty lines)
+
+### Changed
+
+- Default value for "Fetch namespace prefixes from prefix.cc" is now False
 
 ## [3.0.0] 2025-03-05
 

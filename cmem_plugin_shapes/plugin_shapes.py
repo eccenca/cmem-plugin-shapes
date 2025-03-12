@@ -122,7 +122,6 @@ def str2bool(value: str) -> bool:
             description="Attempt to fetch namespace prefixes from prefix.cc instead of from the "
             "local database. If this fails, fall back on local database. Prefixes defined in the "
             "Corporate Memory project will override prefixes defined in the external database.",
-            default_value=False,
             advanced=True,
         ),
         PluginParameter(
@@ -151,7 +150,7 @@ class ShapesPlugin(WorkflowPlugin):
         label: str = "",
         existing_graph: str = "stop",
         import_shapes: bool = False,
-        prefix_cc: bool = True,
+        prefix_cc: bool = False,
         ignore_properties: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
         plugin_provenance: bool = False,
     ) -> None:
