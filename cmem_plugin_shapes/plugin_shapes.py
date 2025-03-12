@@ -180,13 +180,10 @@ class ShapesPlugin(WorkflowPlugin):
         self.prefix_cc = prefix_cc
 
         self.ignore_properties = []
-        if ignore_properties.strip():
-            for _ in ignore_properties.split("\n"):
-                if not validators.url(_):
-                    raise ValueError(
-                        f"Invalid property IRI ({_}) in parameter 'Properties to ignore'"
-                    )
-                self.ignore_properties.append(_)
+        for _ in filter(None, ignore_properties.split("\n")):
+            if not validators.url(_):
+                raise ValueError(f"Invalid property IRI ({_}) in parameter 'Properties to ignore'")
+            self.ignore_properties.append(_)
 
         self.plugin_provenance = plugin_provenance
 
