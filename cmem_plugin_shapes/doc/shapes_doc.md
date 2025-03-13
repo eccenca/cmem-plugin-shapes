@@ -28,10 +28,8 @@ If the graph is not imported, the new shapes are not activated and used.
 
 **<a id="parameter_doc_prefix_cc">Fetch namespace prefixes from prefix.cc</a>**
 
-Attempt to fetch namespace prefixes from prefix.cc instead of from the local database. If this fails, fall back on local
-database. Prefixes defined in the Corporate Memory project will override prefixes defined in the external database.
-            
-WARNING: Enabling this flag reveals information to an external service.
+Attempt to fetch the list of namespace prefixes from https://prefix.cc instead of using the local database. If this fails,
+fall back on the local database. Prefixes defined in the Corporate Memory project will override prefixes defined in the database.
 
 **<a id="parameter_doc_ignore_properties">Properties to ignore</a>**
 
