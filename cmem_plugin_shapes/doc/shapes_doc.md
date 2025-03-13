@@ -28,8 +28,16 @@ If the graph is not imported, the new shapes are not activated and used.
 
 **<a id="parameter_doc_prefix_cc">Fetch namespace prefixes from prefix.cc</a>**
 
+Fetch the list of namespace prefixes from https://prefix.cc instead of using the local prefix database. If unavailable, 
+fall back to the local database. Prefixes defined in the Corporate Memory project override database prefixes. Enabling this 
+option exposes your IP address to prefix.cc but no other data is shared. If unsure, keep this option disabled. See
+https://prefix.cc/about.
+
 Attempt to fetch the list of namespace prefixes from https://prefix.cc instead of using the local database. If this fails,
 fall back on the local database. Prefixes defined in the Corporate Memory project will override prefixes defined in the database.
+
+When enabled, your IP address is exposed to this external service but no other data (e.g., graph content) is shared. 
+For details, see https://prefix.cc/about. If unsure, keep this option disabled.
 
 **<a id="parameter_doc_ignore_properties">Properties to ignore</a>**
 
