@@ -33,7 +33,6 @@ fall back to the local database. Prefixes defined in the Corporate Memory projec
 option exposes your IP address to prefix.cc but no other data is shared. If unsure, keep this option disabled. See
 https://prefix.cc/about.
 
-
 **<a id="parameter_doc_ignore_properties">Properties to ignore</a>**
 
 Provide the list of properties (as IRIs) for which you do not want to create property shapes.
