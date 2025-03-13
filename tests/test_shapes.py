@@ -187,6 +187,17 @@ def test_workflow_execution_add_graph_exists(
     assert isomorphic(result_graph, test)
 
 
+def test_additional_inits() -> None:
+    """Test addition inits"""
+    iri1 = "http://example.com/1"
+    iri2 = "http://example.com/2"
+
+    try:
+        ShapesPlugin(data_graph_iri=iri1, shapes_graph_iri=iri2, ignore_properties="")
+    except ValueError:
+        pytest.fail("Usage with empty ignore_properties list should not fail.")
+
+
 def test_failing_inits() -> None:
     """Test failing inits"""
     iri1 = "http://example.com/1"
