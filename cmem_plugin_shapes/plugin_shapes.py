@@ -41,6 +41,16 @@ PREFIX_CC = "https://prefix.cc/popular/all.file.json"
 PLUGIN_LABEL = "Generate SHACL shapes from data"
 TRUE_SET = {"yes", "true", "t", "y", "1"}
 FALSE_SET = {"no", "false", "f", "n", "0"}
+EXISTING_GRAPH_ADD = "add"
+EXISTING_GRAPH_REPLACE = "replace"
+EXISTING_GRAPH_STOP = "stop"
+EXISTING_GRAPH_PARAMETER_CHOICES = OrderedDict(
+    {
+        EXISTING_GRAPH_ADD: "add result to graph",
+        EXISTING_GRAPH_REPLACE: "replace existing graph with result",
+        EXISTING_GRAPH_STOP: "stop workflow if output graph exists",
+    }
+)
 
 
 def format_namespace(iri: str) -> str:
@@ -82,15 +92,7 @@ def str2bool(value: str) -> bool:
             description="The knowledge graph the generated shapes will be added to.",
         ),
         PluginParameter(
-            param_type=ChoiceParameterType(
-                OrderedDict(
-                    {
-                        "add": "add result to graph",
-                        "replace": "replace existing graph with result",
-                        "stop": "stop workflow if output graph exists",
-                    }
-                ),
-            ),
+            param_type=ChoiceParameterType(EXISTING_GRAPH_PARAMETER_CHOICES),
             name="existing_graph",
             label="Handle existing output graph",
             description="Add result to the existing graph (add result to graph), overwrite the "
@@ -119,10 +121,11 @@ def str2bool(value: str) -> bool:
             param_type=BoolParameterType(),
             name="prefix_cc",
             label="Fetch namespace prefixes from prefix.cc",
-            description="Attempt to fetch namespace prefixes from prefix.cc instead of from the "
-            "local database. If this fails, fall back on local database. Prefixes defined in the "
-            "Corporate Memory project will override prefixes defined in the external database.",
-            default_value=False,
+            description="Fetch the list of namespace prefixes from https://prefix.cc instead of "
+            "using the local prefix database. If unavailable, fall back to the local database. "
+            "Prefixes defined in the Corporate Memory project override database prefixes. Enabling "
+            "this option exposes your IP address to prefix.cc but no other data is shared. If "
+            "unsure, keep this option disabled. See https://prefix.cc/about.",
             advanced=True,
         ),
         PluginParameter(
@@ -149,9 +152,9 @@ class ShapesPlugin(WorkflowPlugin):
         data_graph_iri: str,
         shapes_graph_iri: str,
         label: str = "",
-        existing_graph: str = "stop",
+        existing_graph: str = EXISTING_GRAPH_STOP,
         import_shapes: bool = False,
-        prefix_cc: bool = True,
+        prefix_cc: bool = False,
         ignore_properties: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
         plugin_provenance: bool = False,
     ) -> None:
@@ -169,10 +172,13 @@ class ShapesPlugin(WorkflowPlugin):
         self.label = label
 
         existing_graph = existing_graph.lower()
-        if existing_graph not in ("stop", "replace", "add"):
-            raise ValueError("Invalid value for parameter 'Handle existing output graph'")
+        if existing_graph not in EXISTING_GRAPH_PARAMETER_CHOICES:
+            raise ValueError(
+                "Invalid value for parameter 'Handle existing output graph'. "
+                f"Valid options: {', '.join(EXISTING_GRAPH_PARAMETER_CHOICES.keys())}."
+            )
         self.replace = False
-        if existing_graph == "replace":
+        if existing_graph == EXISTING_GRAPH_REPLACE:
             self.replace = True
         self.existing_graph = existing_graph
 
@@ -180,7 +186,7 @@ class ShapesPlugin(WorkflowPlugin):
         self.prefix_cc = prefix_cc
 
         self.ignore_properties = []
-        for _ in ignore_properties.split("\n"):
+        for _ in filter(None, ignore_properties.split("\n")):
             if not validators.url(_):
                 raise ValueError(f"Invalid property IRI ({_}) in parameter 'Properties to ignore'")
             self.ignore_properties.append(_)
@@ -598,7 +604,7 @@ class ShapesPlugin(WorkflowPlugin):
         self.update_execution_report()
         setup_cmempy_user_access(context.user)
         graph_exists = self.shapes_graph_iri in [_["iri"] for _ in get_graphs_list()]
-        if self.existing_graph == "stop" and graph_exists:
+        if self.existing_graph == EXISTING_GRAPH_STOP and graph_exists:
             raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists.")
 
         self.prefixes = self.get_prefixes()

@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+## [3.0.1] 2025-03-13
+
+### Fixed
+
+- Fixed error when "Properties to ignore" field is empty or contains empty lines
+
+### Changed
+
+- Edit warning regarding "Fetch namespace prefixes from prefix.cc" parameter
 
 ## [3.0.0] 2025-03-05
 
