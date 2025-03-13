@@ -15,7 +15,12 @@ from cmem.cmempy.dp.proxy.update import post
 from rdflib import DCTERMS, Graph, URIRef
 from rdflib.compare import isomorphic
 
-from cmem_plugin_shapes.plugin_shapes import ShapesPlugin
+from cmem_plugin_shapes.plugin_shapes import (
+    EXISTING_GRAPH_ADD,
+    EXISTING_GRAPH_REPLACE,
+    EXISTING_GRAPH_STOP,
+    ShapesPlugin,
+)
 from tests import FIXTURE_DIR
 from tests.cmemc_command_utils import run, run_without_assertion
 from tests.utils import TestExecutionContext
@@ -101,7 +106,7 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="replace",
+        existing_graph=EXISTING_GRAPH_REPLACE,
         import_shapes=False,
         prefix_cc=False,
         plugin_provenance=True,
@@ -124,7 +129,7 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
         ShapesPlugin(
             data_graph_iri=graph_setup.dataset_iri,
             shapes_graph_iri=graph_setup.shapes_iri,
-            existing_graph="stop",
+            existing_graph=EXISTING_GRAPH_STOP,
             import_shapes=False,
             prefix_cc=False,
         ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
@@ -135,7 +140,7 @@ def test_workflow_execution_add_graph_not_exists(graph_setup: GraphSetupFixture)
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="add",
+        existing_graph=EXISTING_GRAPH_ADD,
         import_shapes=False,
         prefix_cc=False,
     )
@@ -158,7 +163,7 @@ def test_workflow_execution_add_graph_exists(
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="add",
+        existing_graph=EXISTING_GRAPH_ADD,
         import_shapes=False,
         prefix_cc=False,
         label="New label",
@@ -220,6 +225,12 @@ def test_failing_inits() -> None:
             ignore_properties="""http://www.w3.org/1999/02/22-rdf-syntax-ns#type
             no iri""",
         )
+    with pytest.raises(ValueError, match="Invalid value for parameter"):
+        ShapesPlugin(
+            data_graph_iri=iri1,
+            shapes_graph_iri=iri2,
+            existing_graph="unknown",
+        )
 
 
 def test_prefix_cc_fetching(graph_setup: GraphSetupFixture) -> None:
@@ -227,7 +238,7 @@ def test_prefix_cc_fetching(graph_setup: GraphSetupFixture) -> None:
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="replace",
+        existing_graph=EXISTING_GRAPH_REPLACE,
         import_shapes=False,
         prefix_cc=True,
     )
@@ -244,7 +255,7 @@ def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
     ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="replace",
+        existing_graph=EXISTING_GRAPH_REPLACE,
         import_shapes=False,
         prefix_cc=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
@@ -252,7 +263,7 @@ def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
     ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="replace",
+        existing_graph=EXISTING_GRAPH_REPLACE,
         import_shapes=True,
         prefix_cc=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
@@ -293,7 +304,7 @@ def test_add_to_graph_label(graph_setup: GraphSetupFixture, add_to_graph: bool) 
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph="add",
+        existing_graph=EXISTING_GRAPH_ADD,
         import_shapes=False,
         prefix_cc=False,
         label="",
