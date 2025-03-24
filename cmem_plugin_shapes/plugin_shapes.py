@@ -520,7 +520,7 @@ class ShapesPlugin(WorkflowPlugin):
         }}"""
 
         query_remove_label = f"""
-        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         DELETE {{
             GRAPH <{self.shapes_graph_iri}> {{
                  <{self.shapes_graph_iri}> rdfs:label ?label
@@ -533,6 +533,12 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
+        has_label = json.loads(post_sparql(query=query_ask_label)).get("boolean", False)
+        if self.label and has_label:
+            post_update(query=query_remove_label)
+        if self.label or not has_label:
+            self.create_label()
+
         query_data = f"""
         INSERT DATA {{
             GRAPH <{self.shapes_graph_iri}> {{
@@ -540,15 +546,9 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        has_label = json.loads(post_sparql(query=query_ask_label)).get("boolean", False)
-        if self.label and has_label:
-            post_update(query=query_remove_label)
-        if self.label or not has_label:
-            self.create_label()
         post_update(query_data)
-        setup_cmempy_user_access(self.context.user)
-        now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
 
+        now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
         query_remove_modified = f"""
         PREFIX dcterms: <http://purl.org/dc/terms/>
         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
@@ -566,6 +566,9 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
+        setup_cmempy_user_access(self.context.user)
+        post_update(query_remove_modified)
+
         query_add_modified = f"""
         PREFIX dcterms: <http://purl.org/dc/terms/>
         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
@@ -582,7 +585,6 @@ class ShapesPlugin(WorkflowPlugin):
             BIND(IF(!BOUND(?datetime), xsd:dateTime("{now}"), ?undef) AS ?current)
         }}"""  # noqa: S608
 
-        post_update(query_remove_modified)
         post_update(query_add_modified)
         return now
 
