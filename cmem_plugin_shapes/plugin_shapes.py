@@ -29,7 +29,7 @@ from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import BoolParameterType, StringParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
-from rdflib import DCTERMS, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
+from rdflib import DCTERMS, OWL, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
 
 from cmem_plugin_shapes.doc import SHAPES_DOC
@@ -281,14 +281,32 @@ class ShapesPlugin(WorkflowPlugin):
 
     def init_shapes_graph(self) -> Graph:
         """Initialize SHACL shapes graph"""
-        shapes_graph = Graph().add((URIRef(self.shapes_graph_iri), RDF.type, SHUI.ShapeCatalog))
+        shapes_graph_uri = URIRef(self.shapes_graph_iri)
+        shapes_graph = Graph().add((shapes_graph_uri, RDF.type, SHUI.ShapeCatalog))
         shapes_graph.add(
             (
-                URIRef(self.shapes_graph_iri),
+                shapes_graph_uri,
                 DCTERMS.source,
                 URIRef(self.data_graph_iri),
             )
         )
+        if self.query_catalog:
+            shapes_graph.add(
+                (shapes_graph_uri, OWL.imports, URIRef("https://ns.eccenca.com/data/queries/"))
+            )
+        if self.managed_classes:
+            for c in [
+                SHUI.ChartVisualization,
+                SH.PropertyShape,
+                SH.NodeShape,
+                SH.PropertyGroup,
+                SH.SPARQLConstraint,
+                SHUI.TableReport,
+                SHUI.WidgetIntegration,
+                SH.PrefixDeclaration,
+                SHUI.WorkflowTrigger,
+            ]:
+                shapes_graph.add((shapes_graph_uri, SHUI.managedClasses, c))
         return shapes_graph
 
     @staticmethod
@@ -607,34 +625,6 @@ class ShapesPlugin(WorkflowPlugin):
         post_update(query_add_modified)
         return now
 
-    def add_managed_classes(self) -> None:
-        """Add managed classes to shapes graph"""
-        insert_query = f"""
-        PREFIX sh: <http://www.w3.org/ns/shacl#>
-        PREFIX shui: <https://vocab.eccenca.com/shui/>
-        INSERT DATA {{
-            GRAPH <{self.shapes_graph_iri}> {{
-                <{self.shapes_graph_iri}> shui:managedClasses
-                    shui:ChartVisualization , sh:PropertyShape , sh:NodeShape , sh:PropertyGroup ,
-                    sh:SPARQLConstraint , shui:TableReport , shui:WidgetIntegration ,
-                    sh:PrefixDeclaration , shui:WorkflowTrigger
-            }}
-        }}"""
-        setup_cmempy_user_access(self.context.user)
-        post_update(query=insert_query)
-
-    def import_query_catalog(self) -> None:
-        """Add managed classes to shapes graph"""
-        insert_query = f"""
-        PREFIX owl: <http://www.w3.org/2002/07/owl#>
-        INSERT DATA {{
-            GRAPH <{self.shapes_graph_iri}> {{
-                <{self.shapes_graph_iri}> owl:imports <https://ns.eccenca.com/data/queries/>
-            }}
-        }}"""
-        setup_cmempy_user_access(self.context.user)
-        post_update(query=insert_query)
-
     def update_execution_report(self) -> None:
         """Update execution report"""
         self.context.report.update(
@@ -669,10 +659,6 @@ class ShapesPlugin(WorkflowPlugin):
             else:
                 now = self.create_graph()
         self.update_execution_report()
-        if self.managed_classes:
-            self.add_managed_classes()
-        if self.query_catalog:
-            self.import_query_catalog()
         if self.plugin_provenance:
             self.post_provenance(now)
         if self.import_shapes:
