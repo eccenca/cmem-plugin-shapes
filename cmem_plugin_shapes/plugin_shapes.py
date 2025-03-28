@@ -140,7 +140,7 @@ def str2bool(value: str) -> bool:
             name="managed_classes",
             label="Add managed classes to the graph",
             description="Add managed SHACL UI classes with the property `shui:managedClasses`",
-            advanced=False,
+            advanced=True,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
@@ -648,7 +648,7 @@ class ShapesPlugin(WorkflowPlugin):
                 now = self.create_graph()
         self.update_execution_report()
         if self.managed_classes:
-            self.add_mannaged_classes()
+            self.add_managed_classes()
         if self.plugin_provenance:
             self.post_provenance(now)
         if self.import_shapes:
