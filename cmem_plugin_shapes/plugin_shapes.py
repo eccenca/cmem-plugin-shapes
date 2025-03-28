@@ -137,6 +137,13 @@ def str2bool(value: str) -> bool:
         ),
         PluginParameter(
             param_type=BoolParameterType(),
+            name="managed_classes",
+            label="Add managed classes to the graph",
+            description="Add managed SHACL UI classes with the property `shui:managedClasses`",
+            advanced=False,
+        ),
+        PluginParameter(
+            param_type=BoolParameterType(),
             name="plugin_provenance",
             label="Include plugin provenance",
             description="Add information about the plugin and plugin settings to the shapes graph.",
@@ -156,6 +163,7 @@ class ShapesPlugin(WorkflowPlugin):
         import_shapes: bool = False,
         prefix_cc: bool = False,
         ignore_properties: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+        managed_classes: bool = False,
         plugin_provenance: bool = False,
     ) -> None:
         if not validators.url(data_graph_iri):
@@ -191,6 +199,7 @@ class ShapesPlugin(WorkflowPlugin):
                 raise ValueError(f"Invalid property IRI ({_}) in parameter 'Properties to ignore'")
             self.ignore_properties.append(_)
 
+        self.managed_classes = managed_classes
         self.plugin_provenance = plugin_provenance
 
         self.shapes_count = 0
@@ -588,6 +597,22 @@ class ShapesPlugin(WorkflowPlugin):
         post_update(query_add_modified)
         return now
 
+    def add_managed_classes(self) -> None:
+        """Add managed classes to shapes graph"""
+        insert_query = f"""
+        PREFIX sh: <http://www.w3.org/ns/shacl#>
+        PREFIX shui: <https://vocab.eccenca.com/shui/>
+        INSERT DATA {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                <{self.shapes_graph_iri}> shui:managedClasses
+                    shui:ChartVisualization , sh:PropertyShape , sh:NodeShape , sh:PropertyGroup ,
+                    sh:SPARQLConstraint , shui:TableReport , shui:WidgetIntegration ,
+                    sh:PrefixDeclaration , shui:WorkflowTrigger .
+            }}
+        }}"""
+        setup_cmempy_user_access(self.context.user)
+        post_update(query=insert_query)
+
     def update_execution_report(self) -> None:
         """Update execution report"""
         self.context.report.update(
@@ -622,6 +647,8 @@ class ShapesPlugin(WorkflowPlugin):
             else:
                 now = self.create_graph()
         self.update_execution_report()
+        if self.managed_classes:
+            self.add_mannaged_classes()
         if self.plugin_provenance:
             self.post_provenance(now)
         if self.import_shapes:
