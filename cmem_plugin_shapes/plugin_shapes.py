@@ -139,8 +139,8 @@ def str2bool(value: str) -> bool:
             param_type=BoolParameterType(),
             name="managed_classes",
             label="Add managed classes to the graph",
-            description="Add managed SH/SHUI classes with the property `shui:managedClasses` to "
-            "the shapes graph.",
+            description="Add managed SH/SHUI classes with the property shui:managedClasses to the "
+            "shapes graph.",
             advanced=True,
         ),
         PluginParameter(
