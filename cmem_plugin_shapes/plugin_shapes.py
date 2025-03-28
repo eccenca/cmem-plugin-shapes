@@ -139,14 +139,15 @@ def str2bool(value: str) -> bool:
             param_type=BoolParameterType(),
             name="managed_classes",
             label="Add managed classes to the graph",
-            description="Add managed SHACL UI classes with the property `shui:managedClasses`",
+            description="Add managed SH/SHUI classes with the property `shui:managedClasses` to "
+            "the shapes graph.",
             advanced=True,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="query_catalog",
             label="Import query catalog to the graph",
-            description="Import the Corporate Memory query catalog.",
+            description="Import the CMEM query catalog to the shapes graph.",
             advanced=True,
         ),
         PluginParameter(
