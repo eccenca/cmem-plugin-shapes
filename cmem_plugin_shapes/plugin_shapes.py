@@ -144,6 +144,13 @@ def str2bool(value: str) -> bool:
         ),
         PluginParameter(
             param_type=BoolParameterType(),
+            name="query_catalog",
+            label="Import query catalog to the graph",
+            description="Import the Corporate Memory query catalog.",
+            advanced=True,
+        ),
+        PluginParameter(
+            param_type=BoolParameterType(),
             name="plugin_provenance",
             label="Include plugin provenance",
             description="Add information about the plugin and plugin settings to the shapes graph.",
@@ -164,6 +171,7 @@ class ShapesPlugin(WorkflowPlugin):
         prefix_cc: bool = False,
         ignore_properties: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
         managed_classes: bool = False,
+        query_catalog: bool = False,
         plugin_provenance: bool = False,
     ) -> None:
         if not validators.url(data_graph_iri):
@@ -191,6 +199,7 @@ class ShapesPlugin(WorkflowPlugin):
         self.existing_graph = existing_graph
 
         self.import_shapes = import_shapes
+        self.query_catalog = query_catalog
         self.prefix_cc = prefix_cc
 
         self.ignore_properties = []
@@ -607,7 +616,19 @@ class ShapesPlugin(WorkflowPlugin):
                 <{self.shapes_graph_iri}> shui:managedClasses
                     shui:ChartVisualization , sh:PropertyShape , sh:NodeShape , sh:PropertyGroup ,
                     sh:SPARQLConstraint , shui:TableReport , shui:WidgetIntegration ,
-                    sh:PrefixDeclaration , shui:WorkflowTrigger .
+                    sh:PrefixDeclaration , shui:WorkflowTrigger
+            }}
+        }}"""
+        setup_cmempy_user_access(self.context.user)
+        post_update(query=insert_query)
+
+    def import_query_catalog(self) -> None:
+        """Add managed classes to shapes graph"""
+        insert_query = f"""
+        PREFIX owl: <http://www.w3.org/2002/07/owl#>
+        INSERT DATA {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                <{self.shapes_graph_iri}> owl:imports <https://ns.eccenca.com/data/queries/>
             }}
         }}"""
         setup_cmempy_user_access(self.context.user)
@@ -649,6 +670,8 @@ class ShapesPlugin(WorkflowPlugin):
         self.update_execution_report()
         if self.managed_classes:
             self.add_managed_classes()
+        if self.query_catalog:
+            self.import_query_catalog()
         if self.plugin_provenance:
             self.post_provenance(now)
         if self.import_shapes:
