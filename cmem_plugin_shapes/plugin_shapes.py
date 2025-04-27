@@ -150,7 +150,7 @@ def str2bool(value: str) -> bool:
             description="""Add foaf:depiction to node shapes taken from the data graph or ontology.
             For the ontology graph name the target class namespace is considered, with or without
             trailing separator.""",
-            advanced=False,
+            advanced=True,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
