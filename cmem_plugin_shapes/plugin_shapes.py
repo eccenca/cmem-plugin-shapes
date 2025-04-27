@@ -29,7 +29,7 @@ from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import BoolParameterType, StringParameterType
 from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
-from rdflib import DCTERMS, OWL, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
+from rdflib import DCTERMS, FOAF, OWL, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
 
 from cmem_plugin_shapes.doc import SHAPES_DOC
@@ -79,8 +79,8 @@ def str2bool(value: str) -> bool:
             param_type=GraphParameterType(allow_only_autocompleted_values=False),
             name="data_graph_iri",
             label="Input data graph",
-            description="The knowledge graph containing the instance data to "
-            "be analyzed for the SHACL shapes generation.",
+            description="""The knowledge graph containing the instance data to be analyzed for the
+            SHACL shapes generation.""",
         ),
         PluginParameter(
             param_type=GraphParameterType(
@@ -95,37 +95,37 @@ def str2bool(value: str) -> bool:
             param_type=ChoiceParameterType(EXISTING_GRAPH_PARAMETER_CHOICES),
             name="existing_graph",
             label="Handle existing output graph",
-            description="Add result to the existing graph (add result to graph), overwrite the "
-            "existing graph with the result (replace existing graph with result), or stop the "
-            "workflow if the output graph already exists (stop workflow if output graph exists).",
+            description="""Add result to the existing graph (add result to graph), overwrite the
+            existing graph with the result (replace existing graph with result), or stop the
+            workflow if the output graph already exists (stop workflow if output graph exists).""",
         ),
         PluginParameter(
             param_type=StringParameterType(),
             name="label",
             label="Output shape catalog label",
-            description="The label for the shape catalog graph. If no label is specified for a new "
-            "shapes graph, a label will be generated. If no label is specified when adding to a "
-            "shapes graph, the original label will be kept, or, if the existing graph does not "
-            'have a label, a label will be generated. Only labels with language tag "en" or '
-            "without language tag are considered.",
+            description="""The label for the shape catalog graph. If no label is specified for a new
+            shapes graph, a label will be generated. If no label is specified when adding to a
+            shapes graph, the original label will be kept, or, if the existing graph does not
+            have a label, a label will be generated. Only labels with language tag "en" or
+            without language tag are considered.""",
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="import_shapes",
             label="Import the output graph into the central shapes catalog",
-            description="Import the SHACL shapes graph in the CMEM shapes catalog by adding an "
-            "`owl:imports` statement to the central CMEM shapes catalog. If the graph is not "
-            "imported, the new shapes are not activated and used.",
+            description="""Import the SHACL shapes graph in the CMEM shapes catalog by adding an
+            "`owl:imports` statement to the central CMEM shapes catalog. If the graph is not
+            "imported, the new shapes are not activated and used.""",
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="prefix_cc",
             label="Fetch namespace prefixes from prefix.cc",
-            description="Fetch the list of namespace prefixes from https://prefix.cc instead of "
-            "using the local prefix database. If unavailable, fall back to the local database. "
-            "Prefixes defined in the Corporate Memory project override database prefixes. Enabling "
-            "this option exposes your IP address to prefix.cc but no other data is shared. If "
-            "unsure, keep this option disabled. See https://prefix.cc/about.",
+            description="""Fetch the list of namespace prefixes from https://prefix.cc instead of
+            using the local prefix database. If unavailable, fall back to the local database.
+            Prefixes defined in the Corporate Memory project override database prefixes. Enabling
+            this option exposes your IP address to prefix.cc but no other data is shared. If
+            unsure, keep this option disabled. See https://prefix.cc/about.""",
             advanced=True,
         ),
         PluginParameter(
@@ -141,6 +141,15 @@ def str2bool(value: str) -> bool:
             label="Add managed classes to the graph",
             description="Add managed SH/SHUI classes with the property shui:managedClasses to the "
             "shapes graph.",
+            advanced=True,
+        ),
+        PluginParameter(
+            param_type=BoolParameterType(),
+            name="depictions",
+            label="Add depictions to node shapes",
+            description="""Add foaf:depiction to node shapes taken from the data graph or ontology.
+            For the ontology graph name the target class namespace is considered, with or without
+            trailing separator.""",
             advanced=True,
         ),
         PluginParameter(
@@ -173,6 +182,7 @@ class ShapesPlugin(WorkflowPlugin):
         ignore_properties: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
         managed_classes: bool = False,
         query_catalog: bool = False,
+        depictions: bool = True,
         plugin_provenance: bool = False,
     ) -> None:
         if not validators.url(data_graph_iri):
@@ -210,6 +220,7 @@ class ShapesPlugin(WorkflowPlugin):
             self.ignore_properties.append(_)
 
         self.managed_classes = managed_classes
+        self.depictions = depictions
         self.plugin_provenance = plugin_provenance
 
         self.shapes_count = 0
@@ -362,6 +373,30 @@ class ShapesPlugin(WorkflowPlugin):
             )
         return class_dict
 
+    def add_depiction(self, node_shape_uri: URIRef, cls: str) -> None:
+        """Add target class depiction to node shape if present in the data graph or the ontology.
+
+        For the ontology graph name the target class namespace is considered, with or without
+        trailing separator.
+        """
+        class_namespace, _ = split_uri(cls)
+        query = f"""
+        PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+        SELECT DISTINCT ?depiction
+        FROM <{self.data_graph_iri}>
+        FROM <{class_namespace}>
+        FROM <{class_namespace[:-1]}>
+        WHERE {{
+          <{cls}> foaf:depiction ?depiction
+        }}"""  # noqa: S608
+
+        setup_cmempy_user_access(self.context.user)
+        bindings = json.loads(post_sparql(query=query))["results"]["bindings"]
+        if bindings:
+            self.shapes_graph.add(
+                (node_shape_uri, FOAF.depiction, URIRef(bindings[0]["depiction"]["value"]))
+            )
+
     def create_shapes(self) -> None:
         """Create SHACL node and property shapes"""
         class_uuids = set()
@@ -377,6 +412,8 @@ class ShapesPlugin(WorkflowPlugin):
                 name = self.get_name(cls)
                 self.shapes_graph.add((node_shape_uri, SH.name, Literal(name, lang="en")))
                 self.shapes_graph.add((node_shape_uri, RDFS.label, Literal(name, lang="en")))
+                if self.depictions:
+                    self.add_depiction(node_shape_uri, cls)
                 class_uuids.add(class_uuid)
 
             for prop in properties:
