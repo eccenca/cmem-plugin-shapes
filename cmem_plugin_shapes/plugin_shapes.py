@@ -150,7 +150,7 @@ def str2bool(value: str) -> bool:
             description="""Add foaf:depiction to node shapes taken from the data graph or ontology.
             For the ontology graph name the target class namespace is considered, with or without
             trailing separator.""",
-            advanced=True,
+            advanced=False,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
@@ -182,7 +182,7 @@ class ShapesPlugin(WorkflowPlugin):
         ignore_properties: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
         managed_classes: bool = False,
         query_catalog: bool = False,
-        depictions: bool = True,
+        depictions: bool = False,
         plugin_provenance: bool = False,
     ) -> None:
         if not validators.url(data_graph_iri):
