@@ -337,7 +337,7 @@ class ShapesPlugin(WorkflowPlugin):
         """Retrieve classes and associated properties"""
         setup_cmempy_user_access(self.context.user)
         query = f"""
-        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX rdf: <{RDF}>
         SELECT DISTINCT ?class ?property ?data ?inverse
         FROM <{self.data_graph_iri}> {{
             {{
@@ -381,7 +381,7 @@ class ShapesPlugin(WorkflowPlugin):
         """
         class_namespace, _ = split_uri(cls)
         query = f"""
-        PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+        PREFIX foaf: <{FOAF}>
         SELECT DISTINCT ?depiction
         FROM <{self.data_graph_iri}>
         FROM <{class_namespace}>
@@ -475,9 +475,9 @@ class ShapesPlugin(WorkflowPlugin):
             param_sparql += f'\n<{prov["plugin_iri"]}> <{iri}> "{self.__dict__[name]}" .'
 
         insert_query = f"""
-        PREFIX dcterms: <http://purl.org/dc/terms/>
-        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX dcterms: <{DCTERMS}>
+        PREFIX xsd: <{XSD}>
+        PREFIX rdfs: <{RDFS}>
         INSERT DATA {{
             GRAPH <{self.shapes_graph_iri}> {{
                 <{self.shapes_graph_iri}> dcterms:creator <{prov["plugin_iri"]}> .
@@ -560,8 +560,8 @@ class ShapesPlugin(WorkflowPlugin):
         )
         now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
         query_add_created = f"""
-        PREFIX dcterms: <http://purl.org/dc/terms/>
-        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+        PREFIX dcterms: <{DCTERMS}>
+        PREFIX xsd: <{XSD}>
         INSERT DATA {{
             GRAPH <{self.shapes_graph_iri}> {{
                 <{self.shapes_graph_iri}> dcterms:created "{now}"^^xsd:dateTime
@@ -585,7 +585,7 @@ class ShapesPlugin(WorkflowPlugin):
     def add_to_graph(self) -> str:
         """Add SHACL shapes to existing graph"""
         query_ask_label = f"""
-        PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX  rdfs: <{RDFS}>
         ASK {{
             GRAPH <{self.shapes_graph_iri}> {{
                  <{self.shapes_graph_iri}> rdfs:label ?label
@@ -594,7 +594,7 @@ class ShapesPlugin(WorkflowPlugin):
         }}"""
 
         query_remove_label = f"""
-        PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX  rdfs: <{RDFS}>
         DELETE {{
             GRAPH <{self.shapes_graph_iri}> {{
                  <{self.shapes_graph_iri}> rdfs:label ?label
@@ -624,8 +624,8 @@ class ShapesPlugin(WorkflowPlugin):
 
         now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
         query_remove_modified = f"""
-        PREFIX dcterms: <http://purl.org/dc/terms/>
-        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+        PREFIX dcterms: <{DCTERMS}>
+        PREFIX xsd: <{XSD}>
         DELETE {{
             GRAPH <{self.shapes_graph_iri}> {{
                 <{self.shapes_graph_iri}> dcterms:modified ?previous
@@ -644,8 +644,8 @@ class ShapesPlugin(WorkflowPlugin):
         post_update(query_remove_modified)
 
         query_add_modified = f"""
-        PREFIX dcterms: <http://purl.org/dc/terms/>
-        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+        PREFIX dcterms: <{DCTERMS}>
+        PREFIX xsd: <{XSD}> 
         INSERT {{
             GRAPH <{self.shapes_graph_iri}> {{
                 <{self.shapes_graph_iri}> dcterms:modified ?current

@@ -91,15 +91,17 @@ def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixtu
     _ = GraphSetupFixture()
     export_zip = str(tmp_path / "export.store.zip")
     run(["admin", "store", "export", export_zip])
+
     run(["graph", "import", "--replace", _.dataset_file, _.dataset_iri])
     if add_to_graph:
         run(["graph", "import", "--replace", _.shapes_file_add_init, _.shapes_iri])
     run_without_assertion(["project", "delete", _.project_name])
     run(["project", "create", _.project_name])
     yield _
+
     # remove test GRAPHS
     run(["admin", "store", "import", export_zip])
-
+    run(["graph", "delete", _.shapes_iri])
 
 def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
     """Test plugin execution"""
@@ -110,6 +112,7 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
         import_shapes=False,
         prefix_cc=False,
         plugin_provenance=True,
+        depictions=True,
     )
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
@@ -143,6 +146,7 @@ def test_workflow_execution_add_graph_not_exists(graph_setup: GraphSetupFixture)
         existing_graph=EXISTING_GRAPH_ADD,
         import_shapes=False,
         prefix_cc=False,
+        depictions=True,
     )
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
@@ -167,6 +171,7 @@ def test_workflow_execution_add_graph_exists(
         import_shapes=False,
         prefix_cc=False,
         label="New label",
+        depictions=False,
     )
     assert graph_setup.add_to_graph == add_to_graph
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
@@ -252,6 +257,7 @@ def test_prefix_cc_fetching(graph_setup: GraphSetupFixture) -> None:
         existing_graph=EXISTING_GRAPH_REPLACE,
         import_shapes=False,
         prefix_cc=True,
+        depictions=True,
     )
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
@@ -263,6 +269,7 @@ def test_prefix_cc_fetching(graph_setup: GraphSetupFixture) -> None:
 
 def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
     """Test plugin execution with import shapes"""
+
     ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,

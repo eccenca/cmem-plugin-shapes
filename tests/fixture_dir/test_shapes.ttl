@@ -15,7 +15,8 @@
     <http://docker.localhost/my-persons-shapes/63efb8eb-7402-52f6-a3cf-107cb1c54b1e>,
     <http://docker.localhost/my-persons-shapes/86fc9801-0605-5fb8-a417-da26a9ba0a71>,
     <http://docker.localhost/my-persons-shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>;
-  sh:targetClass foaf:Person .
+  sh:targetClass foaf:Person ;
+  foaf:depiction <data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cmVjdCB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIGZpbGw9IndoaXRlIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSI4IiByPSI0IiBmaWxsPSJibGFjayIvPjxwYXRoIGQ9Ik00IDIwYzAtNCA0LTYgOC02czggMiA4IDZ2MUg0di0xeiIgZmlsbD0iYmxhY2siLz48L3N2Zz4=> .
 
 <http://docker.localhost/my-persons-shapes/af9c7f1a-9a2c-5151-ba53-1d8797e408e1> a
     sh:PropertyShape;

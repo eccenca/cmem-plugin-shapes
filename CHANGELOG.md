@@ -9,9 +9,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Added
 
 - Optionally add SH/SHUI managed classes to shapes graph
-- Optionally import CMEM queryu cayalog to shapes graph
+- Optionally import CMEM query catalog to shapes graph
 - Optionally add target class depiction to node shape if present in the data graph or the ontology.
-For the ontology graph name the target class namespace is considered, with or without trailing separator.
+For the ontology graph name the target class namespace is considered, with and without trailing separator.
 
 
 ## [3.0.1] 2025-03-13
