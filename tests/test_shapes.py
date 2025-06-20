@@ -12,6 +12,7 @@ import pytest
 from cmem.cmempy.dp.proxy.graph import get
 from cmem.cmempy.dp.proxy.sparql import get as sparql_get
 from cmem.cmempy.dp.proxy.update import post
+from cmem_plugin_base.testing import TestExecutionContext
 from rdflib import DCTERMS, Graph, URIRef
 from rdflib.compare import isomorphic
 
@@ -23,7 +24,6 @@ from cmem_plugin_shapes.plugin_shapes import (
 )
 from tests import FIXTURE_DIR
 from tests.cmemc_command_utils import run, run_without_assertion
-from tests.utils import TestExecutionContext
 
 DATETIME_PATTERN = re.compile(
     r'^"[1-9][0-9]{3}-[0-1][1-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9]{3}Z"\^\^'
