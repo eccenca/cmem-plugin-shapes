@@ -2,8 +2,8 @@
 
 import time
 
-import cmem_cmemc
 from click.testing import CliRunner, Result
+from cmem_cmemc.cli import cli
 
 CLI_RUNNER = CliRunner()
 
@@ -39,7 +39,7 @@ class AnnotatedResult:
 def _run(command: tuple[str, ...] | list[str]) -> AnnotatedResult:
     """Wrap the CliRunner"""
     t_start = time.time()
-    result = CLI_RUNNER.invoke(cmem_cmemc.cli, command)
+    result = CLI_RUNNER.invoke(cli, command)
     t_end = time.time()
     annotated_result = AnnotatedResult(result=result)
     annotated_result.t_start = t_start
