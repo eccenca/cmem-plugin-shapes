@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+## [4.1.0] 2025-07-17
+
+### Changed
+
+- upgrade dependency validators to 0.35.0
+
+
 ## [4.0.0] 2025-07-04
 
 ### Changed
