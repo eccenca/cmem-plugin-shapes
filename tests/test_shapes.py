@@ -12,6 +12,7 @@ import pytest
 from cmem.cmempy.dp.proxy.graph import get
 from cmem.cmempy.dp.proxy.sparql import get as sparql_get
 from cmem.cmempy.dp.proxy.update import post
+from cmem_plugin_base.testing import TestExecutionContext
 from rdflib import DCTERMS, Graph, URIRef
 from rdflib.compare import isomorphic
 
@@ -23,7 +24,6 @@ from cmem_plugin_shapes.plugin_shapes import (
 )
 from tests import FIXTURE_DIR
 from tests.cmemc_command_utils import run, run_without_assertion
-from tests.utils import TestExecutionContext
 
 DATETIME_PATTERN = re.compile(
     r'^"[1-9][0-9]{3}-[0-1][1-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9]{3}Z"\^\^'
@@ -102,6 +102,7 @@ def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixtu
     # remove test GRAPHS
     run(["admin", "store", "import", export_zip])
     run(["graph", "delete", _.shapes_iri])
+
 
 def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
     """Test plugin execution"""
@@ -269,7 +270,6 @@ def test_prefix_cc_fetching(graph_setup: GraphSetupFixture) -> None:
 
 def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
     """Test plugin execution with import shapes"""
-
     ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,

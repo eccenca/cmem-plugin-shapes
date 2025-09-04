@@ -645,7 +645,7 @@ class ShapesPlugin(WorkflowPlugin):
 
         query_add_modified = f"""
         PREFIX dcterms: <{DCTERMS}>
-        PREFIX xsd: <{XSD}> 
+        PREFIX xsd: <{XSD}>
         INSERT {{
             GRAPH <{self.shapes_graph_iri}> {{
                 <{self.shapes_graph_iri}> dcterms:modified ?current
