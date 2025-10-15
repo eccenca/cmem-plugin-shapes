@@ -124,7 +124,7 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     assert isomorphic(result_graph, test)
     with pytest.raises(
-        ValueError, match="Graph <http://docker.localhost/my-persons-shapes> already exists."
+        ValueError, match=r"Graph <http://docker.localhost/my-persons-shapes> already exists."
     ):
         ShapesPlugin(
             data_graph_iri=graph_setup.dataset_iri,
