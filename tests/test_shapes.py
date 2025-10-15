@@ -26,7 +26,7 @@ from tests import FIXTURE_DIR
 from tests.cmemc_command_utils import run, run_without_assertion
 
 DATETIME_PATTERN = re.compile(
-    r'^"[1-9][0-9]{3}-[0-1][1-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9]{3}Z"\^\^'
+    r'^"[1-9][0-9]{3}-(0[1-9]|1[0-2])-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9]{3}Z"\^\^'
     "<http://www.w3.org/2001/XMLSchema#dateTime>"
 )
 
