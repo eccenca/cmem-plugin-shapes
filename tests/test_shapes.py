@@ -26,7 +26,7 @@ from tests import FIXTURE_DIR
 from tests.cmemc_command_utils import run, run_without_assertion
 
 DATETIME_PATTERN = re.compile(
-    r'^"[1-9][0-9]{3}-[0-1][1-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9]{3}Z"\^\^'
+    r'^"[1-9][0-9]{3}-(0[1-9]|1[0-2])-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9]{3}Z"\^\^'
     "<http://www.w3.org/2001/XMLSchema#dateTime>"
 )
 
@@ -124,7 +124,7 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     assert isomorphic(result_graph, test)
     with pytest.raises(
-        ValueError, match="Graph <http://docker.localhost/my-persons-shapes> already exists."
+        ValueError, match=r"Graph <http://docker.localhost/my-persons-shapes> already exists."
     ):
         ShapesPlugin(
             data_graph_iri=graph_setup.dataset_iri,
