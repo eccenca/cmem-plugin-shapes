@@ -136,6 +136,13 @@ def str2bool(value: str) -> bool:
             advanced=True,
         ),
         PluginParameter(
+            param_type=MultilineStringParameterType(),
+            name="ignore_types",
+            label="Types to ignore",
+            description="Provide the list of types (as IRIs) to ignore.",
+            advanced=True,
+        ),
+        PluginParameter(
             param_type=BoolParameterType(),
             name="plugin_provenance",
             label="Include plugin provenance",
@@ -156,6 +163,7 @@ class ShapesPlugin(WorkflowPlugin):
         import_shapes: bool = False,
         prefix_cc: bool = False,
         ignore_properties: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+        ignore_types: str = "",
         plugin_provenance: bool = False,
     ) -> None:
         if not validators.url(data_graph_iri):
@@ -190,6 +198,12 @@ class ShapesPlugin(WorkflowPlugin):
             if not validators.url(_):
                 raise ValueError(f"Invalid property IRI ({_}) in parameter 'Properties to ignore'")
             self.ignore_properties.append(_)
+
+        self.ignore_types = []
+        for _ in filter(None, ignore_types.split("\n")):
+            if not validators.url(_):
+                raise ValueError(f"Invalid type IRI ({_}) in parameter 'Types to ignore'")
+            self.ignore_types.append(_)
 
         self.plugin_provenance = plugin_provenance
 
@@ -296,6 +310,7 @@ class ShapesPlugin(WorkflowPlugin):
                 ?subject a ?class .
                 ?subject ?property ?object .
                 {self.iri_list_to_filter(self.ignore_properties)}
+                {self.iri_list_to_filter(self.ignore_types, name="class")}
                 BIND(isLiteral(?object) AS ?data)
                 BIND("false" AS ?inverse)
             }}
@@ -304,6 +319,7 @@ class ShapesPlugin(WorkflowPlugin):
                 ?object a ?class .
                 ?subject ?property ?object .
                 {self.iri_list_to_filter(self.ignore_properties)}
+                {self.iri_list_to_filter(self.ignore_types, name="class")}
                 BIND("false" AS ?data)
                 BIND("true" AS ?inverse)
             }}
