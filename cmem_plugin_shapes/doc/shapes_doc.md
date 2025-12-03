@@ -42,6 +42,15 @@ http://www.w3.org/1999/02/22-rdf-syntax-ns#type
 http://xmlns.com/foaf/0.1/familyName
 ```
 
+**<a id="parameter_doc_ignore_properties">Properties to ignore</a>**
+
+Provide the list of types (as IRIs) for which you go not want to create type shapes.
+Example:
+```
+http://xmlns.com/foaf/0.1/Person
+http://schema.org/Person
+```
+
 **<a id="parameter_doc_plugin_provenance">Include plugin provenance</a>**
 
 Add information about the plugin and plugin settings to the shapes graph.
