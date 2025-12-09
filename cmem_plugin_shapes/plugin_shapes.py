@@ -32,8 +32,6 @@ from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
 from rdflib import DCTERMS, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
 
-from cmem_plugin_shapes.doc import SHAPES_DOC
-
 from . import __path__
 
 SHUI = Namespace("https://vocab.eccenca.com/shui/")
@@ -73,7 +71,65 @@ def str2bool(value: str) -> bool:
     label=PLUGIN_LABEL,
     icon=Icon(file_name="shapes.svg", package=__package__),
     description="Generate SHACL node and property shapes from a data graph",
-    documentation=SHAPES_DOC,
+    documentation="""This workflow task generates SHACL (Shapes Constraint Language)
+node and property shapes by analyzing instance data from a knowledge graph. The generated
+shapes describe the structure and properties of the classes used in the data graph.
+
+## Usage
+
+The plugin analyzes an input data graph and creates:
+
+- **Node shapes**: One for each class (`rdf:type`) used in the data graph
+- **Property shapes**: For all properties associated with each class, including:
+  - Regular object properties (subject → object relationships)
+  - Inverse object properties (object ← subject relationships, marked with ← prefix)
+  - Datatype properties (literal values)
+
+## Output
+
+The generated shapes are written to a shape catalog graph with:
+
+- Unique URIs based on UUIDs (UUID5 derived from class/property IRIs)
+- Human-readable labels and names (using namespace prefixes when available)
+- Metadata including source data graph reference and timestamps
+- Optional plugin provenance information (see advanced options)
+
+## Example
+
+Given a data graph with:
+
+``` turtle
+ex:Person123 a ex:Person ;
+    ex:name "John" ;
+    ex:knows ex:Person456 .
+```
+
+The plugin generates:
+
+- A node shape for `ex:Person` with `sh:targetClass ex:Person`
+
+``` turtle
+graph:90ee6e27-59b1-5ac8-9d7a-116c60c6791a a sh:NodeShape ;
+  rdfs:label "Person (ex:)"@en ;
+  sh:name "Person (ex:)"@en ;
+  sh:property
+    graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 ,
+    graph:dd5c6728-75a2-5215-8a5d-f9cd4077aaea ;
+  sh:targetClass ex:Person .
+```
+
+- Property shapes for `ex:name` (datatype property) and `ex:knows` (object property)
+
+``` turtle
+graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
+  rdfs:label "knows (ex:)"@en ;
+  sh:name "knows (ex:)"@en ;
+  sh:nodeKind sh:IRI ;
+  sh:path ex:knows ;
+  shui:showAlways true .
+```
+
+""",
     parameters=[
         PluginParameter(
             param_type=GraphParameterType(allow_only_autocompleted_values=False),
