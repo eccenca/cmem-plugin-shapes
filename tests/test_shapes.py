@@ -197,6 +197,11 @@ def test_additional_inits() -> None:
     except ValueError:
         pytest.fail("Usage with empty ignore_properties list should not fail.")
 
+    try:
+        ShapesPlugin(data_graph_iri=iri1, shapes_graph_iri=iri2, ignore_types="")
+    except ValueError:
+        pytest.fail("Usage with empty ignore_types list should not fail.")
+
 
 def test_failing_inits() -> None:
     """Test failing inits"""
@@ -241,6 +246,19 @@ def test_failing_inits() -> None:
             data_graph_iri=iri1,
             shapes_graph_iri=iri2,
             existing_graph="unknown",
+        )
+    with pytest.raises(ValueError, match="Invalid type IRI"):
+        ShapesPlugin(
+            data_graph_iri=iri1,
+            shapes_graph_iri=iri2,
+            ignore_types="""no iri""",
+        )
+    with pytest.raises(ValueError, match="Invalid type IRI"):
+        ShapesPlugin(
+            data_graph_iri=iri1,
+            shapes_graph_iri=iri2,
+            ignore_types="""http://example.com/Person
+            not a valid iri""",
         )
 
 
@@ -306,6 +324,100 @@ def test_filter_creation() -> None:
         ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], name="sfsdf sdf")
     with pytest.raises(ValueError, match="filter_ must be"):
         ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="XX")
+
+
+def test_ignore_types_and_properties() -> None:
+    """Test ignore_types and ignore_properties parameters together"""
+    iri1 = "http://example.com/1"
+    iri2 = "http://example.com/2"
+    person_type = "http://schema.org/Person"
+    organization_type = "http://schema.org/Organization"
+    name_prop = "http://schema.org/name"
+    email_prop = "http://schema.org/email"
+
+    plugin = ShapesPlugin(
+        data_graph_iri=iri1,
+        shapes_graph_iri=iri2,
+        ignore_types=person_type,
+    )
+    assert plugin.ignore_types == [person_type]
+
+    plugin = ShapesPlugin(
+        data_graph_iri=iri1,
+        shapes_graph_iri=iri2,
+        ignore_types=f"{person_type}\n{organization_type}",
+    )
+    assert plugin.ignore_types == [person_type, organization_type]
+
+    plugin = ShapesPlugin(
+        data_graph_iri=iri1,
+        shapes_graph_iri=iri2,
+        ignore_properties=f"{name_prop}\n{email_prop}",
+        ignore_types=f"{person_type}\n{organization_type}",
+    )
+    assert plugin.ignore_properties == [name_prop, email_prop]
+    assert plugin.ignore_types == [person_type, organization_type]
+
+    type_filter = ShapesPlugin.iri_list_to_filter(
+        iris=[person_type, organization_type], name="class"
+    )
+    assert type_filter == f"FILTER (?class NOT IN (<{person_type}>, <{organization_type}>))"
+
+    prop_filter = ShapesPlugin.iri_list_to_filter(iris=[name_prop, email_prop], name="property")
+    assert prop_filter == f"FILTER (?property NOT IN (<{name_prop}>, <{email_prop}>))"
+
+    plugin = ShapesPlugin(
+        data_graph_iri=iri1,
+        shapes_graph_iri=iri2,
+        ignore_types="",
+        ignore_properties="",
+    )
+    assert plugin.ignore_types == []
+    assert plugin.ignore_properties == []
+
+
+def test_workflow_execution_with_ignore_types(graph_setup: GraphSetupFixture) -> None:
+    """Test plugin execution with ignore_types parameter filters correctly"""
+    plugin_baseline = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    plugin_baseline.execute(
+        inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name)
+    )
+    baseline_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
+    baseline_graph = Graph().parse(data=baseline_graph_turtle)
+    baseline_count = plugin_baseline.shapes_count
+
+    plugin_filtered = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+        ignore_types="http://xmlns.com/foaf/0.1/Person",
+    )
+    plugin_filtered.execute(
+        inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name)
+    )
+    filtered_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
+    filtered_graph = Graph().parse(data=filtered_graph_turtle)
+    filtered_count = plugin_filtered.shapes_count
+
+    assert filtered_count < baseline_count, (
+        f"Expected fewer shapes when filtering types, "
+        f"but got {filtered_count} (filtered) vs {baseline_count} (baseline)"
+    )
+
+    # Verify the filtered graph is not isomorphic to baseline (they should differ)
+    baseline_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
+    filtered_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
+    assert not isomorphic(baseline_graph, filtered_graph), (
+        "Expected graphs to differ when using ignore_types filter"
+    )
 
 
 @pytest.mark.parametrize("add_to_graph", [True])
