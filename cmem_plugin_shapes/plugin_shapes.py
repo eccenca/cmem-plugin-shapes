@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
+from re import IGNORECASE, match
 from secrets import token_hex
 from urllib.parse import quote_plus
 from urllib.request import urlopen
@@ -65,6 +66,14 @@ def str2bool(value: str) -> bool:
         return False
     allowed_values = '", "'.join(TRUE_SET | FALSE_SET)
     raise ValueError(f'Expected one of: "{allowed_values}"')
+
+
+def is_valid_uri(uri: str | None) -> bool:
+    """Validate URI"""
+    if not isinstance(uri, str):
+        return False
+    urn_pattern = r"^urn:[a-zA-Z][a-zA-Z0-9-]{0,31}:.+$"
+    return validators.url(uri) is True or bool(match(urn_pattern, uri, IGNORECASE))
 
 
 @Plugin(
@@ -222,11 +231,11 @@ class ShapesPlugin(WorkflowPlugin):
         ignore_types: str = "",
         plugin_provenance: bool = False,
     ) -> None:
-        if not validators.url(data_graph_iri):
+        if not is_valid_uri(data_graph_iri):
             raise ValueError("Invalid value for parameter 'Input data graph'")
         self.data_graph_iri = data_graph_iri
 
-        if not validators.url(shapes_graph_iri):
+        if not is_valid_uri(shapes_graph_iri):
             raise ValueError("Invalid value for parameter 'Output shape catalog'")
         self.shapes_graph_iri = shapes_graph_iri
 
@@ -251,13 +260,13 @@ class ShapesPlugin(WorkflowPlugin):
 
         self.ignore_properties = []
         for _ in filter(None, ignore_properties.split("\n")):
-            if not validators.url(_):
+            if not is_valid_uri(_):
                 raise ValueError(f"Invalid property IRI ({_}) in parameter 'Properties to ignore'")
             self.ignore_properties.append(_)
 
         self.ignore_types = []
         for _ in filter(None, ignore_types.split("\n")):
-            if not validators.url(_):
+            if not is_valid_uri(_):
                 raise ValueError(f"Invalid type IRI ({_}) in parameter 'Types to ignore'")
             self.ignore_types.append(_)
 
