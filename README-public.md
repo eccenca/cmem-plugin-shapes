@@ -26,4 +26,3 @@ cmemc admin workspace python install cmem-plugin-shapes
 [copier]: https://copier.readthedocs.io/
 [copier-shield]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/copier-org/copier/master/img/badge/badge-grayscale-inverted-border-purple.json
 
-
