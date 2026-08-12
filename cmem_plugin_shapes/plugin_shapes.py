@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from secrets import token_hex
+from typing import cast
 from urllib.parse import quote_plus
 from urllib.request import urlopen
 from uuid import NAMESPACE_URL, uuid5
@@ -15,8 +16,6 @@ from uuid import NAMESPACE_URL, uuid5
 import validators.url
 from cmem.cmempy.api import send_request
 from cmem.cmempy.config import get_dp_api_endpoint
-from cmem.cmempy.dp.proxy.sparql import post as post_sparql
-from cmem.cmempy.dp.proxy.update import post as post_update
 from cmem.cmempy.workspace.projects.project import get_prefixes
 from cmem_client.client import Client
 from cmem_client.repositories.graphs import ImportConflictPolicy
@@ -382,7 +381,7 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""  # noqa: S608
 
-        results = json.loads(post_sparql(query))
+        results = json.loads(self._post_sparql(query=query))
 
         class_dict: dict = {}
         for binding in results["results"]["bindings"]:
@@ -461,8 +460,7 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        setup_cmempy_user_access(self.context.user)
-        post_update(query)
+        self.client.store.sparql.update(query=query)
 
     def post_provenance(self, now: str) -> None:
         """Post provenance"""
@@ -488,7 +486,7 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        post_update(query=insert_query)
+        self.client.store.sparql.update(query=insert_query)
 
     def get_provenance(self) -> dict | None:
         """Get provenance information"""
@@ -506,7 +504,7 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        result = json.loads(post_sparql(query=type_query))
+        result = json.loads(self._post_sparql(query=type_query))
 
         try:
             plugin_type = result["results"]["bindings"][0]["type"]["value"]
@@ -532,7 +530,7 @@ class ShapesPlugin(WorkflowPlugin):
 
         new_plugin_iri = f"{'_'.join(plugin_iri.split('_')[:-1])}_{token_hex(8)}"
         label = f"{PLUGIN_LABEL} plugin"
-        result = json.loads(post_sparql(query=parameter_query))
+        result = json.loads(self._post_sparql(query=parameter_query))
 
         prov = {
             "plugin_iri": new_plugin_iri,
@@ -577,7 +575,7 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        post_update(query_add_created)
+        self.client.store.sparql.update(query=query_add_created)
         return now
 
     def create_label(self) -> None:
@@ -616,9 +614,9 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        has_label = json.loads(post_sparql(query=query_ask_label)).get("boolean", False)
+        has_label = json.loads(self._post_sparql(query=query_ask_label)).get("boolean", False)
         if self.label and has_label:
-            post_update(query=query_remove_label)
+            self.client.store.sparql.update(query=query_remove_label)
         if self.label or not has_label:
             self.create_label()
 
@@ -629,7 +627,7 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        post_update(query_data)
+        self.client.store.sparql.update(query=query_data)
 
         now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
         query_remove_modified = f"""
@@ -649,8 +647,7 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        setup_cmempy_user_access(self.context.user)
-        post_update(query_remove_modified)
+        self.client.store.sparql.update(query=query_remove_modified)
 
         query_add_modified = f"""
         PREFIX dcterms: <http://purl.org/dc/terms/>
@@ -668,7 +665,7 @@ class ShapesPlugin(WorkflowPlugin):
             BIND(IF(!BOUND(?datetime), xsd:dateTime("{now}"), ?undef) AS ?current)
         }}"""  # noqa: S608
 
-        post_update(query_add_modified)
+        self.client.store.sparql.update(query=query_add_modified)
         return now
 
     def update_execution_report(self) -> None:
@@ -688,6 +685,10 @@ class ShapesPlugin(WorkflowPlugin):
         """
         self.client.graphs.fetch_data()
         return dict(self.client.graphs.items())
+
+    def _post_sparql(self, query: str) -> bytes:
+        result = self.client.store.sparql.query(query=query)
+        return cast("bytes", result.serialize(format="json"))
 
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:  # noqa: ARG002
         """Execute plugin"""

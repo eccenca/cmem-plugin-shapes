@@ -12,6 +12,7 @@ import pytest
 from cmem.cmempy.dp.proxy.graph import get
 from cmem.cmempy.dp.proxy.sparql import get as sparql_get
 from cmem.cmempy.dp.proxy.update import post
+from cmem_client.client import Client
 from cmem_plugin_base.testing import TestExecutionContext
 from rdflib import DCTERMS, Graph, URIRef
 from rdflib.compare import isomorphic
@@ -433,6 +434,7 @@ def test_add_to_graph_label(graph_setup: GraphSetupFixture, add_to_graph: bool) 
         label="",
     )
     plugin.context = TestExecutionContext()
+    plugin.client = Client.from_context(plugin.context)
 
     plugin.shapes_graph = Graph()
     plugin.add_to_graph()
