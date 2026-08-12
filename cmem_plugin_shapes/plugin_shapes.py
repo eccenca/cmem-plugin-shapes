@@ -2,10 +2,10 @@
 
 import json
 import re
+import tempfile
 from collections import OrderedDict
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from io import BytesIO
 from pathlib import Path
 from secrets import token_hex
 from urllib.parse import quote_plus
@@ -15,10 +15,11 @@ from uuid import NAMESPACE_URL, uuid5
 import validators.url
 from cmem.cmempy.api import send_request
 from cmem.cmempy.config import get_dp_api_endpoint
-from cmem.cmempy.dp.proxy.graph import get_graphs_list, post_streamed
 from cmem.cmempy.dp.proxy.sparql import post as post_sparql
 from cmem.cmempy.dp.proxy.update import post as post_update
 from cmem.cmempy.workspace.projects.project import get_prefixes
+from cmem_client.client import Client
+from cmem_client.repositories.graphs import ImportConflictPolicy
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.description import Icon, Plugin, PluginParameter
 from cmem_plugin_base.dataintegration.entity import Entities
@@ -550,12 +551,22 @@ class ShapesPlugin(WorkflowPlugin):
     def create_graph(self) -> str:
         """Create or replace SHACL shapes graph"""
         self.create_label()
-        post_streamed(
-            self.shapes_graph_iri,
-            BytesIO(self.shapes_graph.serialize(format="nt", encoding="utf-8")),
-            replace=self.replace,
-            content_type="application/n-triples",
-        )
+        ntriples = self.shapes_graph.serialize(format="nt", encoding="utf-8").decode()
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".nt", delete=False, encoding="utf-8"
+        ) as f:
+            f.write(ntriples)
+            tmp_path = f.name
+        try:
+            self.client.graphs.import_item(
+                path=Path(tmp_path),
+                key=self.shapes_graph_iri,
+                on_conflict=ImportConflictPolicy.REPLACE
+                if self.replace
+                else ImportConflictPolicy.FAIL,
+            )
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
         now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
         query_add_created = f"""
         PREFIX dcterms: <http://purl.org/dc/terms/>
@@ -670,12 +681,21 @@ class ShapesPlugin(WorkflowPlugin):
             )
         )
 
+    def _get_graphs_list(self) -> dict:
+        """Return graph IRI → Graph mapping.
+
+        Uses self.client.graphs.fetch_data() which populates the internal store.
+        """
+        self.client.graphs.fetch_data()
+        return dict(self.client.graphs.items())
+
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:  # noqa: ARG002
         """Execute plugin"""
         self.context = context
         self.update_execution_report()
-        setup_cmempy_user_access(context.user)
-        graph_exists = self.shapes_graph_iri in [_["iri"] for _ in get_graphs_list()]
+        self.client = Client.from_context(context=context)
+        graphs_list = self._get_graphs_list()
+        graph_exists = any(self.shapes_graph_iri == g.iri for g in graphs_list.values())
         if self.existing_graph == EXISTING_GRAPH_STOP and graph_exists:
             raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists.")
 
@@ -684,12 +704,11 @@ class ShapesPlugin(WorkflowPlugin):
         self.dp_api_endpoint = get_dp_api_endpoint()
         self.create_shapes()
 
-        setup_cmempy_user_access(context.user)
         if self.existing_graph != "add":
             now = self.create_graph()
         else:
-            self.graphs_list = get_graphs_list()
-            if self.shapes_graph_iri in [_["iri"] for _ in self.graphs_list]:
+            self.graphs_list = graphs_list
+            if self.shapes_graph_iri in self.graphs_list:
                 now = self.add_to_graph()
             else:
                 now = self.create_graph()
