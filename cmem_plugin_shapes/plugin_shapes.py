@@ -14,8 +14,6 @@ from urllib.request import urlopen
 from uuid import NAMESPACE_URL, uuid5
 
 import validators.url
-from cmem.cmempy.api import send_request
-from cmem.cmempy.config import get_dp_api_endpoint
 from cmem.cmempy.workspace.projects.project import get_prefixes
 from cmem_client.client import Client
 from cmem_client.repositories.graphs import ImportConflictPolicy
@@ -28,7 +26,6 @@ from cmem_plugin_base.dataintegration.parameter.multiline import MultilineString
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import BoolParameterType, StringParameterType
-from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
 from rdflib import DCTERMS, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
 
@@ -302,13 +299,13 @@ class ShapesPlugin(WorkflowPlugin):
 
     def get_name(self, iri: str) -> str:
         """Generate shape name from IRI"""
-        response = send_request(
-            uri=f"{self.dp_api_endpoint}/api/explore/title?resource={quote_plus(iri)}",
-            method="GET",
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
-        )
-        title_json = json.loads(response)
-        title: str = title_json["title"]
+        url = self.client.config.url_explore_api / f"/api/explore/title?resource={quote_plus(iri)}"
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        response = self.client.http.get(url=url, headers=headers)
+        response.raise_for_status()
+        results = response.json()
+
+        title: str = results["title"]
         try:
             namespace, _ = split_uri(iri)
         except ValueError as exc:
@@ -317,7 +314,7 @@ class ShapesPlugin(WorkflowPlugin):
         if namespace in self.prefixes:
             prefixes = self.prefixes[namespace]
             prefix = prefixes[0]
-            if title_json["fromIri"]:
+            if results["fromIri"]:
                 if title.startswith(prefixes):
                     if len(prefixes) > 1:
                         prefix = title.split(":", 1)[0] + ":"
@@ -326,7 +323,7 @@ class ShapesPlugin(WorkflowPlugin):
                     try:
                         title = title.split("_", 1)[1]
                     except IndexError as exc:
-                        raise IndexError(f"{title_json['title']} {prefixes}") from exc
+                        raise IndexError(f"{results['title']} {prefixes}") from exc
             title += f" ({prefix})"
         return title
 
@@ -357,7 +354,6 @@ class ShapesPlugin(WorkflowPlugin):
 
     def get_class_dict(self) -> dict:
         """Retrieve classes and associated properties"""
-        setup_cmempy_user_access(self.context.user)
         query = f"""
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         SELECT DISTINCT ?class ?property ?data ?inverse
@@ -702,7 +698,7 @@ class ShapesPlugin(WorkflowPlugin):
 
         self.prefixes = self.get_prefixes()
         self.shapes_graph = self.init_shapes_graph()
-        self.dp_api_endpoint = get_dp_api_endpoint()
+        self.dp_api_endpoint = self.client.config.url_explore_api
         self.create_shapes()
 
         if self.existing_graph != "add":
