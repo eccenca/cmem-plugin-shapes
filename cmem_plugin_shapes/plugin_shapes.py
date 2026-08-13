@@ -8,13 +8,12 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from secrets import token_hex
-from typing import cast
+from typing import Any, cast
 from urllib.parse import quote_plus
 from urllib.request import urlopen
 from uuid import NAMESPACE_URL, uuid5
 
 import validators.url
-from cmem.cmempy.workspace.projects.project import get_prefixes
 from cmem_client.client import Client
 from cmem_client.repositories.graphs import ImportConflictPolicy
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
@@ -276,7 +275,7 @@ class ShapesPlugin(WorkflowPlugin):
 
     def get_prefixes(self) -> dict:
         """Fetch namespace prefixes"""
-        prefixes_project = get_prefixes(self.context.task.project_id())
+        prefixes_project = self._get_prefixes(self.context.task.project_id())
         prefixes = self.format_prefixes(prefixes_project)
 
         prefixes_cc = None
@@ -685,6 +684,17 @@ class ShapesPlugin(WorkflowPlugin):
     def _post_sparql(self, query: str) -> bytes:
         result = self.client.store.sparql.query(query=query)
         return cast("bytes", result.serialize(format="json"))
+
+    def _get_prefixes(self, project_name: str) -> dict[Any, Any]:
+        """GET prefixes of a project."""
+        url = (
+            self.client.config.url_build_api
+            / f"/api/workspace/projects/{quote_plus(project_name)}/prefixes"
+        )
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        response = self.client.http.get(url=url, headers=headers)
+        response.raise_for_status()
+        return cast("dict", response.json())
 
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:  # noqa: ARG002
         """Execute plugin"""

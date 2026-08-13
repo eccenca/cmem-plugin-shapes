@@ -23,7 +23,6 @@ poetry-dynamic-versioning = "^1.10.0"
 python = "^3.13"
 validators = "^0.35.0"
 rdflib = "^7.1.4"
-cmem-cmempy = "^25"
 cmem-client = "^0.16.3"
 
 [tool.poetry.dependencies.cmem-plugin-base]
