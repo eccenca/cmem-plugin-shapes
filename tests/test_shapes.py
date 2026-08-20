@@ -1,21 +1,21 @@
 """Plugin tests."""
 
-import json
 import os
 import re
 from collections.abc import Generator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
-from cmem.cmempy.dp.proxy.graph import get
-from cmem.cmempy.dp.proxy.sparql import get as sparql_get
-from cmem.cmempy.dp.proxy.update import post
 from cmem_client.client import Client
+from cmem_client.repositories.graphs import GraphExportConfig, GraphsRepository
 from cmem_plugin_base.testing import TestExecutionContext
 from rdflib import DCTERMS, Graph, URIRef
 from rdflib.compare import isomorphic
+
+if TYPE_CHECKING:
+    from rdflib.query import ResultRow
 
 from cmem_plugin_shapes.plugin_shapes import (
     EXISTING_GRAPH_ADD,
@@ -74,6 +74,27 @@ class GraphSetupFixture:
     }}"""
 
 
+def get_graph_content(client: Client, iri: str) -> str:
+    """Fetch the content of a graph as N-Triples (without owl:imports resolution)"""
+    client.graphs.fetch_data()
+    path: Path = client.graphs.export_item(
+        key=iri,
+        configuration=GraphExportConfig(serialization=GraphsRepository.formats["n-triples"]),
+    )
+    try:
+        return path.read_text(encoding="utf-8")
+    finally:
+        path.unlink(missing_ok=True)
+
+
+@pytest.fixture
+def client() -> Client:
+    """cmem-client fixture used to verify the results of a plugin execution"""
+    if os.environ.get("CMEM_BASE_URI", "") == "":
+        pytest.skip("Needs CMEM configuration")
+    return Client.from_env()
+
+
 @pytest.fixture
 def add_to_graph() -> bool:
     """Add to graph parameter fixture
@@ -102,7 +123,7 @@ def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixtu
     run(["admin", "store", "import", export_zip])
 
 
-def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
+def test_workflow_execution(graph_setup: GraphSetupFixture, client: Client) -> None:
     """Test plugin execution"""
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
@@ -113,13 +134,13 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
         plugin_provenance=True,
     )
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
+    result_graph_content = get_graph_content(client, graph_setup.shapes_iri)
     regexp = rf"<{graph_setup.shapes_iri}> <http://purl.org/dc/terms/created> .* \."
-    created = re.findall(regexp, result_graph_turtle)
+    created = re.findall(regexp, result_graph_content)
     assert len(created) == 1
     datetime = created[0].split()[-2]
     assert DATETIME_PATTERN.match(datetime)
-    result_graph = Graph().parse(data=result_graph_turtle)
+    result_graph = Graph().parse(data=result_graph_content)
     assert len(list(result_graph.objects(predicate=DCTERMS.modified))) == 0
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
@@ -136,7 +157,9 @@ def test_workflow_execution(graph_setup: GraphSetupFixture) -> None:
         ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
 
 
-def test_workflow_execution_add_graph_not_exists(graph_setup: GraphSetupFixture) -> None:
+def test_workflow_execution_add_graph_not_exists(
+    graph_setup: GraphSetupFixture, client: Client
+) -> None:
     """Test plugin execution with "add to graph" setting without existing graph"""
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
@@ -146,8 +169,7 @@ def test_workflow_execution_add_graph_not_exists(graph_setup: GraphSetupFixture)
         prefix_cc=False,
     )
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
-    result_graph = Graph().parse(data=result_graph_turtle)
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
     assert len(list(result_graph.objects(predicate=DCTERMS.created))) == 1
     assert len(list(result_graph.objects(predicate=DCTERMS.modified))) == 0
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
@@ -158,7 +180,7 @@ def test_workflow_execution_add_graph_not_exists(graph_setup: GraphSetupFixture)
 
 @pytest.mark.parametrize("add_to_graph", [True])
 def test_workflow_execution_add_graph_exists(
-    graph_setup: GraphSetupFixture, add_to_graph: bool
+    graph_setup: GraphSetupFixture, add_to_graph: bool, client: Client
 ) -> None:
     """Test plugin execution with "add to graph" setting with existing graph"""
     plugin = ShapesPlugin(
@@ -171,13 +193,13 @@ def test_workflow_execution_add_graph_exists(
     )
     assert graph_setup.add_to_graph == add_to_graph
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
+    result_graph_content = get_graph_content(client, graph_setup.shapes_iri)
     regexp = rf"<{graph_setup.shapes_iri}> <http://purl.org/dc/terms/modified> .* \."
-    modified = re.findall(regexp, result_graph_turtle)
+    modified = re.findall(regexp, result_graph_content)
     assert len(modified) == 1
     datetime = modified[0].split()[-2]
     assert DATETIME_PATTERN.match(datetime)
-    result_graph = Graph().parse(data=result_graph_turtle)
+    result_graph = Graph().parse(data=result_graph_content)
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes_add.ttl")
     assert result_graph.value(
         subject=URIRef(graph_setup.shapes_iri), predicate=DCTERMS.modified
@@ -263,7 +285,7 @@ def test_failing_inits() -> None:
         )
 
 
-def test_prefix_cc_fetching(graph_setup: GraphSetupFixture) -> None:
+def test_prefix_cc_fetching(graph_setup: GraphSetupFixture, client: Client) -> None:
     """Test prefix.cc fetching"""
     plugin = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
@@ -273,14 +295,13 @@ def test_prefix_cc_fetching(graph_setup: GraphSetupFixture) -> None:
         prefix_cc=True,
     )
     plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    result_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
-    result_graph = Graph().parse(data=result_graph_turtle)
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     assert isomorphic(result_graph, test)
 
 
-def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
+def test_import_shapes(graph_setup: GraphSetupFixture, client: Client) -> None:
     """Test plugin execution with import shapes"""
     ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
@@ -289,7 +310,7 @@ def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
         import_shapes=False,
         prefix_cc=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    assert not json.loads(sparql_get(query=graph_setup.ask_query)).get("boolean", True)
+    assert not client.store.sparql.query(query=graph_setup.ask_query).askAnswer
     ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
@@ -297,7 +318,7 @@ def test_import_shapes(graph_setup: GraphSetupFixture) -> None:
         import_shapes=True,
         prefix_cc=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    assert json.loads(sparql_get(query=graph_setup.ask_query)).get("boolean", False)
+    assert client.store.sparql.query(query=graph_setup.ask_query).askAnswer
 
 
 def test_filter_creation() -> None:
@@ -377,7 +398,9 @@ def test_ignore_types_and_properties() -> None:
     assert plugin.ignore_properties == []
 
 
-def test_workflow_execution_with_ignore_types(graph_setup: GraphSetupFixture) -> None:
+def test_workflow_execution_with_ignore_types(
+    graph_setup: GraphSetupFixture, client: Client
+) -> None:
     """Test plugin execution with ignore_types parameter filters correctly"""
     plugin_baseline = ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
@@ -389,8 +412,7 @@ def test_workflow_execution_with_ignore_types(graph_setup: GraphSetupFixture) ->
     plugin_baseline.execute(
         inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name)
     )
-    baseline_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
-    baseline_graph = Graph().parse(data=baseline_graph_turtle)
+    baseline_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
     baseline_count = plugin_baseline.shapes_count
 
     plugin_filtered = ShapesPlugin(
@@ -404,8 +426,7 @@ def test_workflow_execution_with_ignore_types(graph_setup: GraphSetupFixture) ->
     plugin_filtered.execute(
         inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name)
     )
-    filtered_graph_turtle = get(graph_setup.shapes_iri, owl_imports_resolution=False).text
-    filtered_graph = Graph().parse(data=filtered_graph_turtle)
+    filtered_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
     filtered_count = plugin_filtered.shapes_count
 
     assert filtered_count < baseline_count, (
@@ -422,7 +443,9 @@ def test_workflow_execution_with_ignore_types(graph_setup: GraphSetupFixture) ->
 
 
 @pytest.mark.parametrize("add_to_graph", [True])
-def test_add_to_graph_label(graph_setup: GraphSetupFixture, add_to_graph: bool) -> None:
+def test_add_to_graph_label(
+    graph_setup: GraphSetupFixture, add_to_graph: bool, client: Client
+) -> None:
     """Test add to label"""
     assert graph_setup.add_to_graph == add_to_graph
     plugin = ShapesPlugin(
@@ -436,20 +459,23 @@ def test_add_to_graph_label(graph_setup: GraphSetupFixture, add_to_graph: bool) 
     plugin.context = TestExecutionContext()
     plugin.client = Client.from_context(plugin.context)
 
+    def get_labels() -> list[str]:
+        """Return the English labels of the shapes graph"""
+        rows = cast(
+            "list[ResultRow]", list(client.store.sparql.query(query=graph_setup.label_query))
+        )
+        return [str(row["label"]) for row in rows]
+
     plugin.shapes_graph = Graph()
     plugin.add_to_graph()
-    bindings = json.loads(sparql_get(query=graph_setup.label_query))["results"]["bindings"]
-    assert len(bindings) == 1
-    assert bindings[0]["label"]["value"] == f"Shapes for {graph_setup.dataset_iri}"
+    assert get_labels() == [f"Shapes for {graph_setup.dataset_iri}"]
 
-    post(query=graph_setup.remove_label_query)
+    client.store.sparql.update(query=graph_setup.remove_label_query)
     plugin.shapes_graph = Graph()
     plugin.add_to_graph()
-    bindings = json.loads(sparql_get(query=graph_setup.label_query))["results"]["bindings"]
-    assert len(bindings) == 1
-    assert bindings[0]["label"]["value"] == f"Shapes for {graph_setup.dataset_iri}"
+    assert get_labels() == [f"Shapes for {graph_setup.dataset_iri}"]
 
-    post(query=graph_setup.remove_label_query)
+    client.store.sparql.update(query=graph_setup.remove_label_query)
     query = f"""
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         INSERT DATA {{
@@ -457,24 +483,18 @@ def test_add_to_graph_label(graph_setup: GraphSetupFixture, add_to_graph: bool) 
                 <{graph_setup.shapes_iri}> rdfs:label "test label"@de
             }}
         }}"""
-    post(query=query)
+    client.store.sparql.update(query=query)
     plugin.shapes_graph = Graph()
     plugin.add_to_graph()
-    bindings = json.loads(sparql_get(query=graph_setup.label_query))["results"]["bindings"]
-    assert len(bindings) == 1
-    assert bindings[0]["label"]["value"] == f"Shapes for {graph_setup.dataset_iri}"
+    assert get_labels() == [f"Shapes for {graph_setup.dataset_iri}"]
 
     plugin.label = "New label"
 
     plugin.shapes_graph = Graph()
     plugin.add_to_graph()
-    bindings = json.loads(sparql_get(query=graph_setup.label_query))["results"]["bindings"]
-    assert len(bindings) == 1
-    assert bindings[0]["label"]["value"] == "New label"
+    assert get_labels() == ["New label"]
 
-    post(query=graph_setup.remove_label_query)
+    client.store.sparql.update(query=graph_setup.remove_label_query)
     plugin.shapes_graph = Graph()
     plugin.add_to_graph()
-    bindings = json.loads(sparql_get(query=graph_setup.label_query))["results"]["bindings"]
-    assert len(bindings) == 1
-    assert bindings[0]["label"]["value"] == "New label"
+    assert get_labels() == ["New label"]
