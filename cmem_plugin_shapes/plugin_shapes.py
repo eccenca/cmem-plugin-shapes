@@ -2,23 +2,20 @@
 
 import json
 import re
+import tempfile
 from collections import OrderedDict
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from io import BytesIO
 from pathlib import Path
 from secrets import token_hex
+from typing import Any, cast
 from urllib.parse import quote_plus
 from urllib.request import urlopen
 from uuid import NAMESPACE_URL, uuid5
 
 import validators.url
-from cmem.cmempy.api import send_request
-from cmem.cmempy.config import get_dp_api_endpoint
-from cmem.cmempy.dp.proxy.graph import get_graphs_list, post_streamed
-from cmem.cmempy.dp.proxy.sparql import post as post_sparql
-from cmem.cmempy.dp.proxy.update import post as post_update
-from cmem.cmempy.workspace.projects.project import get_prefixes
+from cmem_client.client import Client
+from cmem_client.repositories.graphs import ImportConflictPolicy
 from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
 from cmem_plugin_base.dataintegration.description import Icon, Plugin, PluginParameter
 from cmem_plugin_base.dataintegration.entity import Entities
@@ -28,7 +25,6 @@ from cmem_plugin_base.dataintegration.parameter.multiline import MultilineString
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import BoolParameterType, StringParameterType
-from cmem_plugin_base.dataintegration.utils import setup_cmempy_user_access
 from rdflib import DCTERMS, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
 
@@ -279,7 +275,7 @@ class ShapesPlugin(WorkflowPlugin):
 
     def get_prefixes(self) -> dict:
         """Fetch namespace prefixes"""
-        prefixes_project = get_prefixes(self.context.task.project_id())
+        prefixes_project = self._get_prefixes(self.context.task.project_id())
         prefixes = self.format_prefixes(prefixes_project)
 
         prefixes_cc = None
@@ -302,13 +298,13 @@ class ShapesPlugin(WorkflowPlugin):
 
     def get_name(self, iri: str) -> str:
         """Generate shape name from IRI"""
-        response = send_request(
-            uri=f"{self.dp_api_endpoint}/api/explore/title?resource={quote_plus(iri)}",
-            method="GET",
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
-        )
-        title_json = json.loads(response)
-        title: str = title_json["title"]
+        url = self.client.config.url_explore_api / f"/api/explore/title?resource={quote_plus(iri)}"
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        response = self.client.http.get(url=url, headers=headers)
+        response.raise_for_status()
+        results = response.json()
+
+        title: str = results["title"]
         try:
             namespace, _ = split_uri(iri)
         except ValueError as exc:
@@ -317,7 +313,7 @@ class ShapesPlugin(WorkflowPlugin):
         if namespace in self.prefixes:
             prefixes = self.prefixes[namespace]
             prefix = prefixes[0]
-            if title_json["fromIri"]:
+            if results["fromIri"]:
                 if title.startswith(prefixes):
                     if len(prefixes) > 1:
                         prefix = title.split(":", 1)[0] + ":"
@@ -326,7 +322,7 @@ class ShapesPlugin(WorkflowPlugin):
                     try:
                         title = title.split("_", 1)[1]
                     except IndexError as exc:
-                        raise IndexError(f"{title_json['title']} {prefixes}") from exc
+                        raise IndexError(f"{results['title']} {prefixes}") from exc
             title += f" ({prefix})"
         return title
 
@@ -357,7 +353,6 @@ class ShapesPlugin(WorkflowPlugin):
 
     def get_class_dict(self) -> dict:
         """Retrieve classes and associated properties"""
-        setup_cmempy_user_access(self.context.user)
         query = f"""
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         SELECT DISTINCT ?class ?property ?data ?inverse
@@ -381,7 +376,7 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""  # noqa: S608
 
-        results = json.loads(post_sparql(query))
+        results = json.loads(self._post_sparql(query=query))
 
         class_dict: dict = {}
         for binding in results["results"]["bindings"]:
@@ -460,8 +455,7 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        setup_cmempy_user_access(self.context.user)
-        post_update(query)
+        self.client.store.sparql.update(query=query)
 
     def post_provenance(self, now: str) -> None:
         """Post provenance"""
@@ -487,7 +481,7 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        post_update(query=insert_query)
+        self.client.store.sparql.update(query=insert_query)
 
     def get_provenance(self) -> dict | None:
         """Get provenance information"""
@@ -505,7 +499,7 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        result = json.loads(post_sparql(query=type_query))
+        result = json.loads(self._post_sparql(query=type_query))
 
         try:
             plugin_type = result["results"]["bindings"][0]["type"]["value"]
@@ -531,7 +525,7 @@ class ShapesPlugin(WorkflowPlugin):
 
         new_plugin_iri = f"{'_'.join(plugin_iri.split('_')[:-1])}_{token_hex(8)}"
         label = f"{PLUGIN_LABEL} plugin"
-        result = json.loads(post_sparql(query=parameter_query))
+        result = json.loads(self._post_sparql(query=parameter_query))
 
         prov = {
             "plugin_iri": new_plugin_iri,
@@ -550,12 +544,22 @@ class ShapesPlugin(WorkflowPlugin):
     def create_graph(self) -> str:
         """Create or replace SHACL shapes graph"""
         self.create_label()
-        post_streamed(
-            self.shapes_graph_iri,
-            BytesIO(self.shapes_graph.serialize(format="nt", encoding="utf-8")),
-            replace=self.replace,
-            content_type="application/n-triples",
-        )
+        ntriples = self.shapes_graph.serialize(format="nt", encoding="utf-8").decode()
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".nt", delete=False, encoding="utf-8"
+        ) as f:
+            f.write(ntriples)
+            tmp_path = f.name
+        try:
+            self.client.graphs.import_item(
+                path=Path(tmp_path),
+                key=self.shapes_graph_iri,
+                on_conflict=ImportConflictPolicy.REPLACE
+                if self.replace
+                else ImportConflictPolicy.FAIL,
+            )
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
         now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
         query_add_created = f"""
         PREFIX dcterms: <http://purl.org/dc/terms/>
@@ -566,7 +570,7 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        post_update(query_add_created)
+        self.client.store.sparql.update(query=query_add_created)
         return now
 
     def create_label(self) -> None:
@@ -605,9 +609,9 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        has_label = json.loads(post_sparql(query=query_ask_label)).get("boolean", False)
+        has_label = json.loads(self._post_sparql(query=query_ask_label)).get("boolean", False)
         if self.label and has_label:
-            post_update(query=query_remove_label)
+            self.client.store.sparql.update(query=query_remove_label)
         if self.label or not has_label:
             self.create_label()
 
@@ -618,7 +622,7 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        post_update(query_data)
+        self.client.store.sparql.update(query=query_data)
 
         now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
         query_remove_modified = f"""
@@ -638,8 +642,7 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        setup_cmempy_user_access(self.context.user)
-        post_update(query_remove_modified)
+        self.client.store.sparql.update(query=query_remove_modified)
 
         query_add_modified = f"""
         PREFIX dcterms: <http://purl.org/dc/terms/>
@@ -657,7 +660,7 @@ class ShapesPlugin(WorkflowPlugin):
             BIND(IF(!BOUND(?datetime), xsd:dateTime("{now}"), ?undef) AS ?current)
         }}"""  # noqa: S608
 
-        post_update(query_add_modified)
+        self.client.store.sparql.update(query=query_add_modified)
         return now
 
     def update_execution_report(self) -> None:
@@ -670,26 +673,49 @@ class ShapesPlugin(WorkflowPlugin):
             )
         )
 
+    def _get_graphs_list(self) -> dict:
+        """Return graph IRI → Graph mapping.
+
+        Uses self.client.graphs.fetch_data() which populates the internal store.
+        """
+        self.client.graphs.fetch_data()
+        return dict(self.client.graphs.items())
+
+    def _post_sparql(self, query: str) -> bytes:
+        result = self.client.store.sparql.query(query=query)
+        return cast("bytes", result.serialize(format="json"))
+
+    def _get_prefixes(self, project_name: str) -> dict[Any, Any]:
+        """GET prefixes of a project."""
+        url = (
+            self.client.config.url_build_api
+            / f"/api/workspace/projects/{quote_plus(project_name)}/prefixes"
+        )
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        response = self.client.http.get(url=url, headers=headers)
+        response.raise_for_status()
+        return cast("dict", response.json())
+
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:  # noqa: ARG002
         """Execute plugin"""
         self.context = context
         self.update_execution_report()
-        setup_cmempy_user_access(context.user)
-        graph_exists = self.shapes_graph_iri in [_["iri"] for _ in get_graphs_list()]
+        self.client = Client.from_context(context=context)
+        graphs_list = self._get_graphs_list()
+        graph_exists = any(self.shapes_graph_iri == g.iri for g in graphs_list.values())
         if self.existing_graph == EXISTING_GRAPH_STOP and graph_exists:
             raise ValueError(f"Graph <{self.shapes_graph_iri}> already exists.")
 
         self.prefixes = self.get_prefixes()
         self.shapes_graph = self.init_shapes_graph()
-        self.dp_api_endpoint = get_dp_api_endpoint()
+        self.dp_api_endpoint = self.client.config.url_explore_api
         self.create_shapes()
 
-        setup_cmempy_user_access(context.user)
         if self.existing_graph != "add":
             now = self.create_graph()
         else:
-            self.graphs_list = get_graphs_list()
-            if self.shapes_graph_iri in [_["iri"] for _ in self.graphs_list]:
+            self.graphs_list = graphs_list
+            if self.shapes_graph_iri in self.graphs_list:
                 now = self.add_to_graph()
             else:
                 now = self.create_graph()
