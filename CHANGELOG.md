@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased]
 
+### Added
+
+- Property shapes now get `sh:description` from the property's `rdfs:comment`, `dcterms:description` or `skos:definition` in the data graph, when present
+- Property shapes now get `sh:datatype rdf:langString` when the data graph uses the property with a language-tagged literal
+- Parameter to omit the namespace addon (e.g. `(rdfs:)`) from property shape labels
+
 ### Changed
 
 - Updated project template to v9.4.0 (cmem-client 1.1.0, ruff 0.16.5)

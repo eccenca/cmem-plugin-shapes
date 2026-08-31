@@ -11,7 +11,7 @@ import pytest
 from cmem_client.client import Client
 from cmem_client.repositories.graphs import GraphExportConfig, GraphsRepository
 from cmem_plugin_base.testing import TestExecutionContext
-from rdflib import DCTERMS, Graph, URIRef
+from rdflib import DCTERMS, RDF, RDFS, SH, SKOS, Graph, Literal, URIRef
 from rdflib.compare import isomorphic
 
 if TYPE_CHECKING:
@@ -346,6 +346,144 @@ def test_filter_creation() -> None:
         ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], name="sfsdf sdf")
     with pytest.raises(ValueError, match="filter_ must be"):
         ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="XX")
+
+
+def test_select_description_prefers_comment_over_description() -> None:
+    """Test select_description prefers rdfs:comment over dcterms:description"""
+    values_by_predicate = {
+        str(RDFS.comment): [{"value": "A comment"}],
+        str(DCTERMS.description): [{"value": "A description"}],
+    }
+    assert ShapesPlugin.select_description(values_by_predicate) == Literal("A comment")
+
+
+def test_select_description_falls_back_through_predicate_priority() -> None:
+    """Test select_description falls back to dcterms:description, then skos:definition"""
+    assert ShapesPlugin.select_description(
+        {str(DCTERMS.description): [{"value": "A description"}]}
+    ) == Literal("A description")
+    assert ShapesPlugin.select_description(
+        {str(SKOS.definition): [{"value": "A definition"}]}
+    ) == Literal("A definition")
+
+
+def test_select_description_prefers_en_language() -> None:
+    """Test select_description prefers an @en value when multiple languages exist"""
+    values_by_predicate = {
+        str(RDFS.comment): [
+            {"value": "Ein Kommentar", "xml:lang": "de"},
+            {"value": "A comment", "xml:lang": "en"},
+        ]
+    }
+    assert ShapesPlugin.select_description(values_by_predicate) == Literal("A comment", lang="en")
+
+
+def test_select_description_falls_back_to_any_language_when_no_en() -> None:
+    """Test select_description falls back to the first value when no @en is present"""
+    values_by_predicate = {str(RDFS.comment): [{"value": "Ein Kommentar", "xml:lang": "de"}]}
+    assert ShapesPlugin.select_description(values_by_predicate) == Literal(
+        "Ein Kommentar", lang="de"
+    )
+
+
+def test_select_description_returns_none_when_no_values() -> None:
+    """Test select_description returns None when nothing matches"""
+    assert ShapesPlugin.select_description({}) is None
+
+
+def test_properties_with_lang_string_detects_any_tagged_value() -> None:
+    """Test properties_with_lang_string flags a property with at least one langString value"""
+    class_dict = {
+        "http://example.com/Person": [
+            {"property": "http://example.com/name", "data": True, "inverse": False, "lang": ""},
+        ],
+        "http://example.com/Dataset": [
+            {"property": "http://example.com/name", "data": True, "inverse": False, "lang": "en"},
+        ],
+    }
+    assert ShapesPlugin.properties_with_lang_string(class_dict) == {"http://example.com/name"}
+
+
+def test_properties_with_lang_string_empty_when_no_tags() -> None:
+    """Test properties_with_lang_string returns an empty set when no value has a language tag"""
+    class_dict = {
+        "http://example.com/Person": [
+            {"property": "http://example.com/name", "data": True, "inverse": False, "lang": ""},
+        ],
+    }
+    assert ShapesPlugin.properties_with_lang_string(class_dict) == set()
+
+
+def test_omit_namespace_addon(graph_setup: GraphSetupFixture, client: Client) -> None:
+    """Test omit_namespace_addon drops the "(prefix:)" suffix from property labels only"""
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+        omit_namespace_addon=True,
+    )
+    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+
+    property_labels = {
+        str(label)
+        for shape in result_graph.subjects(predicate=RDF.type, object=SH.PropertyShape)
+        for label in result_graph.objects(subject=shape, predicate=RDFS.label)
+    }
+    assert property_labels == {"knows", "← knows", "familyName", "label"}
+
+    node_labels = {
+        str(label)
+        for shape in result_graph.subjects(predicate=RDF.type, object=SH.NodeShape)
+        for label in result_graph.objects(subject=shape, predicate=RDFS.label)
+    }
+    assert node_labels == {"Person (foaf:)", "Dataset (void:)"}
+
+
+def test_lang_string_datatype_not_added_to_iri_property_shape(
+    graph_setup: GraphSetupFixture, client: Client
+) -> None:
+    """Test sh:datatype rdf:langString is never combined with sh:nodeKind sh:IRI
+
+    A property might be used as an object/IRI value under one class and as a
+    language-tagged literal under another. The property shape is created once,
+    keyed by the property IRI, so sh:datatype must only be added when the
+    occurrence that wins the shape (and decides sh:nodeKind) is itself a
+    language-tagged literal - the two must never appear together.
+    """
+    insert_query = f"""
+    PREFIX ex: <http://example.com/>
+    INSERT DATA {{
+        GRAPH <{graph_setup.dataset_iri}> {{
+            ex:Widget1 a ex:Widget ;
+                ex:relatedTo ex:Widget2 .
+            ex:Note1 a ex:Note ;
+                ex:relatedTo "A related note"@en .
+        }}
+    }}"""
+    client.store.sparql.update(query=insert_query)
+
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+
+    property_shape = next(
+        result_graph.subjects(predicate=SH.path, object=URIRef("http://example.com/relatedTo"))
+    )
+    node_kinds = set(result_graph.objects(subject=property_shape, predicate=SH.nodeKind))
+    datatypes = set(result_graph.objects(subject=property_shape, predicate=SH.datatype))
+    assert not (SH.IRI in node_kinds and RDF.langString in datatypes), (
+        f"property shape must not combine sh:nodeKind sh:IRI with sh:datatype rdf:langString, "
+        f"got nodeKind={node_kinds} datatype={datatypes}"
+    )
 
 
 def test_ignore_types_and_properties() -> None:

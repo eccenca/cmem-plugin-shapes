@@ -1,6 +1,7 @@
 @prefix : <https://ns.eccenca.com/data/config/> .
 @prefix ns1: <https://vocab.eccenca.com/shui/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix void: <http://rdfs.org/ns/void#> .
@@ -52,6 +53,7 @@
   rdfs:label "familyName (foaf:)"@en;
   sh:nodeKind sh:Literal;
   sh:path foaf:familyName;
+  sh:description "The family name of a person."@en;
   ns1:showAlways true .
 
 <http://docker.localhost/my-persons-shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741> a
@@ -60,6 +62,7 @@
   rdfs:label "label (rdfs:)"@en;
   sh:nodeKind sh:Literal;
   sh:path rdfs:label;
+  sh:datatype rdf:langString;
   ns1:showAlways true .
 
 <http://docker.localhost/my-persons-shapes/da1b0b28-9c51-55c3-a963-2337006693de> a
