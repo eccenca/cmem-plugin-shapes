@@ -206,7 +206,9 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
 class ShapesPlugin(WorkflowPlugin):
     """SHACL shapes generation plugin"""
 
-    def __init__(  # noqa: PLR0913
+    # A plugin constructor takes one argument per PluginParameter, so its arity is
+    # fixed by the plugin's configuration surface, not by a style choice here.
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         data_graph_iri: str,
         shapes_graph_iri: str,
@@ -281,7 +283,7 @@ class ShapesPlugin(WorkflowPlugin):
         prefixes_cc = None
         if self.prefix_cc:
             try:
-                res = urlopen(PREFIX_CC)  # noqa: S310
+                res = urlopen(PREFIX_CC)
                 self.log.info("prefixes fetched from https://prefix.cc")
                 prefixes_cc = json.loads(res.read())
             except Exception as exc:  # noqa: BLE001

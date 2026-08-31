@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+## [Unreleased]
+
+### Changed
+
+- Updated project template to v9.4.0 (cmem-client 1.1.0, ruff 0.16.5)
+
 ## [4.4.0] 2026-08-20
 
 ### Changed
