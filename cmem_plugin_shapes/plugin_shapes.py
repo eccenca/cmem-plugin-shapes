@@ -72,6 +72,10 @@ def str2bool(value: str) -> bool:
 node and property shapes by analyzing instance data from a knowledge graph. The generated
 shapes describe the structure and properties of the classes used in the data graph.
 
+The data graph and the shape catalog are both selected by IRI parameter, not by workflow
+connection, so the task has no input or output port: it is a terminal step that reads and
+writes graphs directly and hands nothing on to a following task.
+
 ## Usage
 
 The plugin analyzes an input data graph and creates:
@@ -170,9 +174,9 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
             param_type=BoolParameterType(),
             name="import_shapes",
             label="Import the output graph into the central shapes catalog",
-            description="Import the SHACL shapes graph in the CMEM shapes catalog by adding an "
-            "`owl:imports` statement to the central CMEM shapes catalog. If the graph is not "
-            "imported, the new shapes are not activated and used.",
+            description="Import the SHACL shapes graph into the central shapes catalog of "
+            "eccenca Corporate Memory, by adding an `owl:imports` statement to it. If the graph "
+            "is not imported, the new shapes are not activated and used.",
         ),
         PluginParameter(
             param_type=BoolParameterType(),
@@ -180,9 +184,9 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
             label="Fetch namespace prefixes from prefix.cc",
             description="Fetch the list of namespace prefixes from https://prefix.cc instead of "
             "using the local prefix database. If unavailable, fall back to the local database. "
-            "Prefixes defined in the Corporate Memory project override database prefixes. Enabling "
-            "this option exposes your IP address to prefix.cc but no other data is shared. If "
-            "unsure, keep this option disabled. See https://prefix.cc/about.",
+            "Prefixes defined in the eccenca Corporate Memory project override database prefixes. "
+            "Enabling this option exposes your IP address to prefix.cc but no other data is "
+            "shared. If unsure, keep this option disabled. See https://prefix.cc/about.",
             advanced=True,
         ),
         PluginParameter(
