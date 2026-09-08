@@ -91,11 +91,11 @@ The generated shapes are written to a shape catalog graph with:
 
 - Unique URIs based on UUIDs (UUID5 derived from class/property IRIs)
 - Human-readable labels and names (using namespace prefixes when available)
-- `sh:description` on a property shape, taken from the description eccenca Corporate
-  Memory resolves for that property - its `rdfs:comment`, `dcterms:description` or
-  `skos:definition`, looked up wherever the property is defined, so a vocabulary graph
-  counts as well as the data graph. A property nothing describes anywhere gets no
-  `sh:description`.
+- `sh:description` on a node or property shape, taken from the description eccenca
+  Corporate Memory resolves for that class or property - its `rdfs:comment`,
+  `dcterms:description` or `skos:definition`, looked up wherever the class or property
+  is defined, so a vocabulary graph counts as well as the data graph. A class or
+  property nothing describes anywhere gets no `sh:description`.
 - `sh:datatype rdf:langString` on a property shape, when the data graph uses the
   property with a language-tagged literal
 - Metadata including source data graph reference and timestamps
@@ -479,10 +479,10 @@ class ShapesPlugin(WorkflowPlugin):
             {prop["property"] for properties in class_dict.values() for prop in properties}
         )
         # One batched helper call each, rather than one request per IRI from inside
-        # the loop below. Titles are needed for classes as well, descriptions only
-        # for properties, since a node shape carries no sh:description.
-        titles = self.resolve("titles", sorted(set(class_dict)) + property_iris)
-        descriptions = self.get_descriptions(property_iris)
+        # the loop below.
+        iris = sorted(set(class_dict)) + property_iris
+        titles = self.resolve("titles", iris)
+        descriptions = self.get_descriptions(iris)
         for cls, properties in class_dict.items():
             class_uuid = uuid5(NAMESPACE_URL, cls)
             node_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{class_uuid}")
@@ -494,6 +494,9 @@ class ShapesPlugin(WorkflowPlugin):
                 class_name = self.name_literal(self.get_name(cls, titles[cls]), titles[cls])
                 self.shapes_graph.add((node_shape_uri, SH.name, class_name))
                 self.shapes_graph.add((node_shape_uri, RDFS.label, class_name))
+                class_description = descriptions.get(cls)
+                if class_description is not None:
+                    self.shapes_graph.add((node_shape_uri, SH.description, class_description))
                 class_uuids.add(class_uuid)
 
             for prop in properties:

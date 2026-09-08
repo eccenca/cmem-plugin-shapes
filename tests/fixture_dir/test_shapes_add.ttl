@@ -44,6 +44,7 @@
     sh:NodeShape;
   sh:name "Dataset (void:)"@en;
   rdfs:label "Dataset (void:)"@en;
+  sh:description "A dataset graph consists mainly instance data."@en;
   sh:property <http://docker.localhost/my-persons-shapes/d0e9e696-d3f2-5966-a62f-d8358cbde741>;
   sh:targetClass void:Dataset .
 

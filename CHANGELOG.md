@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Added
 
-- Property shapes now get `sh:description` from the description Corporate Memory resolves for the property - its `rdfs:comment`, `dcterms:description` or `skos:definition`, wherever the property is defined, so descriptions from a vocabulary graph are picked up as well as those in the data graph
+- Node and property shapes now get `sh:description` from the description Corporate Memory resolves for the class or property - its `rdfs:comment`, `dcterms:description` or `skos:definition`, wherever the class or property is defined, so descriptions from a vocabulary graph are picked up as well as those in the data graph
 - Property shapes now get `sh:datatype rdf:langString` when the data graph uses the property with a language-tagged literal
 - Parameter to omit the namespace addon (e.g. `(rdfs:)`) from property shape labels
 
