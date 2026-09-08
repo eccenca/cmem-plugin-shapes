@@ -43,6 +43,12 @@ from . import __path__
 
 SHUI = Namespace("https://vocab.eccenca.com/shui/")
 PREFIX_CC = "https://prefix.cc/popular/all.file.json"
+# One request per this many IRIs. The explore API takes the list in the request body,
+# and a graph with tens of thousands of properties would otherwise build a body large
+# enough for a proxy to refuse.
+RESOLVE_BATCH_SIZE = 500
+# An action renders into a panel, so its listing is capped - and says when it capped.
+MAX_LISTED_IRIS = 1000
 MANAGED_CLASSES = (
     SH.NodeShape,
     SH.PrefixDeclaration,
@@ -429,13 +435,26 @@ class ShapesPlugin(WorkflowPlugin):
         of the mapping entirely when it knows no description for it, while the titles
         helper always answers, falling back to a title built from the IRI itself.
         """
-        if not iris:
-            return {}
         url = self.client.config.url_explore_api / f"/api/explore/{endpoint}"
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        response = self.client.http.post(url=url, headers=headers, json=iris)
-        response.raise_for_status()
-        return cast("dict[str, dict]", response.json())
+        resolved: dict[str, dict] = {}
+        for start in range(0, len(iris), RESOLVE_BATCH_SIZE):
+            batch = iris[start : start + RESOLVE_BATCH_SIZE]
+            response = self.client.http.post(url=url, headers=headers, json=batch)
+            response.raise_for_status()
+            resolved.update(cast("dict[str, dict]", response.json()))
+        return resolved
+
+    @staticmethod
+    def title_record(iri: str, titles: dict) -> dict:
+        """Return the resolved title of an IRI, or one standing in for an absent answer
+
+        The titles helper answers for every IRI it is given, but indexing the mapping
+        directly made that an assumption which, when it failed, raised KeyError from inside
+        the shape loop. The stand-in is what the helper returns for an IRI it knows nothing
+        about, so get_name treats it the same way.
+        """
+        return titles.get(iri) or {"title": iri, "fromIri": True}
 
     def get_name(self, iri: str, title_record: dict, *, include_namespace: bool = True) -> str:
         """Generate shape name from IRI and its resolved title"""
@@ -493,8 +512,12 @@ class ShapesPlugin(WorkflowPlugin):
         iris = sorted({binding[variable]["value"] for binding in bindings})
         if not iris:
             return f"No {plural} found in `{self.data_graph_iri}`."
-        listing = "\n".join(iris)
-        return f"{len(iris)} {plural} found in `{self.data_graph_iri}`:\n\n```\n{listing}\n```"
+        shown = iris[:MAX_LISTED_IRIS]
+        listing = "\n".join(shown)
+        header = f"{len(iris)} {plural} found in `{self.data_graph_iri}`"
+        if len(shown) < len(iris):
+            header += f", showing the first {len(shown)}"
+        return f"{header}:\n\n```\n{listing}\n```"
 
     def get_classes(self, context: PluginContext) -> str:
         """List the classes used in the input data graph"""
@@ -678,9 +701,10 @@ class ShapesPlugin(WorkflowPlugin):
     ) -> None:
         """Add one property shape to the shapes graph"""
         self.shapes_count += 1
+        record = self.title_record(prop["property"], titles)
         name = self.get_name(
             prop["property"],
-            titles[prop["property"]],
+            record,
             include_namespace=not self.omit_namespace_addon,
         )
         self.shapes_graph.add((property_shape_uri, RDF.type, SH.PropertyShape))
@@ -705,7 +729,7 @@ class ShapesPlugin(WorkflowPlugin):
                 (property_shape_uri, SHUI.inversePath, Literal("true", datatype=XSD.boolean))
             )
             name = "← " + name
-        name_literal = self.name_literal(name, titles[prop["property"]])
+        name_literal = self.name_literal(name, record)
         self.shapes_graph.add((property_shape_uri, SH.name, name_literal))
         self.shapes_graph.add((property_shape_uri, RDFS.label, name_literal))
 
@@ -738,7 +762,8 @@ class ShapesPlugin(WorkflowPlugin):
                 self.shapes_count += 1
                 self.shapes_graph.add((node_shape_uri, RDF.type, SH.NodeShape))
                 self.shapes_graph.add((node_shape_uri, SH.targetClass, URIRef(cls)))
-                class_name = self.name_literal(self.get_name(cls, titles[cls]), titles[cls])
+                record = self.title_record(cls, titles)
+                class_name = self.name_literal(self.get_name(cls, record), record)
                 self.shapes_graph.add((node_shape_uri, SH.name, class_name))
                 self.shapes_graph.add((node_shape_uri, RDFS.label, class_name))
                 class_description = descriptions.get(cls)

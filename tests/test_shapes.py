@@ -756,6 +756,18 @@ def test_shape_count_does_not_accumulate_across_runs(
     assert plugin.shapes_count == first
 
 
+def test_title_record_stands_in_for_an_absent_answer() -> None:
+    """Test a missing title does not raise from inside the shape loop"""
+    titles = {"http://example.com/known": {"title": "Known", "fromIri": False, "lang": "en"}}
+    assert ShapesPlugin.title_record("http://example.com/known", titles)["title"] == "Known"
+
+    missing = ShapesPlugin.title_record("http://example.com/absent", titles)
+    assert missing["fromIri"] is True
+    plugin = ShapesPlugin.__new__(ShapesPlugin)
+    plugin.prefixes = {"http://example.com/": ("ex:",)}
+    assert plugin.get_name("http://example.com/absent", missing) == "absent (ex:)"
+
+
 def test_get_name_falls_back_to_the_local_name() -> None:
     """Test a synthesized title is not taken apart on an underscore
 
