@@ -13,6 +13,7 @@ from cmem_plugin_base.testing import TestExecutionContext, TestPluginContext
 from rdflib import DCTERMS, FOAF, RDF, RDFS, SH, SKOS, Graph, Literal, URIRef
 from rdflib.compare import isomorphic
 from rdflib.term import Node
+from rdflib.util import from_n3
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -708,6 +709,31 @@ def test_provenance_subject_keeps_the_whole_task_iri() -> None:
     # a subject this code produced earlier keeps its length rather than growing each run
     already = f"http://dataintegration.eccenca.com/p/t_{'b' * 16}"
     assert re.sub(r"_[0-9a-f]{16}$", "", already) == "http://dataintegration.eccenca.com/p/t"
+
+
+def test_parameter_literal_escapes_and_flattens() -> None:
+    """Test a parameter value cannot break out of the SPARQL literal it is written into
+
+    Round-tripping is the proof: whatever the value contains, the serialized form has to
+    parse back to exactly that one literal and to nothing else.
+    """
+    plugin = ShapesPlugin.__new__(ShapesPlugin)
+
+    for value in (
+        'My "big" catalog',
+        'x" . <http://evil/s> <http://evil/p> "y',
+        "a line\nand another",
+        "back\\slash",
+    ):
+        plugin.label = value
+        serialized = plugin.parameter_literal("label").n3()
+        assert from_n3(serialized) == Literal(value), serialized
+
+    # a list parameter is recorded as the lines the user typed, not as a Python repr
+    plugin.ignore_types = ["http://example.com/a", "http://example.com/b"]
+    assert str(plugin.parameter_literal("ignore_types")) == (
+        "http://example.com/a\nhttp://example.com/b"
+    )
 
 
 def test_get_name_falls_back_to_the_local_name() -> None:

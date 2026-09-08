@@ -762,6 +762,19 @@ class ShapesPlugin(WorkflowPlugin):
 
         self.client.store.sparql.update(query=query)
 
+    def parameter_literal(self, name: str) -> Literal:
+        """Return a parameter value as a literal safe to put in a SPARQL update
+
+        Interpolating the value into a quoted string by hand let a quote in, say, the
+        catalog label break the update - and a crafted value write triples of its own.
+        Literal.n3() escapes it. The two ignore parameters are held as parsed lists, so
+        they are written back as the lines the user typed rather than as a Python repr.
+        """
+        value = self.__dict__[name]
+        if isinstance(value, list):
+            return Literal("\n".join(value))
+        return Literal(str(value))
+
     def post_provenance(self, now: str) -> None:
         """Post provenance"""
         prov = self.get_provenance()
@@ -769,7 +782,9 @@ class ShapesPlugin(WorkflowPlugin):
             return
         param_sparql = ""
         for name, iri in prov["parameters"].items():
-            param_sparql += f'\n<{prov["plugin_iri"]}> <{iri}> "{self.__dict__[name]}" .'
+            param_sparql += (
+                f"\n<{prov['plugin_iri']}> <{iri}> {self.parameter_literal(name).n3()} ."
+            )
 
         insert_query = f"""
         PREFIX dcterms: <http://purl.org/dc/terms/>
@@ -780,7 +795,7 @@ class ShapesPlugin(WorkflowPlugin):
                 <{self.shapes_graph_iri}> dcterms:creator <{prov["plugin_iri"]}> .
                 <{prov["plugin_iri"]}> a <{prov["plugin_type"]}>,
                         <https://vocab.eccenca.com/di/CustomTask> ;
-                    rdfs:label "{prov["plugin_label"]}" ;
+                    rdfs:label {Literal(prov["plugin_label"]).n3()} ;
                     dcterms:date "{now}"^^xsd:dateTime .
                 {param_sparql}
             }}
