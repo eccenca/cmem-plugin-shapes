@@ -4,6 +4,7 @@ import os
 import re
 from collections.abc import Generator
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
@@ -16,8 +17,6 @@ from rdflib.term import Node
 from rdflib.util import from_n3
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from rdflib.query import ResultRow
 
 from cmem_plugin_shapes.plugin_shapes import (
@@ -27,6 +26,7 @@ from cmem_plugin_shapes.plugin_shapes import (
     MANAGED_CLASSES,
     SHUI,
     ShapesPlugin,
+    is_valid_uri,
 )
 from tests import FIXTURE_DIR
 from tests.cmemc_command_utils import run, run_without_assertion
@@ -817,6 +817,85 @@ def test_adding_does_not_leave_two_names_on_a_shape(
         labels = list(result_graph.objects(subject=shape, predicate=RDFS.label))
         assert len(names) == 1, (shape, names)
         assert len(labels) == 1, (shape, labels)
+
+
+def test_is_valid_uri_accepts_urls_and_urns() -> None:
+    """Test the IRI check takes a URN as readily as a URL"""
+    assert is_valid_uri("https://example.org/graph")
+    assert is_valid_uri("urn:isbn:9780134685991")
+    assert is_valid_uri("urn:uuid:12345678-1234-5678-1234-567812345678")
+    assert is_valid_uri("URN:Example:Thing")  # the scheme and the NID are case insensitive
+
+
+def test_is_valid_uri_rejects_what_is_not_one() -> None:
+    """Test the check still refuses a malformed URL, a malformed URN and a non-string"""
+    assert not is_valid_uri("https:/example.org/graph")
+    assert not is_valid_uri("urn:x:9780134685991")  # a namespace identifier of one character
+    assert not is_valid_uri("urn:example:")  # nothing after the namespace identifier
+    assert not is_valid_uri("not an iri at all")
+    assert not is_valid_uri(None)
+
+
+def test_urn_iris_are_accepted_by_every_parameter() -> None:
+    """Test a URN passes each of the four places an IRI is validated"""
+    ShapesPlugin(
+        data_graph_iri="urn:example:data",
+        shapes_graph_iri="urn:example:shapes",
+        ignore_properties="urn:example:ignoredProperty",
+        ignore_types="urn:example:IgnoredClass",
+    )
+
+
+URN_DATA_GRAPH = "urn:example:cmem-plugin-shapes-data"
+URN_SHAPE_CATALOG = "urn:example:cmem-plugin-shapes-catalog"
+
+
+@pytest.fixture
+def urn_graphs(tmp_path: Path) -> Generator[None, Any]:
+    """Create a data graph named with a urn: IRI, and remove it again afterwards"""
+    if os.environ.get("CMEM_BASE_URI", "") == "":
+        pytest.skip("Needs CMEM configuration")
+    data_file = tmp_path / "urn_data.ttl"
+    data_file.write_text(
+        "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
+        "<urn:example:thing1> a <urn:example:Thing> ;\n"
+        '  rdfs:label "A thing" ;\n'
+        "  <urn:example:relatedTo> <urn:example:thing2> .\n",
+        encoding="utf-8",
+    )
+    for iri in (URN_DATA_GRAPH, URN_SHAPE_CATALOG):
+        run_without_assertion(["graph", "delete", iri])
+    run(["graph", "import", "--replace", str(data_file), URN_DATA_GRAPH])
+    yield
+    for iri in (URN_DATA_GRAPH, URN_SHAPE_CATALOG):
+        run_without_assertion(["graph", "delete", iri])
+
+
+@pytest.mark.usefixtures("urn_graphs")
+def test_shapes_generated_from_a_urn_named_graph(
+    graph_setup: GraphSetupFixture, client: Client
+) -> None:
+    """Test the whole run works with urn: IRIs, not merely that the parameters accept them"""
+    ShapesPlugin(
+        data_graph_iri=URN_DATA_GRAPH,
+        shapes_graph_iri=URN_SHAPE_CATALOG,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, URN_SHAPE_CATALOG))
+
+    assert URIRef("urn:example:Thing") in set(result_graph.objects(predicate=SH.targetClass))
+    assert {str(o) for o in result_graph.objects(predicate=SH.path)} == {
+        "http://www.w3.org/2000/01/rdf-schema#label",
+        "urn:example:relatedTo",
+    }
+    # the generated shapes live in the catalog's own namespace, URN or not
+    shapes = set(result_graph.subjects(predicate=RDF.type, object=SH.NodeShape)) | set(
+        result_graph.subjects(predicate=RDF.type, object=SH.PropertyShape)
+    )
+    assert shapes
+    assert all(str(shape).startswith(URN_SHAPE_CATALOG) for shape in shapes), shapes
 
 
 def test_get_name_falls_back_to_the_local_name() -> None:

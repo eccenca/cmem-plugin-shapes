@@ -75,6 +75,20 @@ EXISTING_GRAPH_PARAMETER_CHOICES = OrderedDict(
 )
 
 
+def is_valid_uri(uri: str | None) -> bool:
+    """Check a graph, class or property IRI a user supplied
+
+    validators.url rejects every scheme that is not a URL, and a knowledge graph is as
+    likely to be named with a URN as with an http IRI. The pattern is the namespace
+    identifier RFC 8141 describes: an alphanumeric first character and two to thirty-two
+    characters in all, followed by a non-empty namespace specific string.
+    """
+    if not isinstance(uri, str):
+        return False
+    urn_pattern = r"^urn:[a-zA-Z0-9][a-zA-Z0-9-]{1,31}:.+$"
+    return validators.url(uri) is True or bool(re.match(urn_pattern, uri, re.IGNORECASE))
+
+
 def format_namespace(iri: str) -> str:
     """Ensure namespace ends with '/' or '#'"""
     return iri if iri.endswith(("/", "#")) else iri + "/"
@@ -332,11 +346,11 @@ class ShapesPlugin(WorkflowPlugin):
         managed_classes: bool = True,
         depictions: bool = True,
     ) -> None:
-        if not validators.url(data_graph_iri):
+        if not is_valid_uri(data_graph_iri):
             raise ValueError("Invalid value for parameter 'Input data graph'")
         self.data_graph_iri = data_graph_iri
 
-        if not validators.url(shapes_graph_iri):
+        if not is_valid_uri(shapes_graph_iri):
             raise ValueError("Invalid value for parameter 'Output shape catalog'")
         self.shapes_graph_iri = shapes_graph_iri
 
@@ -361,13 +375,13 @@ class ShapesPlugin(WorkflowPlugin):
 
         self.ignore_properties = []
         for _ in filter(None, ignore_properties.split("\n")):
-            if not validators.url(_):
+            if not is_valid_uri(_):
                 raise ValueError(f"Invalid property IRI ({_}) in parameter 'Properties to ignore'")
             self.ignore_properties.append(_)
 
         self.ignore_types = []
         for _ in filter(None, ignore_types.split("\n")):
-            if not validators.url(_):
+            if not is_valid_uri(_):
                 raise ValueError(f"Invalid type IRI ({_}) in parameter 'Types to ignore'")
             self.ignore_types.append(_)
 
