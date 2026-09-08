@@ -978,6 +978,25 @@ class ShapesPlugin(WorkflowPlugin):
         if self.label or not has_label:
             self.create_label()
 
+        # The catalog level statements this task owns are replaced rather than added to.
+        # Adding inserts and deletes nothing, so without this the managed classes of an
+        # earlier run would survive being switched off, and re-running would keep piling
+        # the same nine triples onto a catalog that already had them.
+        self.client.store.sparql.update(
+            query=f"""
+        PREFIX shui: <https://vocab.eccenca.com/shui/>
+        DELETE {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                <{self.shapes_graph_iri}> shui:managedClasses ?managed_class
+            }}
+        }}
+        WHERE {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                <{self.shapes_graph_iri}> shui:managedClasses ?managed_class
+            }}
+        }}"""
+        )
+
         query_data = f"""
         INSERT DATA {{
             GRAPH <{self.shapes_graph_iri}> {{

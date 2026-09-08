@@ -768,6 +768,29 @@ def test_title_record_stands_in_for_an_absent_answer() -> None:
     assert plugin.get_name("http://example.com/absent", missing) == "absent (ex:)"
 
 
+def test_managed_classes_can_be_withdrawn_from_an_existing_catalog(
+    graph_setup: GraphSetupFixture, client: Client
+) -> None:
+    """Test switching the option off removes what an earlier run declared
+
+    Adding to a catalog inserts and deletes nothing, so a catalog level statement that
+    only ever accumulated could not be taken back once written.
+    """
+    catalog = URIRef(graph_setup.shapes_iri)
+    for managed in (True, False):
+        ShapesPlugin(
+            data_graph_iri=graph_setup.dataset_iri,
+            shapes_graph_iri=graph_setup.shapes_iri,
+            existing_graph=EXISTING_GRAPH_ADD,
+            import_shapes=False,
+            prefix_cc=False,
+            managed_classes=managed,
+        ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+        result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+        declared = set(result_graph.objects(subject=catalog, predicate=SHUI.managedClasses))
+        assert declared == (set(MANAGED_CLASSES) if managed else set()), declared
+
+
 def test_get_name_falls_back_to_the_local_name() -> None:
     """Test a synthesized title is not taken apart on an underscore
 
