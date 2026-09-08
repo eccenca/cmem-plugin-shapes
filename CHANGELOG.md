@@ -22,6 +22,25 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Fixed
 
+- Shape names use the shortest prefix a namespace offers rather than the alphabetically
+  first one, so the XML Schema namespace is no longer written as `xds:`, a typo entry in
+  the prefix database, and `prov:`, `sdo:` and `dcterms:` win over their longer variants
+- An untagged description from a vocabulary is written untagged, instead of being claimed
+  as English
+- An inverse property shape no longer carries the description of the forward property,
+  which said the opposite of what the shape holds
+- Classes and properties that are blank nodes are skipped instead of aborting the run
+- A property used with both literal and IRI values gets the same shape on every run; the
+  query it comes from was unordered, so the store could decide it
+- A name the deployment builds from an IRI is no longer split on an underscore, which
+  crashed on names without one and truncated names with one
+- Adding to a catalog replaces a shape's name, label and description rather than leaving
+  the earlier run's beside them, and the classes a catalog declares can be withdrawn again
+- Adding to a catalog streams the shapes, so a large graph no longer exceeds the request
+  size the single update it used to build was subject to
+- Values written into the provenance graph are escaped
+- Cancelling a workflow now stops the task before it writes, and progress is reported while
+  it runs rather than only at the end
 - Shape labels and names are tagged with the language they were actually resolved in.
   They were tagged `@en` whatever came back, so a vocabulary with no English label
   produced a foreign-language label claiming to be English. A name derived from the IRI,
