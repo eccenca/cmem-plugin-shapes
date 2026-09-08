@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/)
 
+## [Unreleased]
+
+### Fixed
+
+- Graph, class and property IRIs using the `urn:` scheme are accepted. Every IRI parameter
+  was checked with a URL validator, so a knowledge graph named `urn:example:data`, or a
+  `urn:` entry in one of the two ignore lists, was rejected as invalid
+
 ## [4.5.0] 2026-09-08
 
 ### Added
