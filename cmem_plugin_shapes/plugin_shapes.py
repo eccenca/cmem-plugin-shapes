@@ -368,12 +368,31 @@ class ShapesPlugin(WorkflowPlugin):
         self.output_port = None
 
     @staticmethod
-    def format_prefixes(prefixes: dict, formatted_prefixes: dict | None = None) -> dict:
-        """Format prefix dictionary for consistency"""
+    def format_prefixes(
+        prefixes: dict, formatted_prefixes: dict | None = None, *, shortest_first: bool = False
+    ) -> dict:
+        """Format prefix dictionary for consistency
+
+        get_name takes the first prefix of a namespace, so the order within a namespace
+        decides how every shape of it is named. ``shortest_first`` orders the prefixes
+        contributed by this call by length, which is for the prefix database: it offers
+        several prefixes for 171 of its namespaces and is stored sorted alphabetically, so
+        taking it as it comes picks "xds:" - a typo entry in prefix.cc - over "xsd:",
+        "nsprov:" over "prov:" and "schemas:" over "sdo:". The shortest is the conventional
+        one far more often than the alphabetically first is.
+
+        Prefixes a project declares are formatted without it and added first, so they keep
+        their precedence over anything the database offers.
+        """
         if not formatted_prefixes:
             formatted_prefixes = {}
+        grouped: dict = {}
         for prefix, namespace in prefixes.items():
-            formatted_prefixes.setdefault(namespace, []).append(prefix + ":")
+            grouped.setdefault(namespace, []).append(prefix + ":")
+        for namespace, candidates in grouped.items():
+            if shortest_first:
+                candidates.sort(key=lambda candidate: (len(candidate), candidate))
+            formatted_prefixes.setdefault(namespace, []).extend(candidates)
 
         return formatted_prefixes
 
@@ -396,7 +415,7 @@ class ShapesPlugin(WorkflowPlugin):
             with (Path(__path__[0]) / "prefix_cc.json").open("r", encoding="utf-8") as json_file:
                 prefixes_cc = json.load(json_file)
         if prefixes_cc:
-            prefixes = self.format_prefixes(prefixes_cc, prefixes)
+            prefixes = self.format_prefixes(prefixes_cc, prefixes, shortest_first=True)
 
         return {k: tuple(v) for k, v in prefixes.items()}
 

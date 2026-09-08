@@ -626,6 +626,31 @@ def test_no_description_on_an_inverse_property_shape(
     assert not {o for s in inverse for o in result_graph.objects(s, SH.description)}
 
 
+XSD_NAMESPACE = "http://www.w3.org/2001/XMLSchema#"
+
+
+def test_prefix_database_prefers_the_shortest_prefix() -> None:
+    """Test the prefix taken for a namespace is not simply the alphabetically first
+
+    prefix_cc.json is stored sorted, and prefix.cc offers four prefixes for the XML
+    Schema namespace, one of which is the typo "xds".
+    """
+    formatted = ShapesPlugin.format_prefixes(
+        {"xds": XSD_NAMESPACE, "xmls": XSD_NAMESPACE, "xs": XSD_NAMESPACE, "xsd": XSD_NAMESPACE},
+        shortest_first=True,
+    )
+    assert formatted[XSD_NAMESPACE][0] == "xs:"
+
+
+def test_project_prefixes_keep_precedence_over_the_database() -> None:
+    """Test a prefix declared in the project wins over one offered by the database"""
+    from_project = ShapesPlugin.format_prefixes({"mine": XSD_NAMESPACE})
+    both = ShapesPlugin.format_prefixes(
+        {"xds": XSD_NAMESPACE, "xs": XSD_NAMESPACE}, from_project, shortest_first=True
+    )
+    assert both[XSD_NAMESPACE][0] == "mine:"
+
+
 def test_get_name_falls_back_to_the_local_name() -> None:
     """Test a synthesized title is not taken apart on an underscore
 
