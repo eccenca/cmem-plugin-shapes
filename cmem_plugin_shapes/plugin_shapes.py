@@ -904,9 +904,13 @@ class ShapesPlugin(WorkflowPlugin):
 
         return prov
 
-    def create_graph(self) -> str:
-        """Create or replace SHACL shapes graph"""
-        self.create_label()
+    def write_shapes(self, on_conflict: ImportConflictPolicy) -> None:
+        """Stream the generated shapes into the catalog
+
+        Through a file rather than a SPARQL update: the update would have to carry the whole
+        serialization in one request body, which is a size limit the streamed import does not
+        have and which the add path used to run into on a large graph.
+        """
         ntriples = self.shapes_graph.serialize(format="nt", encoding="utf-8").decode()
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".nt", delete=False, encoding="utf-8"
@@ -915,14 +919,23 @@ class ShapesPlugin(WorkflowPlugin):
             tmp_path = f.name
         try:
             self.client.graphs.import_item(
-                path=Path(tmp_path),
-                key=self.shapes_graph_iri,
-                on_conflict=ImportConflictPolicy.REPLACE
-                if self.replace
-                else ImportConflictPolicy.FAIL,
+                path=Path(tmp_path), key=self.shapes_graph_iri, on_conflict=on_conflict
             )
         finally:
             Path(tmp_path).unlink(missing_ok=True)
+
+    def create_graph(self) -> str:
+        """Create or replace SHACL shapes graph"""
+        self.create_label()
+        # Merging when adding, so a catalog that appeared between the existence check in
+        # execute() and this call is added to rather than failed on.
+        if self.replace:
+            on_conflict = ImportConflictPolicy.REPLACE
+        elif self.existing_graph == EXISTING_GRAPH_ADD:
+            on_conflict = ImportConflictPolicy.MERGE
+        else:
+            on_conflict = ImportConflictPolicy.FAIL
+        self.write_shapes(on_conflict)
         now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
         query_add_created = f"""
         PREFIX dcterms: <http://purl.org/dc/terms/>
@@ -1026,14 +1039,7 @@ class ShapesPlugin(WorkflowPlugin):
         }}"""
             )
 
-        query_data = f"""
-        INSERT DATA {{
-            GRAPH <{self.shapes_graph_iri}> {{
-                {self.shapes_graph.serialize(format="nt", encoding="utf-8").decode()}
-            }}
-        }}"""
-
-        self.client.store.sparql.update(query=query_data)
+        self.write_shapes(ImportConflictPolicy.MERGE)
 
         now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
         query_remove_modified = f"""
@@ -1132,6 +1138,10 @@ class ShapesPlugin(WorkflowPlugin):
             now = self.create_graph()
         else:
             self.graphs_list = graphs_list
+            # The existence check only decides the bookkeeping - dcterms:created for a new
+            # catalog, dcterms:modified for one being added to. The write itself merges
+            # either way, so a catalog created between the check and here is added to, as
+            # the user asked, rather than failing on a FAIL policy.
             if self.shapes_graph_iri in self.graphs_list:
                 now = self.add_to_graph()
             else:
