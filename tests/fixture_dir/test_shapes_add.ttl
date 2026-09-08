@@ -1,3 +1,8 @@
+# Expected output of a plugin run, compared with assert_isomorphic in tests/test_shapes.py.
+# That comparison normalizes away sh:description and the language tag on sh:name and
+# rdfs:label, because both come from the deployment's title and description helpers and
+# therefore follow the vocabularies a given instance has loaded. They are recorded here as
+# one real deployment produced them, and asserted separately on test owned data.
 @prefix : <https://ns.eccenca.com/data/config/> .
 @prefix ns1: <https://vocab.eccenca.com/shui/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .

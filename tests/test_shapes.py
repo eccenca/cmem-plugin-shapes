@@ -123,6 +123,42 @@ def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixtu
     run(["admin", "store", "import", export_zip])
 
 
+def normalize(graph: Graph) -> Graph:
+    """Drop everything in a shape graph that the deployment rather than the plugin decides
+
+    `sh:description`, and the language tag on a name or label, come from the description
+    and title helpers of whichever deployment the tests run against, so they follow the
+    vocabularies that deployment happens to have loaded. Comparing them would pin these
+    fixtures to one instance. What the plugin itself decides - the shapes, their IRIs,
+    paths, node kinds and the name strings - is compared in full.
+    """
+    normalized = Graph()
+    for subject, predicate, object_ in graph:
+        if predicate == SH.description:
+            continue
+        if predicate in (SH.name, RDFS.label) and isinstance(object_, Literal) and object_.language:
+            object_ = Literal(str(object_))  # noqa: PLW2901
+        normalized.add((subject, predicate, object_))
+    return normalized
+
+
+def assert_isomorphic(result: Graph, expected: Graph) -> None:
+    """Assert two shape graphs match, reporting the differing triples when they do not
+
+    Neither graph contains blank nodes, so a plain set difference is an accurate diff and
+    says far more than the bare `assert isomorphic(...)` this replaces.
+    """
+    result, expected = normalize(result), normalize(expected)
+    if isomorphic(result, expected):
+        return
+    only_result = sorted(set(result) - set(expected), key=str)
+    only_expected = sorted(set(expected) - set(result), key=str)
+    report = ["generated graph does not match the fixture"]
+    report += ["only in the generated graph:", *(f"  {t}" for t in only_result)]
+    report += ["only in the fixture:", *(f"  {t}" for t in only_expected)]
+    raise AssertionError("\n".join(report))
+
+
 def test_workflow_execution(graph_setup: GraphSetupFixture, client: Client) -> None:
     """Test plugin execution"""
     plugin = ShapesPlugin(
@@ -144,7 +180,7 @@ def test_workflow_execution(graph_setup: GraphSetupFixture, client: Client) -> N
     assert len(list(result_graph.objects(predicate=DCTERMS.modified))) == 0
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
-    assert isomorphic(result_graph, test)
+    assert_isomorphic(result_graph, test)
     with pytest.raises(
         ValueError, match=r"Graph <http://docker.localhost/my-persons-shapes> already exists."
     ):
@@ -175,7 +211,7 @@ def test_workflow_execution_add_graph_not_exists(
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
     test.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
-    assert isomorphic(result_graph, test)
+    assert_isomorphic(result_graph, test)
 
 
 @pytest.mark.parametrize("add_to_graph", [True])
@@ -207,7 +243,7 @@ def test_workflow_execution_add_graph_exists(
     assert len(list(result_graph.objects(predicate=DCTERMS.created))) == 0
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
     test.remove((URIRef(graph_setup.shapes_iri), DCTERMS.modified, None))
-    assert isomorphic(result_graph, test)
+    assert_isomorphic(result_graph, test)
 
 
 def test_additional_inits() -> None:
@@ -298,7 +334,7 @@ def test_prefix_cc_fetching(graph_setup: GraphSetupFixture, client: Client) -> N
     result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
     result_graph.remove((URIRef(graph_setup.shapes_iri), DCTERMS.created, None))
     test = Graph().parse(f"{FIXTURE_DIR}/test_shapes.ttl")
-    assert isomorphic(result_graph, test)
+    assert_isomorphic(result_graph, test)
 
 
 def test_import_shapes(graph_setup: GraphSetupFixture, client: Client) -> None:
@@ -441,6 +477,52 @@ def test_lang_string_datatype_not_added_to_iri_property_shape(
         f"property shape must not combine sh:nodeKind sh:IRI with sh:datatype rdf:langString, "
         f"got nodeKind={node_kinds} datatype={datatypes}"
     )
+
+
+def test_description_and_name_language_from_the_data_graph(
+    graph_setup: GraphSetupFixture, client: Client
+) -> None:
+    """Test sh:description and the name language follow what the data graph says
+
+    Every IRI here belongs to this test, so no vocabulary a deployment happens to have
+    loaded can offer a competing title or description. This is what the whole graph
+    comparisons deliberately normalize away, asserted on data the test owns instead.
+    """
+    insert_query = f"""
+    PREFIX ex: <http://example.com/shapes-test/>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    INSERT DATA {{
+        GRAPH <{graph_setup.dataset_iri}> {{
+            ex:widget1 a ex:Widget ;
+                ex:weight "12" .
+            ex:weight rdfs:label "Gewicht"@de ;
+                rdfs:comment "Wie schwer das Ding ist."@de .
+        }}
+    }}"""
+    client.store.sparql.update(query=insert_query)
+
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+
+    shape = next(
+        result_graph.subjects(
+            predicate=SH.path, object=URIRef("http://example.com/shapes-test/weight")
+        )
+    )
+    # the namespace is unknown to the prefix database, so no "(prefix:)" addon is appended
+    assert set(result_graph.objects(subject=shape, predicate=SH.name)) == {
+        Literal("Gewicht", lang="de")
+    }
+    assert set(result_graph.objects(subject=shape, predicate=SH.description)) == {
+        Literal("Wie schwer das Ding ist.", lang="de")
+    }
 
 
 def test_ignore_types_and_properties() -> None:
