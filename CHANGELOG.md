@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 - Node and property shapes now get `sh:description` from the description Corporate Memory resolves for the class or property - its `rdfs:comment`, `dcterms:description` or `skos:definition`, wherever the class or property is defined, so descriptions from a vocabulary graph are picked up as well as those in the data graph
 - Property shapes now get `sh:datatype rdf:langString` when the data graph uses the property with a language-tagged literal
-- Parameter to omit the namespace addon (e.g. `(rdfs:)`) from property shape labels
+- Parameter to omit the trailing namespace prefix (e.g. `(rdfs:)`) from property shape names
 
 ### Fixed
 
@@ -25,8 +25,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Updated project template to v9.7.0 (cmem-client 1.1.0, ruff 0.16.5)
 - Labels and descriptions are now resolved with one batched request each instead of one
   request per class and property, so generating shapes for a large graph is faster
-- Task documentation now notes it has no input or output port, and parameter descriptions
-  follow the eccenca Corporate Memory naming convention instead of the "CMEM" abbreviation
+- Task documentation rewritten: it now says what is generated, what each shape carries, and
+  the four caveats a user meets - the language a name is tagged with, one property shape
+  shared by every class using that property, `sh:datatype rdf:langString` added on a single
+  tagged value, and shapes accumulating when adding to an existing catalog
+- Parameter descriptions and labels reworded to speak of one shape catalog throughout, to
+  say what each parameter controls without repeating the dropdown, and to follow the
+  eccenca Corporate Memory naming convention instead of the "CMEM" abbreviation
+- The choices for handling an existing catalog explain themselves in the dropdown
 
 ## [4.4.0] 2026-08-20
 
