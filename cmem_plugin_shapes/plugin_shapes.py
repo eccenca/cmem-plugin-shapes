@@ -91,7 +91,9 @@ A description follows wherever one can be resolved - the `rdfs:comment`,
 it is defined, so a vocabulary graph counts as well as the data graph. A class or
 property that nothing describes gets no `sh:description`.
 
-The catalog itself records the data graph it was generated from and when it was written.
+Every property shape carries `shui:showAlways`, and a shape for the object ← subject
+direction carries `shui:inversePath` as well. The catalog itself records the data graph it
+was generated from and when it was written.
 
 ## Caveats
 
@@ -107,7 +109,8 @@ property carrying IRI values under one class and literal values under another is
 described as only one of the two.
 
 `sh:datatype rdf:langString` is added as soon as any value of a property carries a
-language tag, however few do. A property whose values mix tagged and untagged literals
+language tag, however few of them do. A property whose values mix tagged and untagged
+literals
 therefore gets a shape that its own source data does not satisfy.
 
 Adding to an existing catalog inserts triples and deletes none, so shapes written by an
@@ -136,7 +139,8 @@ graph:90ee6e27-59b1-5ac8-9d7a-116c60c6791a a sh:NodeShape ;
   sh:targetClass ex:Person .
 ```
 
-and one property shape for each of `ex:knows` and `ex:name`, the first of them
+together with a property shape for each of `ex:knows` and `ex:name`, of which the first
+reads
 
 ``` turtle
 graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
@@ -174,10 +178,11 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
             param_type=StringParameterType(),
             name="label",
             label="Output shape catalog label",
-            description="The label of the shape catalog. Left empty, a label is generated for a "
-            "new catalog, while an existing one keeps the label it has. Only an existing label "
-            'tagged "en" or carrying no language tag counts as one, and only such a label is '
-            "replaced.",
+            description="The label of the shape catalog. Left empty, a new catalog gets a "
+            "generated label and an existing one keeps the label it has, so this is only worth "
+            'setting to title a catalog yourself. Only a label tagged "en" or carrying no '
+            "language tag counts as an existing label, and only such a label is replaced.",
+            advanced=True,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
@@ -216,9 +221,10 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
         PluginParameter(
             param_type=BoolParameterType(),
             name="plugin_provenance",
-            label="Include plugin provenance",
-            description="If enabled, the shape catalog also records the plugin that generated "
-            "it and the parameter values it ran with.",
+            label="Include task provenance",
+            description="If enabled, the shape catalog also records the task that generated "
+            "it and the parameter values it ran with. Where the type of the task cannot be "
+            "determined, nothing is recorded and the run continues with a warning in the log.",
             advanced=True,
         ),
         PluginParameter(

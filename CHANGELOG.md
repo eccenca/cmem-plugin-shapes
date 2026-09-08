@@ -32,6 +32,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Parameter descriptions and labels reworded to speak of one shape catalog throughout, to
   say what each parameter controls without repeating the dropdown, and to follow the
   eccenca Corporate Memory naming convention instead of the "CMEM" abbreviation
+- The provenance option is now named after what it records - the task that generated the
+  catalog, not the plugin - and says that it records nothing, without failing the run, when
+  the type of the task cannot be determined
+- The shape catalog label is now an advanced parameter, since leaving it empty names a new
+  catalog and preserves the name of an existing one
 - The choices for handling an existing catalog explain themselves in the dropdown
 
 ## [4.4.0] 2026-08-20
