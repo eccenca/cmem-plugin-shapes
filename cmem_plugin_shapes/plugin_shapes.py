@@ -997,6 +997,35 @@ class ShapesPlugin(WorkflowPlugin):
         }}"""
         )
 
+        # Same reasoning for the shapes themselves. Every predicate below holds one value
+        # per shape, so leaving the old one in place shows the user two names, two labels or
+        # two descriptions for one field - which is what happens to a catalog written before
+        # names carried the language they were resolved in.
+        subjects = " ".join(
+            f"<{subject}>"
+            for subject in sorted({str(s) for s in self.shapes_graph.subjects()})
+            if subject != self.shapes_graph_iri
+        )
+        if subjects:
+            self.client.store.sparql.update(
+                query=f"""
+        PREFIX sh: <http://www.w3.org/ns/shacl#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+        DELETE {{
+            GRAPH <{self.shapes_graph_iri}> {{ ?shape ?predicate ?value }}
+        }}
+        WHERE {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                VALUES ?shape {{ {subjects} }}
+                VALUES ?predicate {{
+                    sh:name rdfs:label sh:description sh:nodeKind sh:datatype foaf:depiction
+                }}
+                ?shape ?predicate ?value
+            }}
+        }}"""
+            )
+
         query_data = f"""
         INSERT DATA {{
             GRAPH <{self.shapes_graph_iri}> {{

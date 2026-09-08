@@ -15,8 +15,8 @@
 
 <http://docker.localhost/my-persons-shapes/7daca3e6-86fc-515e-a96e-1d44e5b2828e> a
     sh:NodeShape;
-  sh:name "Person (foaf:)"@en, "Person (foaf:)";
-  rdfs:label "Person (foaf:)"@en, "Person (foaf:)";
+  sh:name "Person (foaf:)";
+  rdfs:label "Person (foaf:)";
   sh:property <http://docker.localhost/my-persons-shapes/af9c7f1a-9a2c-5151-ba53-1d8797e408e1>,
     <http://docker.localhost/my-persons-shapes/63efb8eb-7402-52f6-a3cf-107cb1c54b1e>,
     <http://docker.localhost/my-persons-shapes/86fc9801-0605-5fb8-a417-da26a9ba0a71>,

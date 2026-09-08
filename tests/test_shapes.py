@@ -791,6 +791,34 @@ def test_managed_classes_can_be_withdrawn_from_an_existing_catalog(
         assert declared == (set(MANAGED_CLASSES) if managed else set()), declared
 
 
+def test_adding_does_not_leave_two_names_on_a_shape(
+    graph_setup: GraphSetupFixture, client: Client
+) -> None:
+    """Test re-adding to a catalog replaces a shape's name rather than doubling it
+
+    A catalog written before names carried the language they were resolved in holds
+    "Person (foaf:)"@en; a run today writes the untagged form. Adding used to leave both,
+    so the form editor showed one field under two names.
+    """
+    for _ in range(2):
+        ShapesPlugin(
+            data_graph_iri=graph_setup.dataset_iri,
+            shapes_graph_iri=graph_setup.shapes_iri,
+            existing_graph=EXISTING_GRAPH_ADD,
+            import_shapes=False,
+            prefix_cc=False,
+        ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+    for shape in set(result_graph.subjects(predicate=SH.path)) | set(
+        result_graph.subjects(predicate=SH.targetClass)
+    ):
+        names = list(result_graph.objects(subject=shape, predicate=SH.name))
+        labels = list(result_graph.objects(subject=shape, predicate=RDFS.label))
+        assert len(names) == 1, (shape, names)
+        assert len(labels) == 1, (shape, labels)
+
+
 def test_get_name_falls_back_to_the_local_name() -> None:
     """Test a synthesized title is not taken apart on an underscore
 
