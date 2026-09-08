@@ -668,6 +668,47 @@ class ShapesPlugin(WorkflowPlugin):
             )
         return descriptions
 
+    def add_property_shape(
+        self,
+        property_shape_uri: URIRef,
+        prop: dict,
+        titles: dict,
+        descriptions: dict,
+        lang_string_properties: set[str],
+    ) -> None:
+        """Add one property shape to the shapes graph"""
+        self.shapes_count += 1
+        name = self.get_name(
+            prop["property"],
+            titles[prop["property"]],
+            include_namespace=not self.omit_namespace_addon,
+        )
+        self.shapes_graph.add((property_shape_uri, RDF.type, SH.PropertyShape))
+        self.shapes_graph.add((property_shape_uri, SH.path, URIRef(prop["property"])))
+        self.shapes_graph.add(
+            (property_shape_uri, SH.nodeKind, SH.Literal if prop["data"] else SH.IRI)
+        )
+        if prop["data"] and prop["property"] in lang_string_properties:
+            self.shapes_graph.add((property_shape_uri, SH.datatype, RDF.langString))
+        # Only the forward direction. A description is written about the property, so on an
+        # inverse path it describes the opposite of what the shape holds - "The family name
+        # of a person." on a shape named "← familyName" tells the user exactly the wrong
+        # thing.
+        description = None if prop["inverse"] else descriptions.get(prop["property"])
+        if description is not None:
+            self.shapes_graph.add((property_shape_uri, SH.description, description))
+        self.shapes_graph.add(
+            (property_shape_uri, SHUI.showAlways, Literal("true", datatype=XSD.boolean))
+        )
+        if prop["inverse"]:
+            self.shapes_graph.add(
+                (property_shape_uri, SHUI.inversePath, Literal("true", datatype=XSD.boolean))
+            )
+            name = "← " + name
+        name_literal = self.name_literal(name, titles[prop["property"]])
+        self.shapes_graph.add((property_shape_uri, SH.name, name_literal))
+        self.shapes_graph.add((property_shape_uri, RDFS.label, name_literal))
+
     def create_shapes(self) -> None:
         """Create SHACL node and property shapes"""
         class_uuids = set()
@@ -684,6 +725,12 @@ class ShapesPlugin(WorkflowPlugin):
         descriptions = self.get_descriptions(iris)
         depictions = self.get_depictions(sorted(class_dict)) if self.depictions else {}
         for cls, properties in class_dict.items():
+            # context.workflow is absent in some contexts, the test ones among them, so the
+            # check has to be guarded rather than assumed.
+            with suppress(AttributeError):
+                if self.context.workflow.status() == "Canceling":
+                    self.log.info("cancelled - no shapes are written")
+                    return
             class_uuid = uuid5(NAMESPACE_URL, cls)
             node_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{class_uuid}")
 
@@ -708,47 +755,14 @@ class ShapesPlugin(WorkflowPlugin):
                 )
                 property_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{prop_uuid}")
                 if prop_uuid not in prop_uuids:
-                    self.shapes_count += 1
-                    name = self.get_name(
-                        prop["property"],
-                        titles[prop["property"]],
-                        include_namespace=not self.omit_namespace_addon,
+                    self.add_property_shape(
+                        property_shape_uri, prop, titles, descriptions, lang_string_properties
                     )
-                    self.shapes_graph.add((property_shape_uri, RDF.type, SH.PropertyShape))
-                    self.shapes_graph.add((property_shape_uri, SH.path, URIRef(prop["property"])))
-                    self.shapes_graph.add(
-                        (property_shape_uri, SH.nodeKind, SH.Literal if prop["data"] else SH.IRI)
-                    )
-                    if prop["data"] and prop["property"] in lang_string_properties:
-                        self.shapes_graph.add((property_shape_uri, SH.datatype, RDF.langString))
-                    # Only the forward direction. A description is written about the
-                    # property, so on an inverse path it describes the opposite of what the
-                    # shape holds - "The family name of a person." on a shape named
-                    # "← familyName" tells the user exactly the wrong thing.
-                    description = None if prop["inverse"] else descriptions.get(prop["property"])
-                    if description is not None:
-                        self.shapes_graph.add((property_shape_uri, SH.description, description))
-                    self.shapes_graph.add(
-                        (
-                            property_shape_uri,
-                            SHUI.showAlways,
-                            Literal("true", datatype=XSD.boolean),
-                        )
-                    )
-                    if prop["inverse"]:
-                        self.shapes_graph.add(
-                            (
-                                property_shape_uri,
-                                SHUI.inversePath,
-                                Literal("true", datatype=XSD.boolean),
-                            )
-                        )
-                        name = "← " + name
-                    name_literal = self.name_literal(name, titles[prop["property"]])
-                    self.shapes_graph.add((property_shape_uri, SH.name, name_literal))
-                    self.shapes_graph.add((property_shape_uri, RDFS.label, name_literal))
                     prop_uuids.add(prop_uuid)
                 self.shapes_graph.add((node_shape_uri, SH.property, property_shape_uri))
+            # inside the loop: a report emitted once the work is over shows a user nothing
+            # while the task runs, which is when they are looking at it
+            self.update_execution_report()
 
     def import_shapes_graph(self) -> None:
         """Import SHACL shapes graph to catalog"""
@@ -1023,6 +1037,9 @@ class ShapesPlugin(WorkflowPlugin):
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:  # noqa: ARG002
         """Execute plugin"""
         self.context = context
+        # not in __init__: a second execute() on the same instance would otherwise report
+        # the sum of both runs
+        self.shapes_count = 0
         self.update_execution_report()
         self.client = Client.from_context(context=context)
         graphs_list = self._get_graphs_list()
@@ -1034,6 +1051,9 @@ class ShapesPlugin(WorkflowPlugin):
         self.shapes_graph = self.init_shapes_graph()
         self.dp_api_endpoint = self.client.config.url_explore_api
         self.create_shapes()
+        with suppress(AttributeError):
+            if context.workflow.status() == "Canceling":
+                return
 
         if self.existing_graph != "add":
             now = self.create_graph()

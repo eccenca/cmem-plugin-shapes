@@ -736,6 +736,26 @@ def test_parameter_literal_escapes_and_flattens() -> None:
     )
 
 
+def test_shape_count_does_not_accumulate_across_runs(
+    graph_setup: GraphSetupFixture,
+) -> None:
+    """Test a second run of the same task reports its own shapes, not both runs' worth"""
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    context = TestExecutionContext(project_id=graph_setup.project_name)
+    plugin.execute(inputs=[], context=context)
+    first = plugin.shapes_count
+    plugin.execute(inputs=[], context=context)
+
+    assert first > 0
+    assert plugin.shapes_count == first
+
+
 def test_get_name_falls_back_to_the_local_name() -> None:
     """Test a synthesized title is not taken apart on an underscore
 
