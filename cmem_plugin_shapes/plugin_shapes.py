@@ -423,7 +423,7 @@ class ShapesPlugin(WorkflowPlugin):
         results = title_record
         title: str = results["title"]
         try:
-            namespace, _ = split_uri(iri)
+            namespace, local_name = split_uri(iri)
         except ValueError as exc:
             raise ValueError(f"Invalid class or property ({iri}).") from exc
 
@@ -431,15 +431,14 @@ class ShapesPlugin(WorkflowPlugin):
             prefixes = self.prefixes[namespace]
             prefix = prefixes[0]
             if results["fromIri"]:
+                # Nothing in the deployment describes this IRI, so the helper built a title
+                # out of the IRI itself. Whatever shape that title takes, the authoritative
+                # local name is the one split_uri produced above.
                 if title.startswith(prefixes):
-                    if len(prefixes) > 1:
-                        prefix = title.split(":", 1)[0] + ":"
-                    title = title[len(prefix) :]
+                    matched = title.split(":", 1)[0] + ":"
+                    title = title[len(matched) :]
                 else:
-                    try:
-                        title = title.split("_", 1)[1]
-                    except IndexError as exc:
-                        raise IndexError(f"{results['title']} {prefixes}") from exc
+                    title = local_name
             if include_namespace:
                 title += f" ({prefix})"
         return title

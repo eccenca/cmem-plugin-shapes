@@ -626,6 +626,27 @@ def test_no_description_on_an_inverse_property_shape(
     assert not {o for s in inverse for o in result_graph.objects(s, SH.description)}
 
 
+def test_get_name_falls_back_to_the_local_name() -> None:
+    """Test a synthesized title is not taken apart on an underscore
+
+    The deployment builds a title out of the IRI when it knows nothing about it, and
+    the shape of that title is not this plugin's to predict.
+    """
+    plugin = ShapesPlugin.__new__(ShapesPlugin)
+    plugin.prefixes = {"http://schema.org/": ("schema:",)}
+
+    # a title with no underscore used to raise IndexError from inside the shape loop
+    assert (
+        plugin.get_name("http://schema.org/Person", {"title": "Person", "fromIri": True})
+        == "Person (schema:)"
+    )
+    # and one with an underscore was truncated at it, giving "name (schema:)"
+    assert (
+        plugin.get_name("http://schema.org/first_name", {"title": "first_name", "fromIri": True})
+        == "first_name (schema:)"
+    )
+
+
 def test_namespace_graphs_offers_both_spellings() -> None:
     """Test namespace_graphs offers a vocabulary graph name with and without its separator"""
     assert ShapesPlugin.namespace_graphs(["http://example.com/vocab/Widget"]) == [
