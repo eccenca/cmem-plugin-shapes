@@ -203,9 +203,10 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
             name="label",
             label="Output shape catalog label",
             description="The label of the shape catalog. Left empty, a new catalog gets a "
-            "generated label and an existing one keeps the label it has, so this is only worth "
-            'setting to title a catalog yourself. Only a label tagged "en" or carrying no '
-            "language tag counts as an existing label, and only such a label is replaced.",
+            "generated label, and a catalog being added to keeps the label it has - but a "
+            "catalog being replaced is rewritten whole, generated label included. Only a "
+            'label tagged "en" or carrying no language tag counts as an existing label, and '
+            "only such a label is replaced.",
             advanced=True,
         ),
         PluginParameter(
