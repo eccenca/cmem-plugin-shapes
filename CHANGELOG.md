@@ -64,6 +64,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - The shape catalog label is now an advanced parameter, since leaving it empty names a new
   catalog and preserves the name of an existing one
 - The choices for handling an existing catalog explain themselves in the dropdown
+- The task documentation describes what adding to a catalog now replaces, says which class
+  decides a shared property shape, and notes that blank node classes are skipped and that an
+  inverse property shape carries no description
 - The depiction option says that a class depicted more than once contributes one depiction,
   and the same one on every run
 - The central catalog option no longer claims that unimported shapes are "never activated" -

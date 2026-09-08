@@ -117,7 +117,9 @@ labels come from the title eccenca Corporate Memory resolves for that class or p
 A description follows wherever one can be resolved - the `rdfs:comment`,
 `dcterms:description` or `skos:definition` of the class or property, looked up wherever
 it is defined, so a vocabulary graph counts as well as the data graph. A class or
-property that nothing describes gets no `sh:description`.
+property that nothing describes gets no `sh:description`, and neither does a shape for
+the object ← subject direction: the description is written about the property, so on the
+inverse path it would say the opposite of what the shape holds.
 
 Every property shape carries `shui:showAlways`, and a shape for the object ← subject
 direction carries `shui:inversePath` as well. A node shape carries the `foaf:depiction` of
@@ -134,17 +136,22 @@ the deployment knows nothing about falls back to a name built from its IRI, whic
 no language at all and is written without a tag.
 
 A property used by several classes gets one property shape, shared by every node shape
-that uses it. Its `sh:nodeKind` is decided by the first use the store returns, so a
-property carrying IRI values under one class and literal values under another is
-described as only one of the two.
+that uses it. Its `sh:nodeKind` is decided by whichever of those classes sorts first, so a
+property carrying IRI values under one class and literal values under another is described
+as only one of the two - the same one on every run over the same data.
+
+A class or property that is a blank node is skipped. Instance data sharing a graph with an
+ontology types things with anonymous class expressions, and a shape has nothing to target
+in one.
 
 `sh:datatype rdf:langString` is added as soon as any value of a property carries a
 language tag, however few of them do. A property whose values mix tagged and untagged
-literals
-therefore gets a shape that its own source data does not satisfy.
+literals therefore gets a shape that its own source data does not satisfy.
 
-Adding to an existing catalog inserts triples and deletes none, so shapes written by an
-earlier run stay alongside the new ones.
+Adding to an existing catalog replaces the name, label and description of every shape the
+run writes, and the classes the catalog declares, rather than leaving an earlier run's
+beside them. Everything else in the catalog is left alone, including shapes this run did
+not produce - that is what adding is for.
 
 ## Example
 
