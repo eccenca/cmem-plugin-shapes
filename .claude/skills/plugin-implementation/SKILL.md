@@ -46,6 +46,39 @@ use `setup_cmempy_user_access()`. Plenty of existing plugins still call it -
 that is legacy, not a pattern to copy. `cmem-plugin-base` continues to depend
 on `cmem-cmempy` transitively, which does not make it available for new code.
 
+## The plugin identifier
+
+Set `plugin_id` explicitly on every `@Plugin`:
+
+```python
+@Plugin(
+    label="Create thing",
+    plugin_id="cmem_plugin_example-CreateThing",
+    ...
+)
+```
+
+Left unset, it is generated from where the code happens to sit -
+`generate_id(module_path + "-" + ClassName)`, so a task in
+`cmem_plugin_example/tasks/create.py` is called
+`cmem_plugin_example-tasks-create-CreateThing`. A workflow references a plugin
+by that identifier, so moving the module or renaming the class changes the
+identity of an already deployed task and orphans every workflow task built on
+it. That turns an ordinary refactoring into a breaking change, without an error
+anywhere.
+
+Name it `<package_dir>-<Name>`. The prefix carries the weight - it keeps the
+identifier distinct from every other plugin in the same workspace - and
+`<Name>` is the class name, or a shortened form where the class repeats
+something the package name already says: `cmem_plugin_ssh-Download` for
+`DownloadFiles`. An identifier you supply bypasses `generate_id()` and is
+therefore never sanitised, so keep it to `[a-zA-Z0-9_-]` yourself.
+
+**For a task that is already deployed, write down the identifier it generates
+today, verbatim** - work it out with the formula above rather than inventing a
+tidier one. The point of setting the field is to stop the identifier moving; a
+first commit that changes it breaks exactly what it is there to protect.
+
 ## Logging
 
 The base class already provides a logger as `self.log`. Use it:
@@ -106,9 +139,94 @@ input_ports=FixedNumberOfInputs([FixedSchemaPort(schema=MY_SCHEMA)]),
 output_port=FixedSchemaPort(schema=MY_SCHEMA),
 ```
 
-Use `UnknownSchemaPort` when the schema is only known at runtime, and
-`FlexibleNumberOfInputs` when the task genuinely accepts any number of inputs.
 A task that consumes nothing declares `FixedNumberOfInputs([])`.
+
+Two independent things are being declared here, and they are easy to confuse.
+`FixedNumberOfInputs` and `FlexibleNumberOfInputs` say how many inputs the task
+takes. `FixedSchemaPort`, `FlexibleSchemaPort` and `UnknownSchemaPort` say what
+a single port's schema is. `FlexibleNumberOfInputs` makes every one of its
+inputs a flexible schema port, which is why the two get read as one choice.
+
+Prefer a **fixed** schema on every port, and reach for a flexible one only when
+the task really cannot know its schema. A fixed schema lets DataIntegration
+check a connection while the workflow is being drawn, which turns a runtime
+abort into an error the author sees in the editor.
+
+A flexible **input** schema costs more than it looks - whether it is written
+`FixedNumberOfInputs([FlexibleSchemaPort()])` or `FlexibleNumberOfInputs()`.
+An operator declaring one has been seen to reject a file dataset outright,
+aborting before it receives a single entity, with an entity count of 0 and
+
+```text
+array assignment index out of range: 0
+```
+
+A flexible port requests no paths, and reading a file dataset with an empty
+requested schema appears to be the trigger - the same file read by a transform,
+which requests named paths, is fine. The message names an array index, so it
+reads like a bug in the plugin rather than a schema negotiation that never
+happened. If a "process whatever arrives" task has to exist, say in its
+documentation that its input comes from another task rather than from a dataset.
+
+`UnknownSchemaPort` is the safer of the two escapes: it says the schema is not
+known in advance, without asking DataIntegration to adapt this port to whatever
+is connected.
+
+A port can also depend on a parameter's current value instead of being fixed
+at write time. Assign `input_ports`/`output_port` in `__init__` from a
+condition on `self`, and the port the editor shows follows the parameter:
+
+```python
+self.input_ports = (
+    FixedNumberOfInputs([])
+    if self.source_file.strip()
+    else FixedNumberOfInputs([FixedSchemaPort(schema=MY_SCHEMA)])
+)
+```
+
+This is the standard way to offer two mutually exclusive ways of supplying the
+same thing - a parameter here versus a connected input - rather than accepting
+both and picking one at runtime. A boolean or an enum parameter drives the same
+pattern with an `if`/`match` in place of the empty-string check.
+
+### What `execute()` receives
+
+The declaration settles what `inputs` can hold, and the two directions are not
+symmetric.
+
+Under `FixedNumberOfInputs` it never carries **more** than the declared number
+of ports. The workflow editor offers exactly the handlers a task declares, so a
+one-port task cannot be connected to two upstream tasks. Code that warns about
+or trims a surplus is unreachable from a workflow, and it especially must not
+be mentioned in the task's `documentation`: telling a user to avoid a state they
+cannot configure is worse than saying nothing. Calling `execute()` directly from
+Python bypasses the editor entirely, which is why a test - or a code review
+reading the body alone - can "reproduce" the surplus and make a non-issue look
+like a defect.
+
+It can carry **fewer**. A declared port the workflow leaves unconnected is
+absent from the sequence rather than arriving as an empty `Entities`, and
+DataIntegration runs the workflow anyway, so `inputs[0]` raises `IndexError`
+on a task whose one port nobody wired. That case is real, and each task decides
+what it means:
+
+```python
+entities = list(inputs[index].entities) if index < len(inputs) else []
+```
+
+reads an unconnected port as an empty one - the right call when input is an
+optional addition to what parameters already supply. Where the input is the
+whole point, fail with a message naming the cause instead:
+
+```python
+if not inputs:
+    raise ValueError("No input was given.")
+```
+
+Both are used across the fleet. With several declared ports, do not additionally
+assume that a partly connected task keeps each remaining port at its declared
+index; drive the loop from `len(inputs)` or accept only what you can identify
+from the entities themselves.
 
 ## Honouring cancellation
 
@@ -127,7 +245,9 @@ for entity in inputs[0].entities:
 
 The `suppress(AttributeError)` is required, not defensive noise:
 `context.workflow` is absent in some contexts - notably the test contexts - and
-an unguarded check raises there while working in production.
+an unguarded check raises there while working in production. The `inputs[0]` in
+front of it is shorthand for a task whose port is connected; see *What
+`execute()` receives* for the case where it is not.
 
 ## Reporting progress
 

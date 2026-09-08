@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Changed
 
-- Updated project template to v9.4.0 (cmem-client 1.1.0, ruff 0.16.5)
+- Updated project template to v9.7.0 (cmem-client 1.1.0, ruff 0.16.5)
 - Task documentation now notes it has no input or output port, and parameter descriptions
   follow the eccenca Corporate Memory naming convention instead of the "CMEM" abbreviation
 
