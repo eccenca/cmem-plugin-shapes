@@ -697,7 +697,11 @@ class ShapesPlugin(WorkflowPlugin):
                     )
                     if prop["data"] and prop["property"] in lang_string_properties:
                         self.shapes_graph.add((property_shape_uri, SH.datatype, RDF.langString))
-                    description = descriptions.get(prop["property"])
+                    # Only the forward direction. A description is written about the
+                    # property, so on an inverse path it describes the opposite of what the
+                    # shape holds - "The family name of a person." on a shape named
+                    # "← familyName" tells the user exactly the wrong thing.
+                    description = None if prop["inverse"] else descriptions.get(prop["property"])
                     if description is not None:
                         self.shapes_graph.add((property_shape_uri, SH.description, description))
                     self.shapes_graph.add(

@@ -581,6 +581,47 @@ def test_description_and_name_language_from_the_data_graph(
     }
 
 
+def test_no_description_on_an_inverse_property_shape(
+    graph_setup: GraphSetupFixture, client: Client
+) -> None:
+    """Test the description of a property is not repeated on its inverse shape
+
+    The description is written about the property, so on the inverse path it would
+    describe the opposite of what the shape holds.
+    """
+    client.store.sparql.update(
+        query=f"""
+        PREFIX ex: <http://example.com/shapes-test/>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        INSERT DATA {{
+            GRAPH <{graph_setup.dataset_iri}> {{
+                ex:person1 a ex:Person ; ex:employs ex:person2 .
+                ex:person2 a ex:Person .
+                ex:employs rdfs:comment "The people this person employs."@en .
+            }}
+        }}"""
+    )
+    ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+
+    employs = URIRef("http://example.com/shapes-test/employs")
+    shapes = set(result_graph.subjects(predicate=SH.path, object=employs))
+    forward = {s for s in shapes if (s, SHUI.inversePath, None) not in result_graph}
+    inverse = shapes - forward
+    assert forward, "the fixture has to produce a forward shape"
+    assert inverse, "the fixture has to produce an inverse shape"
+    assert {str(o) for s in forward for o in result_graph.objects(s, SH.description)} == {
+        "The people this person employs."
+    }
+    assert not {o for s in inverse for o in result_graph.objects(s, SH.description)}
+
+
 def test_namespace_graphs_offers_both_spellings() -> None:
     """Test namespace_graphs offers a vocabulary graph name with and without its separator"""
     assert ShapesPlugin.namespace_graphs(["http://example.com/vocab/Widget"]) == [
