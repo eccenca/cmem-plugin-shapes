@@ -456,22 +456,26 @@ class ShapesPlugin(WorkflowPlugin):
         lang = title_record.get("lang")
         return Literal(name, lang=lang) if lang else Literal(name)
 
-    def _iri_list(self, context: PluginContext, query: str, name: str) -> str:
+    def _iri_list(self, context: PluginContext, query: str, variable: str, plural: str) -> str:
         """Run a SELECT returning one variable of IRIs and render it for the action panel
 
         The result is a fenced code block rather than a plain list: the panel renders
         Markdown, which would run bare lines together into one paragraph, and a block is
         what a user can copy into one of the two ignore parameters unchanged.
+
+        Nothing here may be written as `<iri>`, which Markdown turns into a link. A graph
+        IRI is a name and generally not retrievable, so a link on it is an invitation to a
+        dead end. The IRIs in the code block are safe, since a fence is not linked.
         """
         # An action is handed its own context, and execute() has not run, so there is no
         # client on the instance yet.
         self.client = get_client(context)
         bindings = json.loads(self._post_sparql(query=query))["results"]["bindings"]
-        iris = sorted({binding[name]["value"] for binding in bindings})
+        iris = sorted({binding[variable]["value"] for binding in bindings})
         if not iris:
-            return f"No {name} found in <{self.data_graph_iri}>."
+            return f"No {plural} found in `{self.data_graph_iri}`."
         listing = "\n".join(iris)
-        return f"{len(iris)} {name} found in <{self.data_graph_iri}>:\n\n```\n{listing}\n```"
+        return f"{len(iris)} {plural} found in `{self.data_graph_iri}`:\n\n```\n{listing}\n```"
 
     def get_classes(self, context: PluginContext) -> str:
         """List the classes used in the input data graph"""
@@ -480,7 +484,7 @@ class ShapesPlugin(WorkflowPlugin):
         FROM <{self.data_graph_iri}> {{
             ?subject a ?class .
         }}"""  # noqa: S608
-        return self._iri_list(context, query, "class")
+        return self._iri_list(context, query, "class", "classes")
 
     def get_properties(self, context: PluginContext) -> str:
         """List the properties used in the input data graph
@@ -497,7 +501,7 @@ class ShapesPlugin(WorkflowPlugin):
         UNION
             {{ ?object a ?class . ?subject ?property ?object }}
         }}"""  # noqa: S608
-        return self._iri_list(context, query, "property")
+        return self._iri_list(context, query, "property", "properties")
 
     def init_shapes_graph(self) -> Graph:
         """Initialize SHACL shapes graph"""

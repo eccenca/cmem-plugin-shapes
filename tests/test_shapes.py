@@ -707,6 +707,7 @@ def test_get_classes_and_get_properties_actions(graph_setup: GraphSetupFixture) 
     assert "http://xmlns.com/foaf/0.1/Person" in classes
     assert "http://rdfs.org/ns/void#Dataset" in classes
     assert "```" in classes, "the listing has to be a code block to survive Markdown rendering"
+    assert "<" not in classes, "an <iri> would render as a link to something not retrievable"
 
     properties = plugin.get_properties(context)
     for iri in (
@@ -728,8 +729,8 @@ def test_actions_report_an_empty_graph(graph_setup: GraphSetupFixture) -> None:
         prefix_cc=False,
     )
     context = TestPluginContext(project_id=graph_setup.project_name)
-    assert plugin.get_classes(context).startswith("No class found")
-    assert plugin.get_properties(context).startswith("No property found")
+    assert plugin.get_classes(context).startswith("No classes found")
+    assert plugin.get_properties(context).startswith("No properties found")
 
 
 def test_ignore_types_and_properties() -> None:
