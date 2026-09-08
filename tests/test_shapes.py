@@ -9,10 +9,11 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 from cmem_client.client import Client
 from cmem_client.repositories.graphs import GraphExportConfig, GraphsRepository
-from cmem_plugin_base.testing import TestExecutionContext
-from rdflib import DCTERMS, FOAF, OWL, RDF, RDFS, SH, SKOS, Graph, Literal, URIRef
+from cmem_plugin_base.testing import TestExecutionContext, TestPluginContext
+from rdflib import DCTERMS, FOAF, RDF, RDFS, SH, SKOS, Graph, Literal, URIRef
 from rdflib.compare import isomorphic
 from rdflib.term import Node
+from rdflib.util import from_n3
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -24,7 +25,6 @@ from cmem_plugin_shapes.plugin_shapes import (
     EXISTING_GRAPH_REPLACE,
     EXISTING_GRAPH_STOP,
     MANAGED_CLASSES,
-    QUERY_CATALOG,
     SHUI,
     ShapesPlugin,
 )
@@ -160,15 +160,15 @@ def graph_setup(add_to_graph: bool) -> Generator[GraphSetupFixture, Any]:
 def normalize(graph: Graph) -> Graph:
     """Drop everything in a shape graph that the deployment rather than the plugin decides
 
-    `sh:description`, and the language tag on a name or label, come from the description
-    and title helpers of whichever deployment the tests run against, so they follow the
+    `sh:description` and `foaf:depiction`, and the language tag on a name or label, are
+    resolved against whichever deployment the tests run against, so they follow the
     vocabularies that deployment happens to have loaded. Comparing them would pin these
     fixtures to one instance. What the plugin itself decides - the shapes, their IRIs,
     paths, node kinds and the name strings - is compared in full.
     """
     normalized = Graph()
     for subject, predicate, object_ in graph:
-        if predicate == SH.description:
+        if predicate in (SH.description, FOAF.depiction):
             continue
         if predicate in (SH.name, RDFS.label) and isinstance(object_, Literal) and object_.language:
             object_ = Literal(str(object_))  # noqa: PLW2901
@@ -469,19 +469,18 @@ def test_omit_namespace_addon(graph_setup: GraphSetupFixture, client: Client) ->
     assert node_labels == {"Person (foaf:)", "Dataset (void:)"}
 
 
-def test_lang_string_datatype_not_added_to_iri_property_shape(
+def test_node_kind_of_a_property_used_both_ways(
     graph_setup: GraphSetupFixture, client: Client
 ) -> None:
-    """Test sh:datatype rdf:langString is never combined with sh:nodeKind sh:IRI
+    """Test the one shape of a mixed use property is described consistently
 
-    A property might be used as an object/IRI value under one class and as a
-    language-tagged literal under another. The property shape is created once,
-    keyed by the property IRI, so sh:datatype must only be added when the
-    occurrence that wins the shape (and decides sh:nodeKind) is itself a
-    language-tagged literal - the two must never appear together.
+    A property may carry an IRI under one class and a language-tagged literal under
+    another. There is one property shape, keyed by the property IRI, so it can only
+    describe one of the two uses - and whichever it describes, sh:nodeKind and
+    sh:datatype have to agree. sh:IRI with rdf:langString would satisfy nothing.
     """
     insert_query = f"""
-    PREFIX ex: <http://example.com/>
+    PREFIX ex: <http://example.com/shapes-test/>
     INSERT DATA {{
         GRAPH <{graph_setup.dataset_iri}> {{
             ex:Widget1 a ex:Widget ;
@@ -492,25 +491,30 @@ def test_lang_string_datatype_not_added_to_iri_property_shape(
     }}"""
     client.store.sparql.update(query=insert_query)
 
-    plugin = ShapesPlugin(
+    ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
         existing_graph=EXISTING_GRAPH_REPLACE,
         import_shapes=False,
         prefix_cc=False,
-    )
-    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
 
-    property_shape = next(
-        result_graph.subjects(predicate=SH.path, object=URIRef("http://example.com/relatedTo"))
+    shape = next(
+        result_graph.subjects(
+            predicate=SH.path, object=URIRef("http://example.com/shapes-test/relatedTo")
+        ),
+        None,
     )
-    node_kinds = set(result_graph.objects(subject=property_shape, predicate=SH.nodeKind))
-    datatypes = set(result_graph.objects(subject=property_shape, predicate=SH.datatype))
-    assert not (SH.IRI in node_kinds and RDF.langString in datatypes), (
-        f"property shape must not combine sh:nodeKind sh:IRI with sh:datatype rdf:langString, "
-        f"got nodeKind={node_kinds} datatype={datatypes}"
-    )
+    assert shape is not None, "no property shape was generated for ex:relatedTo"
+    node_kinds = set(result_graph.objects(subject=shape, predicate=SH.nodeKind))
+    datatypes = set(result_graph.objects(subject=shape, predicate=SH.datatype))
+
+    # ex:Note sorts before ex:Widget and holds the literal, so the query's ORDER BY makes
+    # the literal use the one that decides the shape - the point being that it is decided
+    # by the data rather than by whatever order the store happened to answer in.
+    assert node_kinds == {SH.Literal}, node_kinds
+    assert datatypes == {RDF.langString}, datatypes
 
 
 def test_description_and_name_language_from_the_data_graph(
@@ -558,6 +562,283 @@ def test_description_and_name_language_from_the_data_graph(
         Literal("Wie schwer das Ding ist.", lang="de")
     }
 
+    # an untagged comment stays untagged rather than being asserted as English
+    client.store.sparql.update(
+        query=f"""
+        PREFIX ex: <http://example.com/shapes-test/>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        INSERT DATA {{
+            GRAPH <{graph_setup.dataset_iri}> {{
+                ex:widget1 a ex:Widget ; ex:size "3" .
+                ex:size rdfs:comment "How big the thing is." .
+            }}
+        }}"""
+    )
+    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+    size_shape = next(
+        result_graph.subjects(
+            predicate=SH.path, object=URIRef("http://example.com/shapes-test/size")
+        )
+    )
+    assert set(result_graph.objects(subject=size_shape, predicate=SH.description)) == {
+        Literal("How big the thing is.")
+    }
+
+
+def test_no_description_on_an_inverse_property_shape(
+    graph_setup: GraphSetupFixture, client: Client
+) -> None:
+    """Test the description of a property is not repeated on its inverse shape
+
+    The description is written about the property, so on the inverse path it would
+    describe the opposite of what the shape holds.
+    """
+    client.store.sparql.update(
+        query=f"""
+        PREFIX ex: <http://example.com/shapes-test/>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        INSERT DATA {{
+            GRAPH <{graph_setup.dataset_iri}> {{
+                ex:person1 a ex:Person ; ex:employs ex:person2 .
+                ex:person2 a ex:Person .
+                ex:employs rdfs:comment "The people this person employs."@en .
+            }}
+        }}"""
+    )
+    ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+
+    employs = URIRef("http://example.com/shapes-test/employs")
+    shapes = set(result_graph.subjects(predicate=SH.path, object=employs))
+    forward = {s for s in shapes if (s, SHUI.inversePath, None) not in result_graph}
+    inverse = shapes - forward
+    assert forward, "the fixture has to produce a forward shape"
+    assert inverse, "the fixture has to produce an inverse shape"
+    assert {str(o) for s in forward for o in result_graph.objects(s, SH.description)} == {
+        "The people this person employs."
+    }
+    assert not {o for s in inverse for o in result_graph.objects(s, SH.description)}
+
+
+XSD_NAMESPACE = "http://www.w3.org/2001/XMLSchema#"
+
+
+def test_prefix_database_prefers_the_shortest_prefix() -> None:
+    """Test the prefix taken for a namespace is not simply the alphabetically first
+
+    prefix_cc.json is stored sorted, and prefix.cc offers four prefixes for the XML
+    Schema namespace, one of which is the typo "xds".
+    """
+    formatted = ShapesPlugin.format_prefixes(
+        {"xds": XSD_NAMESPACE, "xmls": XSD_NAMESPACE, "xs": XSD_NAMESPACE, "xsd": XSD_NAMESPACE},
+        shortest_first=True,
+    )
+    assert formatted[XSD_NAMESPACE][0] == "xs:"
+
+
+def test_project_prefixes_keep_precedence_over_the_database() -> None:
+    """Test a prefix declared in the project wins over one offered by the database"""
+    from_project = ShapesPlugin.format_prefixes({"mine": XSD_NAMESPACE})
+    both = ShapesPlugin.format_prefixes(
+        {"xds": XSD_NAMESPACE, "xs": XSD_NAMESPACE}, from_project, shortest_first=True
+    )
+    assert both[XSD_NAMESPACE][0] == "mine:"
+
+
+def test_a_blank_node_class_is_ignored(graph_setup: GraphSetupFixture, client: Client) -> None:
+    """Test an anonymous class expression does not reach the shape generation
+
+    Instance data sharing a graph with an OWL ontology types things with anonymous
+    class expressions. A blank node has no namespace, so it used to reach split_uri
+    and abort the run with "Invalid class or property (b0)." after every query had
+    already been paid for.
+    """
+    client.store.sparql.update(
+        query=f"""
+        PREFIX ex: <http://example.com/shapes-test/>
+        PREFIX owl: <http://www.w3.org/2002/07/owl#>
+        INSERT DATA {{
+            GRAPH <{graph_setup.dataset_iri}> {{
+                ex:thing1 a ex:Thing , [ a owl:Restriction ; owl:onProperty ex:weight ] ;
+                    ex:weight "12" .
+            }}
+        }}"""
+    )
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+
+    target_classes = set(result_graph.objects(predicate=SH.targetClass))
+    assert URIRef("http://example.com/shapes-test/Thing") in target_classes
+    assert all(isinstance(target, URIRef) for target in target_classes), target_classes
+
+    # and the action does not offer something the parameter would reject
+    listed = plugin.get_classes(TestPluginContext(project_id=graph_setup.project_name))
+    body = listed.split("```")[1].strip().splitlines()
+    assert "http://example.com/shapes-test/Thing" in body
+    assert all(line.startswith("http") for line in body), body
+
+
+def test_provenance_subject_keeps_the_whole_task_iri() -> None:
+    """Test the provenance subject is the task IRI plus a suffix, not a truncation of it
+
+    The subject used to be built by dropping everything after the last underscore
+    anywhere in the task IRI, so a project id containing one lost the task segment with
+    it, and a task IRI with no underscore at all produced a bare relative reference.
+    """
+    suffix = re.compile(r"_[0-9a-f]{16}$")
+    for project, task in (("myproject", "mytask"), ("shapes_plugin_test", "mytask")):
+        task_iri = f"http://dataintegration.eccenca.com/{project}/{task}"
+        subject = f"{re.sub(r'_[0-9a-f]{16}$', '', task_iri)}_{'a' * 16}"
+        assert subject.startswith(task_iri), subject
+        assert suffix.sub("", subject) == task_iri
+
+    # a subject this code produced earlier keeps its length rather than growing each run
+    already = f"http://dataintegration.eccenca.com/p/t_{'b' * 16}"
+    assert re.sub(r"_[0-9a-f]{16}$", "", already) == "http://dataintegration.eccenca.com/p/t"
+
+
+def test_parameter_literal_escapes_and_flattens() -> None:
+    """Test a parameter value cannot break out of the SPARQL literal it is written into
+
+    Round-tripping is the proof: whatever the value contains, the serialized form has to
+    parse back to exactly that one literal and to nothing else.
+    """
+    plugin = ShapesPlugin.__new__(ShapesPlugin)
+
+    for value in (
+        'My "big" catalog',
+        'x" . <http://evil/s> <http://evil/p> "y',
+        "a line\nand another",
+        "back\\slash",
+    ):
+        plugin.label = value
+        serialized = plugin.parameter_literal("label").n3()
+        assert from_n3(serialized) == Literal(value), serialized
+
+    # a list parameter is recorded as the lines the user typed, not as a Python repr
+    plugin.ignore_types = ["http://example.com/a", "http://example.com/b"]
+    assert str(plugin.parameter_literal("ignore_types")) == (
+        "http://example.com/a\nhttp://example.com/b"
+    )
+
+
+def test_shape_count_does_not_accumulate_across_runs(
+    graph_setup: GraphSetupFixture,
+) -> None:
+    """Test a second run of the same task reports its own shapes, not both runs' worth"""
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    context = TestExecutionContext(project_id=graph_setup.project_name)
+    plugin.execute(inputs=[], context=context)
+    first = plugin.shapes_count
+    plugin.execute(inputs=[], context=context)
+
+    assert first > 0
+    assert plugin.shapes_count == first
+
+
+def test_title_record_stands_in_for_an_absent_answer() -> None:
+    """Test a missing title does not raise from inside the shape loop"""
+    titles = {"http://example.com/known": {"title": "Known", "fromIri": False, "lang": "en"}}
+    assert ShapesPlugin.title_record("http://example.com/known", titles)["title"] == "Known"
+
+    missing = ShapesPlugin.title_record("http://example.com/absent", titles)
+    assert missing["fromIri"] is True
+    plugin = ShapesPlugin.__new__(ShapesPlugin)
+    plugin.prefixes = {"http://example.com/": ("ex:",)}
+    assert plugin.get_name("http://example.com/absent", missing) == "absent (ex:)"
+
+
+def test_managed_classes_can_be_withdrawn_from_an_existing_catalog(
+    graph_setup: GraphSetupFixture, client: Client
+) -> None:
+    """Test switching the option off removes what an earlier run declared
+
+    Adding to a catalog inserts and deletes nothing, so a catalog level statement that
+    only ever accumulated could not be taken back once written.
+    """
+    catalog = URIRef(graph_setup.shapes_iri)
+    for managed in (True, False):
+        ShapesPlugin(
+            data_graph_iri=graph_setup.dataset_iri,
+            shapes_graph_iri=graph_setup.shapes_iri,
+            existing_graph=EXISTING_GRAPH_ADD,
+            import_shapes=False,
+            prefix_cc=False,
+            managed_classes=managed,
+        ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+        result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+        declared = set(result_graph.objects(subject=catalog, predicate=SHUI.managedClasses))
+        assert declared == (set(MANAGED_CLASSES) if managed else set()), declared
+
+
+def test_adding_does_not_leave_two_names_on_a_shape(
+    graph_setup: GraphSetupFixture, client: Client
+) -> None:
+    """Test re-adding to a catalog replaces a shape's name rather than doubling it
+
+    A catalog written before names carried the language they were resolved in holds
+    "Person (foaf:)"@en; a run today writes the untagged form. Adding used to leave both,
+    so the form editor showed one field under two names.
+    """
+    for _ in range(2):
+        ShapesPlugin(
+            data_graph_iri=graph_setup.dataset_iri,
+            shapes_graph_iri=graph_setup.shapes_iri,
+            existing_graph=EXISTING_GRAPH_ADD,
+            import_shapes=False,
+            prefix_cc=False,
+        ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+    for shape in set(result_graph.subjects(predicate=SH.path)) | set(
+        result_graph.subjects(predicate=SH.targetClass)
+    ):
+        names = list(result_graph.objects(subject=shape, predicate=SH.name))
+        labels = list(result_graph.objects(subject=shape, predicate=RDFS.label))
+        assert len(names) == 1, (shape, names)
+        assert len(labels) == 1, (shape, labels)
+
+
+def test_get_name_falls_back_to_the_local_name() -> None:
+    """Test a synthesized title is not taken apart on an underscore
+
+    The deployment builds a title out of the IRI when it knows nothing about it, and
+    the shape of that title is not this plugin's to predict.
+    """
+    plugin = ShapesPlugin.__new__(ShapesPlugin)
+    plugin.prefixes = {"http://schema.org/": ("schema:",)}
+
+    # a title with no underscore used to raise IndexError from inside the shape loop
+    assert (
+        plugin.get_name("http://schema.org/Person", {"title": "Person", "fromIri": True})
+        == "Person (schema:)"
+    )
+    # and one with an underscore was truncated at it, giving "name (schema:)"
+    assert (
+        plugin.get_name("http://schema.org/first_name", {"title": "first_name", "fromIri": True})
+        == "first_name (schema:)"
+    )
+
 
 def test_namespace_graphs_offers_both_spellings() -> None:
     """Test namespace_graphs offers a vocabulary graph name with and without its separator"""
@@ -588,31 +869,10 @@ def test_namespace_graphs_skips_an_unsplittable_iri() -> None:
     assert ShapesPlugin.namespace_graphs([]) == []
 
 
-def test_managed_classes_and_query_catalog(graph_setup: GraphSetupFixture, client: Client) -> None:
-    """Test the catalog declares its managed classes and imports the query catalog"""
-    plugin = ShapesPlugin(
-        data_graph_iri=graph_setup.dataset_iri,
-        shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph=EXISTING_GRAPH_REPLACE,
-        import_shapes=False,
-        prefix_cc=False,
-        managed_classes=True,
-        query_catalog=True,
-    )
-    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
-
-    catalog = URIRef(graph_setup.shapes_iri)
-    assert set(result_graph.objects(subject=catalog, predicate=SHUI.managedClasses)) == set(
-        MANAGED_CLASSES
-    )
-    assert set(result_graph.objects(subject=catalog, predicate=OWL.imports)) == {QUERY_CATALOG}
-
-
-def test_managed_classes_and_query_catalog_are_off_by_default(
+def test_managed_classes_are_declared_by_default(
     graph_setup: GraphSetupFixture, client: Client
 ) -> None:
-    """Test neither catalog statement is written unless it is asked for"""
+    """Test the catalog declares the classes it manages without being asked to"""
     ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
@@ -622,13 +882,30 @@ def test_managed_classes_and_query_catalog_are_off_by_default(
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
 
-    catalog = URIRef(graph_setup.shapes_iri)
-    assert not set(result_graph.objects(subject=catalog, predicate=SHUI.managedClasses))
-    assert not set(result_graph.objects(subject=catalog, predicate=OWL.imports))
+    assert set(
+        result_graph.objects(subject=URIRef(graph_setup.shapes_iri), predicate=SHUI.managedClasses)
+    ) == set(MANAGED_CLASSES)
+
+
+def test_managed_classes_can_be_turned_off(graph_setup: GraphSetupFixture, client: Client) -> None:
+    """Test no managed class is declared when the option is switched off"""
+    ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+        managed_classes=False,
+    ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+
+    assert not set(
+        result_graph.objects(subject=URIRef(graph_setup.shapes_iri), predicate=SHUI.managedClasses)
+    )
 
 
 def test_depiction_from_the_data_graph(graph_setup: GraphSetupFixture, client: Client) -> None:
-    """Test a node shape is given the foaf:depiction of its target class
+    """Test a node shape is given the foaf:depiction of its target class, without being asked
 
     The class is owned by this test, and a second class without a depiction is typed
     alongside it to show that a node shape only gets one where there is something to find.
@@ -653,7 +930,6 @@ def test_depiction_from_the_data_graph(graph_setup: GraphSetupFixture, client: C
         existing_graph=EXISTING_GRAPH_REPLACE,
         import_shapes=False,
         prefix_cc=False,
-        depictions=True,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
 
@@ -668,8 +944,8 @@ def test_depiction_from_the_data_graph(graph_setup: GraphSetupFixture, client: C
     assert not set(result_graph.objects(subject=gadget_shape, predicate=FOAF.depiction))
 
 
-def test_depictions_are_off_by_default(graph_setup: GraphSetupFixture, client: Client) -> None:
-    """Test no depiction is written unless it is asked for"""
+def test_depictions_can_be_turned_off(graph_setup: GraphSetupFixture, client: Client) -> None:
+    """Test no depiction is written when the option is switched off"""
     insert_query = f"""
     PREFIX ex: <http://example.com/shapes-test/>
     PREFIX foaf: <http://xmlns.com/foaf/0.1/>
@@ -688,9 +964,55 @@ def test_depictions_are_off_by_default(graph_setup: GraphSetupFixture, client: C
         existing_graph=EXISTING_GRAPH_REPLACE,
         import_shapes=False,
         prefix_cc=False,
+        depictions=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
     assert not set(result_graph.subject_objects(predicate=FOAF.depiction))
+
+
+def test_get_classes_and_get_properties_actions(graph_setup: GraphSetupFixture) -> None:
+    """Test both actions list what the data graph holds, ready for the ignore parameters
+
+    Neither ignore list is applied: rdf:type is the default of Properties to ignore and
+    still has to be offered, or the action could not explain the default it is up against.
+    """
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    context = TestPluginContext(project_id=graph_setup.project_name)
+
+    classes = plugin.get_classes(context)
+    assert "http://xmlns.com/foaf/0.1/Person" in classes
+    assert "http://rdfs.org/ns/void#Dataset" in classes
+    assert "```" in classes, "the listing has to be a code block to survive Markdown rendering"
+    assert "<" not in classes, "an <iri> would render as a link to something not retrievable"
+
+    properties = plugin.get_properties(context)
+    for iri in (
+        "http://xmlns.com/foaf/0.1/knows",
+        "http://xmlns.com/foaf/0.1/familyName",
+        "http://www.w3.org/2000/01/rdf-schema#label",
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+    ):
+        assert iri in properties, iri
+
+
+def test_actions_report_an_empty_graph(graph_setup: GraphSetupFixture) -> None:
+    """Test an action says so rather than returning an empty code block"""
+    plugin = ShapesPlugin(
+        data_graph_iri="http://example.com/shapes-test/a-graph-that-holds-nothing",
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    context = TestPluginContext(project_id=graph_setup.project_name)
+    assert plugin.get_classes(context).startswith("No classes found")
+    assert plugin.get_properties(context).startswith("No properties found")
 
 
 def test_ignore_types_and_properties() -> None:

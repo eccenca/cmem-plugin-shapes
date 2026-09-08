@@ -17,8 +17,18 @@ from uuid import NAMESPACE_URL, uuid5
 import validators.url
 from cmem_client.client import Client
 from cmem_client.repositories.graphs import ImportConflictPolicy
-from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
-from cmem_plugin_base.dataintegration.description import Icon, Plugin, PluginParameter
+from cmem_plugin_base.dataintegration.client import get_client
+from cmem_plugin_base.dataintegration.context import (
+    ExecutionContext,
+    ExecutionReport,
+    PluginContext,
+)
+from cmem_plugin_base.dataintegration.description import (
+    Icon,
+    Plugin,
+    PluginAction,
+    PluginParameter,
+)
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.graph import GraphParameterType
@@ -26,14 +36,19 @@ from cmem_plugin_base.dataintegration.parameter.multiline import MultilineString
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import BoolParameterType, StringParameterType
-from rdflib import DCTERMS, FOAF, OWL, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
+from rdflib import DCTERMS, FOAF, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
 
 from . import __path__
 
 SHUI = Namespace("https://vocab.eccenca.com/shui/")
 PREFIX_CC = "https://prefix.cc/popular/all.file.json"
-QUERY_CATALOG = URIRef("https://ns.eccenca.com/data/queries/")
+# One request per this many IRIs. The explore API takes the list in the request body,
+# and a graph with tens of thousands of properties would otherwise build a body large
+# enough for a proxy to refuse.
+RESOLVE_BATCH_SIZE = 500
+# An action renders into a panel, so its listing is capped - and says when it capped.
+MAX_LISTED_IRIS = 1000
 MANAGED_CLASSES = (
     SH.NodeShape,
     SH.PrefixDeclaration,
@@ -102,11 +117,15 @@ labels come from the title eccenca Corporate Memory resolves for that class or p
 A description follows wherever one can be resolved - the `rdfs:comment`,
 `dcterms:description` or `skos:definition` of the class or property, looked up wherever
 it is defined, so a vocabulary graph counts as well as the data graph. A class or
-property that nothing describes gets no `sh:description`.
+property that nothing describes gets no `sh:description`, and neither does a shape for
+the object ← subject direction: the description is written about the property, so on the
+inverse path it would say the opposite of what the shape holds.
 
 Every property shape carries `shui:showAlways`, and a shape for the object ← subject
-direction carries `shui:inversePath` as well. The catalog itself records the data graph it
-was generated from and when it was written.
+direction carries `shui:inversePath` as well. A node shape carries the `foaf:depiction` of
+its target class wherever the data graph or the class's own vocabulary offers one. The
+catalog itself records the data graph it was generated from, when it was written, and the
+classes it manages.
 
 ## Caveats
 
@@ -117,17 +136,22 @@ the deployment knows nothing about falls back to a name built from its IRI, whic
 no language at all and is written without a tag.
 
 A property used by several classes gets one property shape, shared by every node shape
-that uses it. Its `sh:nodeKind` is decided by the first use the store returns, so a
-property carrying IRI values under one class and literal values under another is
-described as only one of the two.
+that uses it. Its `sh:nodeKind` is decided by whichever of those classes sorts first, so a
+property carrying IRI values under one class and literal values under another is described
+as only one of the two - the same one on every run over the same data.
+
+A class or property that is a blank node is skipped. Instance data sharing a graph with an
+ontology types things with anonymous class expressions, and a shape has nothing to target
+in one.
 
 `sh:datatype rdf:langString` is added as soon as any value of a property carries a
 language tag, however few of them do. A property whose values mix tagged and untagged
-literals
-therefore gets a shape that its own source data does not satisfy.
+literals therefore gets a shape that its own source data does not satisfy.
 
-Adding to an existing catalog inserts triples and deletes none, so shapes written by an
-earlier run stay alongside the new ones.
+Adding to an existing catalog replaces the name, label and description of every shape the
+run writes, and the classes the catalog declares, rather than leaving an earlier run's
+beside them. Everything else in the catalog is left alone, including shapes this run did
+not produce - that is what adding is for.
 
 ## Example
 
@@ -192,9 +216,10 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
             name="label",
             label="Output shape catalog label",
             description="The label of the shape catalog. Left empty, a new catalog gets a "
-            "generated label and an existing one keeps the label it has, so this is only worth "
-            'setting to title a catalog yourself. Only a label tagged "en" or carrying no '
-            "language tag counts as an existing label, and only such a label is replaced.",
+            "generated label, and a catalog being added to keeps the label it has - but a "
+            "catalog being replaced is rewritten whole, generated label included. Only a "
+            'label tagged "en" or carrying no language tag counts as an existing label, and '
+            "only such a label is replaced.",
             advanced=True,
         ),
         PluginParameter(
@@ -202,8 +227,8 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
             name="import_shapes",
             label="Import into the central shape catalog",
             description="If enabled, the generated catalog is imported into the central shape "
-            "catalog by adding an `owl:imports` statement to it. Shapes in a catalog that is not "
-            "imported are never activated and never used.",
+            "catalog by adding an `owl:imports` statement to it. Shapes in a catalog the "
+            "central one does not import are not picked up.",
         ),
         PluginParameter(
             param_type=BoolParameterType(),
@@ -252,20 +277,14 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
         ),
         PluginParameter(
             param_type=BoolParameterType(),
-            name="query_catalog",
-            label="Import the query catalog",
-            description="If enabled, the shape catalog imports the query catalog with an "
-            "`owl:imports` statement, so the stored queries are visible from it.",
-            advanced=True,
-        ),
-        PluginParameter(
-            param_type=BoolParameterType(),
             name="depictions",
             label="Add depictions to node shapes",
             description="If enabled, a node shape is given the `foaf:depiction` of its target "
             "class, where one can be found. The class is looked up in the data graph and in the "
             "graph named by its own namespace, tried both with and without the trailing "
-            "separator, because the graph a vocabulary was loaded into is not recorded anywhere.",
+            "separator, because the graph a vocabulary was loaded into is not recorded anywhere. "
+            "A class depicted more than once contributes one of its depictions, the same one on "
+            "every run.",
             advanced=True,
         ),
         PluginParameter(
@@ -276,6 +295,20 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
             'namespace prefix, reading "label" rather than "label (rdfs:)". Node shape names '
             "always keep it.",
             advanced=True,
+        ),
+    ],
+    actions=[
+        PluginAction(
+            name="get_classes",
+            label="Get classes",
+            description="Lists the classes used in the input data graph, one IRI per line, "
+            "ready to paste into Classes to ignore.",
+        ),
+        PluginAction(
+            name="get_properties",
+            label="Get properties",
+            description="Lists the properties used in the input data graph, one IRI per line, "
+            "ready to paste into Properties to ignore.",
         ),
     ],
 )
@@ -296,9 +329,8 @@ class ShapesPlugin(WorkflowPlugin):
         ignore_types: str = "",
         plugin_provenance: bool = False,
         omit_namespace_addon: bool = False,
-        managed_classes: bool = False,
-        query_catalog: bool = False,
-        depictions: bool = False,
+        managed_classes: bool = True,
+        depictions: bool = True,
     ) -> None:
         if not validators.url(data_graph_iri):
             raise ValueError("Invalid value for parameter 'Input data graph'")
@@ -342,7 +374,6 @@ class ShapesPlugin(WorkflowPlugin):
         self.plugin_provenance = plugin_provenance
         self.omit_namespace_addon = omit_namespace_addon
         self.managed_classes = managed_classes
-        self.query_catalog = query_catalog
         self.depictions = depictions
 
         self.shapes_count = 0
@@ -350,12 +381,31 @@ class ShapesPlugin(WorkflowPlugin):
         self.output_port = None
 
     @staticmethod
-    def format_prefixes(prefixes: dict, formatted_prefixes: dict | None = None) -> dict:
-        """Format prefix dictionary for consistency"""
+    def format_prefixes(
+        prefixes: dict, formatted_prefixes: dict | None = None, *, shortest_first: bool = False
+    ) -> dict:
+        """Format prefix dictionary for consistency
+
+        get_name takes the first prefix of a namespace, so the order within a namespace
+        decides how every shape of it is named. ``shortest_first`` orders the prefixes
+        contributed by this call by length, which is for the prefix database: it offers
+        several prefixes for 171 of its namespaces and is stored sorted alphabetically, so
+        taking it as it comes picks "xds:" - a typo entry in prefix.cc - over "xsd:",
+        "nsprov:" over "prov:" and "schemas:" over "sdo:". The shortest is the conventional
+        one far more often than the alphabetically first is.
+
+        Prefixes a project declares are formatted without it and added first, so they keep
+        their precedence over anything the database offers.
+        """
         if not formatted_prefixes:
             formatted_prefixes = {}
+        grouped: dict = {}
         for prefix, namespace in prefixes.items():
-            formatted_prefixes.setdefault(namespace, []).append(prefix + ":")
+            grouped.setdefault(namespace, []).append(prefix + ":")
+        for namespace, candidates in grouped.items():
+            if shortest_first:
+                candidates.sort(key=lambda candidate: (len(candidate), candidate))
+            formatted_prefixes.setdefault(namespace, []).extend(candidates)
 
         return formatted_prefixes
 
@@ -378,7 +428,7 @@ class ShapesPlugin(WorkflowPlugin):
             with (Path(__path__[0]) / "prefix_cc.json").open("r", encoding="utf-8") as json_file:
                 prefixes_cc = json.load(json_file)
         if prefixes_cc:
-            prefixes = self.format_prefixes(prefixes_cc, prefixes)
+            prefixes = self.format_prefixes(prefixes_cc, prefixes, shortest_first=True)
 
         return {k: tuple(v) for k, v in prefixes.items()}
 
@@ -392,20 +442,33 @@ class ShapesPlugin(WorkflowPlugin):
         of the mapping entirely when it knows no description for it, while the titles
         helper always answers, falling back to a title built from the IRI itself.
         """
-        if not iris:
-            return {}
         url = self.client.config.url_explore_api / f"/api/explore/{endpoint}"
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        response = self.client.http.post(url=url, headers=headers, json=iris)
-        response.raise_for_status()
-        return cast("dict[str, dict]", response.json())
+        resolved: dict[str, dict] = {}
+        for start in range(0, len(iris), RESOLVE_BATCH_SIZE):
+            batch = iris[start : start + RESOLVE_BATCH_SIZE]
+            response = self.client.http.post(url=url, headers=headers, json=batch)
+            response.raise_for_status()
+            resolved.update(cast("dict[str, dict]", response.json()))
+        return resolved
+
+    @staticmethod
+    def title_record(iri: str, titles: dict) -> dict:
+        """Return the resolved title of an IRI, or one standing in for an absent answer
+
+        The titles helper answers for every IRI it is given, but indexing the mapping
+        directly made that an assumption which, when it failed, raised KeyError from inside
+        the shape loop. The stand-in is what the helper returns for an IRI it knows nothing
+        about, so get_name treats it the same way.
+        """
+        return titles.get(iri) or {"title": iri, "fromIri": True}
 
     def get_name(self, iri: str, title_record: dict, *, include_namespace: bool = True) -> str:
         """Generate shape name from IRI and its resolved title"""
         results = title_record
         title: str = results["title"]
         try:
-            namespace, _ = split_uri(iri)
+            namespace, local_name = split_uri(iri)
         except ValueError as exc:
             raise ValueError(f"Invalid class or property ({iri}).") from exc
 
@@ -413,15 +476,14 @@ class ShapesPlugin(WorkflowPlugin):
             prefixes = self.prefixes[namespace]
             prefix = prefixes[0]
             if results["fromIri"]:
+                # Nothing in the deployment describes this IRI, so the helper built a title
+                # out of the IRI itself. Whatever shape that title takes, the authoritative
+                # local name is the one split_uri produced above.
                 if title.startswith(prefixes):
-                    if len(prefixes) > 1:
-                        prefix = title.split(":", 1)[0] + ":"
-                    title = title[len(prefix) :]
+                    matched = title.split(":", 1)[0] + ":"
+                    title = title[len(matched) :]
                 else:
-                    try:
-                        title = title.split("_", 1)[1]
-                    except IndexError as exc:
-                        raise IndexError(f"{results['title']} {prefixes}") from exc
+                    title = local_name
             if include_namespace:
                 title += f" ({prefix})"
         return title
@@ -439,6 +501,59 @@ class ShapesPlugin(WorkflowPlugin):
         lang = title_record.get("lang")
         return Literal(name, lang=lang) if lang else Literal(name)
 
+    def _iri_list(self, context: PluginContext, query: str, variable: str, plural: str) -> str:
+        """Run a SELECT returning one variable of IRIs and render it for the action panel
+
+        The result is a fenced code block rather than a plain list: the panel renders
+        Markdown, which would run bare lines together into one paragraph, and a block is
+        what a user can copy into one of the two ignore parameters unchanged.
+
+        Nothing here may be written as `<iri>`, which Markdown turns into a link. A graph
+        IRI is a name and generally not retrievable, so a link on it is an invitation to a
+        dead end. The IRIs in the code block are safe, since a fence is not linked.
+        """
+        # An action is handed its own context, and execute() has not run, so there is no
+        # client on the instance yet.
+        self.client = get_client(context)
+        bindings = json.loads(self._post_sparql(query=query))["results"]["bindings"]
+        iris = sorted({binding[variable]["value"] for binding in bindings})
+        if not iris:
+            return f"No {plural} found in `{self.data_graph_iri}`."
+        shown = iris[:MAX_LISTED_IRIS]
+        listing = "\n".join(shown)
+        header = f"{len(iris)} {plural} found in `{self.data_graph_iri}`"
+        if len(shown) < len(iris):
+            header += f", showing the first {len(shown)}"
+        return f"{header}:\n\n```\n{listing}\n```"
+
+    def get_classes(self, context: PluginContext) -> str:
+        """List the classes used in the input data graph"""
+        query = f"""
+        SELECT DISTINCT ?class
+        FROM <{self.data_graph_iri}> {{
+            ?subject a ?class .
+            FILTER(isIRI(?class))
+        }}"""  # noqa: S608
+        return self._iri_list(context, query, "class", "classes")
+
+    def get_properties(self, context: PluginContext) -> str:
+        """List the properties used in the input data graph
+
+        The two alternatives are the ones get_class_dict draws property shapes from - a
+        property of a typed subject, and a property pointing at a typed object - so what is
+        listed is what the ignore parameter can actually act on. Neither ignore list is
+        applied, since the point is to find out what to put in them.
+        """
+        query = f"""
+        SELECT DISTINCT ?property
+        FROM <{self.data_graph_iri}> {{
+            {{ ?subject a ?class . ?subject ?property ?object }}
+        UNION
+            {{ ?object a ?class . ?subject ?property ?object }}
+            FILTER(isIRI(?property))
+        }}"""  # noqa: S608
+        return self._iri_list(context, query, "property", "properties")
+
     def init_shapes_graph(self) -> Graph:
         """Initialize SHACL shapes graph"""
         shapes_graph = Graph().add((URIRef(self.shapes_graph_iri), RDF.type, SHUI.ShapeCatalog))
@@ -449,8 +564,6 @@ class ShapesPlugin(WorkflowPlugin):
                 URIRef(self.data_graph_iri),
             )
         )
-        if self.query_catalog:
-            shapes_graph.add((URIRef(self.shapes_graph_iri), OWL.imports, QUERY_CATALOG))
         if self.managed_classes:
             for managed_class in MANAGED_CLASSES:
                 shapes_graph.add(
@@ -538,6 +651,7 @@ class ShapesPlugin(WorkflowPlugin):
                 ?subject ?property ?object .
                 {self.iri_list_to_filter(self.ignore_properties)}
                 {self.iri_list_to_filter(self.ignore_types, name="class")}
+                FILTER(isIRI(?class) && isIRI(?property))
                 BIND(isLiteral(?object) AS ?data)
                 BIND("false" AS ?inverse)
                 BIND(LANG(?object) AS ?lang)
@@ -548,10 +662,12 @@ class ShapesPlugin(WorkflowPlugin):
                 ?subject ?property ?object .
                 {self.iri_list_to_filter(self.ignore_properties)}
                 {self.iri_list_to_filter(self.ignore_types, name="class")}
+                FILTER(isIRI(?class) && isIRI(?property))
                 BIND("false" AS ?data)
                 BIND("true" AS ?inverse)
             }}
-        }}"""  # noqa: S608
+        }}
+        ORDER BY ?class ?property ?inverse ?data ?lang"""  # noqa: S608
 
         results = json.loads(self._post_sparql(query=query))
 
@@ -574,9 +690,55 @@ class ShapesPlugin(WorkflowPlugin):
         """Fetch property descriptions with the description helper of the explore API"""
         descriptions = {}
         for iri, record in self.resolve("descriptions", iris).items():
-            lang = record.get("lang") or "en"
-            descriptions[iri] = Literal(record["title"], lang=lang)
+            # No language means the vocabulary left the text untagged, which is not the
+            # same as it being English - name_literal makes the same distinction.
+            lang = record.get("lang")
+            descriptions[iri] = (
+                Literal(record["title"], lang=lang) if lang else Literal(record["title"])
+            )
         return descriptions
+
+    def add_property_shape(
+        self,
+        property_shape_uri: URIRef,
+        prop: dict,
+        titles: dict,
+        descriptions: dict,
+        lang_string_properties: set[str],
+    ) -> None:
+        """Add one property shape to the shapes graph"""
+        self.shapes_count += 1
+        record = self.title_record(prop["property"], titles)
+        name = self.get_name(
+            prop["property"],
+            record,
+            include_namespace=not self.omit_namespace_addon,
+        )
+        self.shapes_graph.add((property_shape_uri, RDF.type, SH.PropertyShape))
+        self.shapes_graph.add((property_shape_uri, SH.path, URIRef(prop["property"])))
+        self.shapes_graph.add(
+            (property_shape_uri, SH.nodeKind, SH.Literal if prop["data"] else SH.IRI)
+        )
+        if prop["data"] and prop["property"] in lang_string_properties:
+            self.shapes_graph.add((property_shape_uri, SH.datatype, RDF.langString))
+        # Only the forward direction. A description is written about the property, so on an
+        # inverse path it describes the opposite of what the shape holds - "The family name
+        # of a person." on a shape named "← familyName" tells the user exactly the wrong
+        # thing.
+        description = None if prop["inverse"] else descriptions.get(prop["property"])
+        if description is not None:
+            self.shapes_graph.add((property_shape_uri, SH.description, description))
+        self.shapes_graph.add(
+            (property_shape_uri, SHUI.showAlways, Literal("true", datatype=XSD.boolean))
+        )
+        if prop["inverse"]:
+            self.shapes_graph.add(
+                (property_shape_uri, SHUI.inversePath, Literal("true", datatype=XSD.boolean))
+            )
+            name = "← " + name
+        name_literal = self.name_literal(name, record)
+        self.shapes_graph.add((property_shape_uri, SH.name, name_literal))
+        self.shapes_graph.add((property_shape_uri, RDFS.label, name_literal))
 
     def create_shapes(self) -> None:
         """Create SHACL node and property shapes"""
@@ -594,6 +756,12 @@ class ShapesPlugin(WorkflowPlugin):
         descriptions = self.get_descriptions(iris)
         depictions = self.get_depictions(sorted(class_dict)) if self.depictions else {}
         for cls, properties in class_dict.items():
+            # context.workflow is absent in some contexts, the test ones among them, so the
+            # check has to be guarded rather than assumed.
+            with suppress(AttributeError):
+                if self.context.workflow.status() == "Canceling":
+                    self.log.info("cancelled - no shapes are written")
+                    return
             class_uuid = uuid5(NAMESPACE_URL, cls)
             node_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{class_uuid}")
 
@@ -601,7 +769,8 @@ class ShapesPlugin(WorkflowPlugin):
                 self.shapes_count += 1
                 self.shapes_graph.add((node_shape_uri, RDF.type, SH.NodeShape))
                 self.shapes_graph.add((node_shape_uri, SH.targetClass, URIRef(cls)))
-                class_name = self.name_literal(self.get_name(cls, titles[cls]), titles[cls])
+                record = self.title_record(cls, titles)
+                class_name = self.name_literal(self.get_name(cls, record), record)
                 self.shapes_graph.add((node_shape_uri, SH.name, class_name))
                 self.shapes_graph.add((node_shape_uri, RDFS.label, class_name))
                 class_description = descriptions.get(cls)
@@ -618,43 +787,14 @@ class ShapesPlugin(WorkflowPlugin):
                 )
                 property_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{prop_uuid}")
                 if prop_uuid not in prop_uuids:
-                    self.shapes_count += 1
-                    name = self.get_name(
-                        prop["property"],
-                        titles[prop["property"]],
-                        include_namespace=not self.omit_namespace_addon,
+                    self.add_property_shape(
+                        property_shape_uri, prop, titles, descriptions, lang_string_properties
                     )
-                    self.shapes_graph.add((property_shape_uri, RDF.type, SH.PropertyShape))
-                    self.shapes_graph.add((property_shape_uri, SH.path, URIRef(prop["property"])))
-                    self.shapes_graph.add(
-                        (property_shape_uri, SH.nodeKind, SH.Literal if prop["data"] else SH.IRI)
-                    )
-                    if prop["data"] and prop["property"] in lang_string_properties:
-                        self.shapes_graph.add((property_shape_uri, SH.datatype, RDF.langString))
-                    description = descriptions.get(prop["property"])
-                    if description is not None:
-                        self.shapes_graph.add((property_shape_uri, SH.description, description))
-                    self.shapes_graph.add(
-                        (
-                            property_shape_uri,
-                            SHUI.showAlways,
-                            Literal("true", datatype=XSD.boolean),
-                        )
-                    )
-                    if prop["inverse"]:
-                        self.shapes_graph.add(
-                            (
-                                property_shape_uri,
-                                SHUI.inversePath,
-                                Literal("true", datatype=XSD.boolean),
-                            )
-                        )
-                        name = "← " + name
-                    name_literal = self.name_literal(name, titles[prop["property"]])
-                    self.shapes_graph.add((property_shape_uri, SH.name, name_literal))
-                    self.shapes_graph.add((property_shape_uri, RDFS.label, name_literal))
                     prop_uuids.add(prop_uuid)
                 self.shapes_graph.add((node_shape_uri, SH.property, property_shape_uri))
+            # inside the loop: a report emitted once the work is over shows a user nothing
+            # while the task runs, which is when they are looking at it
+            self.update_execution_report()
 
     def import_shapes_graph(self) -> None:
         """Import SHACL shapes graph to catalog"""
@@ -668,6 +808,19 @@ class ShapesPlugin(WorkflowPlugin):
 
         self.client.store.sparql.update(query=query)
 
+    def parameter_literal(self, name: str) -> Literal:
+        """Return a parameter value as a literal safe to put in a SPARQL update
+
+        Interpolating the value into a quoted string by hand let a quote in, say, the
+        catalog label break the update - and a crafted value write triples of its own.
+        Literal.n3() escapes it. The two ignore parameters are held as parsed lists, so
+        they are written back as the lines the user typed rather than as a Python repr.
+        """
+        value = self.__dict__[name]
+        if isinstance(value, list):
+            return Literal("\n".join(value))
+        return Literal(str(value))
+
     def post_provenance(self, now: str) -> None:
         """Post provenance"""
         prov = self.get_provenance()
@@ -675,7 +828,9 @@ class ShapesPlugin(WorkflowPlugin):
             return
         param_sparql = ""
         for name, iri in prov["parameters"].items():
-            param_sparql += f'\n<{prov["plugin_iri"]}> <{iri}> "{self.__dict__[name]}" .'
+            param_sparql += (
+                f"\n<{prov['plugin_iri']}> <{iri}> {self.parameter_literal(name).n3()} ."
+            )
 
         insert_query = f"""
         PREFIX dcterms: <http://purl.org/dc/terms/>
@@ -686,7 +841,7 @@ class ShapesPlugin(WorkflowPlugin):
                 <{self.shapes_graph_iri}> dcterms:creator <{prov["plugin_iri"]}> .
                 <{prov["plugin_iri"]}> a <{prov["plugin_type"]}>,
                         <https://vocab.eccenca.com/di/CustomTask> ;
-                    rdfs:label "{prov["plugin_label"]}" ;
+                    rdfs:label {Literal(prov["plugin_label"]).n3()} ;
                     dcterms:date "{now}"^^xsd:dateTime .
                 {param_sparql}
             }}
@@ -734,7 +889,11 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        new_plugin_iri = f"{'_'.join(plugin_iri.split('_')[:-1])}_{token_hex(8)}"
+        # A fresh subject per run, derived from the task IRI. Only a suffix this method
+        # added itself is replaced: splitting on every underscore ate the task segment
+        # whenever the project id contained one, and produced the bare relative reference
+        # "_<hex>" when neither id did.
+        new_plugin_iri = f"{re.sub(r'_[0-9a-f]{16}$', '', plugin_iri)}_{token_hex(8)}"
         label = f"{PLUGIN_LABEL} plugin"
         result = json.loads(self._post_sparql(query=parameter_query))
 
@@ -752,9 +911,13 @@ class ShapesPlugin(WorkflowPlugin):
 
         return prov
 
-    def create_graph(self) -> str:
-        """Create or replace SHACL shapes graph"""
-        self.create_label()
+    def write_shapes(self, on_conflict: ImportConflictPolicy) -> None:
+        """Stream the generated shapes into the catalog
+
+        Through a file rather than a SPARQL update: the update would have to carry the whole
+        serialization in one request body, which is a size limit the streamed import does not
+        have and which the add path used to run into on a large graph.
+        """
         ntriples = self.shapes_graph.serialize(format="nt", encoding="utf-8").decode()
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".nt", delete=False, encoding="utf-8"
@@ -763,14 +926,23 @@ class ShapesPlugin(WorkflowPlugin):
             tmp_path = f.name
         try:
             self.client.graphs.import_item(
-                path=Path(tmp_path),
-                key=self.shapes_graph_iri,
-                on_conflict=ImportConflictPolicy.REPLACE
-                if self.replace
-                else ImportConflictPolicy.FAIL,
+                path=Path(tmp_path), key=self.shapes_graph_iri, on_conflict=on_conflict
             )
         finally:
             Path(tmp_path).unlink(missing_ok=True)
+
+    def create_graph(self) -> str:
+        """Create or replace SHACL shapes graph"""
+        self.create_label()
+        # Merging when adding, so a catalog that appeared between the existence check in
+        # execute() and this call is added to rather than failed on.
+        if self.replace:
+            on_conflict = ImportConflictPolicy.REPLACE
+        elif self.existing_graph == EXISTING_GRAPH_ADD:
+            on_conflict = ImportConflictPolicy.MERGE
+        else:
+            on_conflict = ImportConflictPolicy.FAIL
+        self.write_shapes(on_conflict)
         now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
         query_add_created = f"""
         PREFIX dcterms: <http://purl.org/dc/terms/>
@@ -826,14 +998,55 @@ class ShapesPlugin(WorkflowPlugin):
         if self.label or not has_label:
             self.create_label()
 
-        query_data = f"""
-        INSERT DATA {{
+        # The catalog level statements this task owns are replaced rather than added to.
+        # Adding inserts and deletes nothing, so without this the managed classes of an
+        # earlier run would survive being switched off, and re-running would keep piling
+        # the same nine triples onto a catalog that already had them.
+        self.client.store.sparql.update(
+            query=f"""
+        PREFIX shui: <https://vocab.eccenca.com/shui/>
+        DELETE {{
             GRAPH <{self.shapes_graph_iri}> {{
-                {self.shapes_graph.serialize(format="nt", encoding="utf-8").decode()}
+                <{self.shapes_graph_iri}> shui:managedClasses ?managed_class
+            }}
+        }}
+        WHERE {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                <{self.shapes_graph_iri}> shui:managedClasses ?managed_class
             }}
         }}"""
+        )
 
-        self.client.store.sparql.update(query=query_data)
+        # Same reasoning for the shapes themselves. Every predicate below holds one value
+        # per shape, so leaving the old one in place shows the user two names, two labels or
+        # two descriptions for one field - which is what happens to a catalog written before
+        # names carried the language they were resolved in.
+        subjects = " ".join(
+            f"<{subject}>"
+            for subject in sorted({str(s) for s in self.shapes_graph.subjects()})
+            if subject != self.shapes_graph_iri
+        )
+        if subjects:
+            self.client.store.sparql.update(
+                query=f"""
+        PREFIX sh: <http://www.w3.org/ns/shacl#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+        DELETE {{
+            GRAPH <{self.shapes_graph_iri}> {{ ?shape ?predicate ?value }}
+        }}
+        WHERE {{
+            GRAPH <{self.shapes_graph_iri}> {{
+                VALUES ?shape {{ {subjects} }}
+                VALUES ?predicate {{
+                    sh:name rdfs:label sh:description sh:nodeKind sh:datatype foaf:depiction
+                }}
+                ?shape ?predicate ?value
+            }}
+        }}"""
+            )
+
+        self.write_shapes(ImportConflictPolicy.MERGE)
 
         now = datetime.now(UTC).isoformat(timespec="milliseconds")[:-6] + "Z"
         query_remove_modified = f"""
@@ -910,6 +1123,9 @@ class ShapesPlugin(WorkflowPlugin):
     def execute(self, inputs: Sequence[Entities], context: ExecutionContext) -> None:  # noqa: ARG002
         """Execute plugin"""
         self.context = context
+        # not in __init__: a second execute() on the same instance would otherwise report
+        # the sum of both runs
+        self.shapes_count = 0
         self.update_execution_report()
         self.client = Client.from_context(context=context)
         graphs_list = self._get_graphs_list()
@@ -921,11 +1137,18 @@ class ShapesPlugin(WorkflowPlugin):
         self.shapes_graph = self.init_shapes_graph()
         self.dp_api_endpoint = self.client.config.url_explore_api
         self.create_shapes()
+        with suppress(AttributeError):
+            if context.workflow.status() == "Canceling":
+                return
 
         if self.existing_graph != "add":
             now = self.create_graph()
         else:
             self.graphs_list = graphs_list
+            # The existence check only decides the bookkeeping - dcterms:created for a new
+            # catalog, dcterms:modified for one being added to. The write itself merges
+            # either way, so a catalog created between the check and here is added to, as
+            # the user asked, rather than failing on a FAIL policy.
             if self.shapes_graph_iri in self.graphs_list:
                 now = self.add_to_graph()
             else:

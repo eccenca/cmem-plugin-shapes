@@ -12,14 +12,35 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Node and property shapes now get `sh:description` from the description Corporate Memory resolves for the class or property - its `rdfs:comment`, `dcterms:description` or `skos:definition`, wherever the class or property is defined, so descriptions from a vocabulary graph are picked up as well as those in the data graph
 - Property shapes now get `sh:datatype rdf:langString` when the data graph uses the property with a language-tagged literal
 - Parameter to omit the trailing namespace prefix (e.g. `(rdfs:)`) from property shape names
-- Parameter to declare with `shui:managedClasses` which classes the shape catalog manages
-- Parameter to import the query catalog into the shape catalog with `owl:imports`
-- Parameter to add the `foaf:depiction` of a target class to its node shape, looked up in the
-  data graph and in the graph named by the class namespace, with and without its trailing
-  separator
+- Actions "Get classes" and "Get properties", which list what the input data graph holds as
+  one IRI per line, to be pasted into the two ignore parameters
+- The shape catalog now declares with `shui:managedClasses` which classes it manages, which
+  a new parameter can switch off
+- A node shape now gets the `foaf:depiction` of its target class, looked up in the data graph
+  and in the graph named by the class namespace, with and without its trailing separator, which
+  a new parameter can switch off
 
 ### Fixed
 
+- Shape names use the shortest prefix a namespace offers rather than the alphabetically
+  first one, so the XML Schema namespace is no longer written as `xds:`, a typo entry in
+  the prefix database, and `prov:`, `sdo:` and `dcterms:` win over their longer variants
+- An untagged description from a vocabulary is written untagged, instead of being claimed
+  as English
+- An inverse property shape no longer carries the description of the forward property,
+  which said the opposite of what the shape holds
+- Classes and properties that are blank nodes are skipped instead of aborting the run
+- A property used with both literal and IRI values gets the same shape on every run; the
+  query it comes from was unordered, so the store could decide it
+- A name the deployment builds from an IRI is no longer split on an underscore, which
+  crashed on names without one and truncated names with one
+- Adding to a catalog replaces a shape's name, label and description rather than leaving
+  the earlier run's beside them, and the classes a catalog declares can be withdrawn again
+- Adding to a catalog streams the shapes, so a large graph no longer exceeds the request
+  size the single update it used to build was subject to
+- Values written into the provenance graph are escaped
+- Cancelling a workflow now stops the task before it writes, and progress is reported while
+  it runs rather than only at the end
 - Shape labels and names are tagged with the language they were actually resolved in.
   They were tagged `@en` whatever came back, so a vocabulary with no English label
   produced a foreign-language label claiming to be English. A name derived from the IRI,
@@ -43,6 +64,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - The shape catalog label is now an advanced parameter, since leaving it empty names a new
   catalog and preserves the name of an existing one
 - The choices for handling an existing catalog explain themselves in the dropdown
+- The task documentation describes what adding to a catalog now replaces, says which class
+  decides a shared property shape, and notes that blank node classes are skipped and that an
+  inverse property shape carries no description
+- The depiction option says that a class depicted more than once contributes one depiction,
+  and the same one on every run
+- The central catalog option no longer claims that unimported shapes are "never activated" -
+  what it can say is that they are not picked up
 
 ## [4.4.0] 2026-08-20
 
