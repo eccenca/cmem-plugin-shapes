@@ -468,19 +468,18 @@ def test_omit_namespace_addon(graph_setup: GraphSetupFixture, client: Client) ->
     assert node_labels == {"Person (foaf:)", "Dataset (void:)"}
 
 
-def test_lang_string_datatype_not_added_to_iri_property_shape(
+def test_node_kind_of_a_property_used_both_ways(
     graph_setup: GraphSetupFixture, client: Client
 ) -> None:
-    """Test sh:datatype rdf:langString is never combined with sh:nodeKind sh:IRI
+    """Test the one shape of a mixed use property is described consistently
 
-    A property might be used as an object/IRI value under one class and as a
-    language-tagged literal under another. The property shape is created once,
-    keyed by the property IRI, so sh:datatype must only be added when the
-    occurrence that wins the shape (and decides sh:nodeKind) is itself a
-    language-tagged literal - the two must never appear together.
+    A property may carry an IRI under one class and a language-tagged literal under
+    another. There is one property shape, keyed by the property IRI, so it can only
+    describe one of the two uses - and whichever it describes, sh:nodeKind and
+    sh:datatype have to agree. sh:IRI with rdf:langString would satisfy nothing.
     """
     insert_query = f"""
-    PREFIX ex: <http://example.com/>
+    PREFIX ex: <http://example.com/shapes-test/>
     INSERT DATA {{
         GRAPH <{graph_setup.dataset_iri}> {{
             ex:Widget1 a ex:Widget ;
@@ -491,25 +490,30 @@ def test_lang_string_datatype_not_added_to_iri_property_shape(
     }}"""
     client.store.sparql.update(query=insert_query)
 
-    plugin = ShapesPlugin(
+    ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
         existing_graph=EXISTING_GRAPH_REPLACE,
         import_shapes=False,
         prefix_cc=False,
-    )
-    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
 
-    property_shape = next(
-        result_graph.subjects(predicate=SH.path, object=URIRef("http://example.com/relatedTo"))
+    shape = next(
+        result_graph.subjects(
+            predicate=SH.path, object=URIRef("http://example.com/shapes-test/relatedTo")
+        ),
+        None,
     )
-    node_kinds = set(result_graph.objects(subject=property_shape, predicate=SH.nodeKind))
-    datatypes = set(result_graph.objects(subject=property_shape, predicate=SH.datatype))
-    assert not (SH.IRI in node_kinds and RDF.langString in datatypes), (
-        f"property shape must not combine sh:nodeKind sh:IRI with sh:datatype rdf:langString, "
-        f"got nodeKind={node_kinds} datatype={datatypes}"
-    )
+    assert shape is not None, "no property shape was generated for ex:relatedTo"
+    node_kinds = set(result_graph.objects(subject=shape, predicate=SH.nodeKind))
+    datatypes = set(result_graph.objects(subject=shape, predicate=SH.datatype))
+
+    assert node_kinds in ({SH.IRI}, {SH.Literal}), node_kinds
+    if node_kinds == {SH.IRI}:
+        assert not datatypes, f"sh:IRI cannot carry a datatype, got {datatypes}"
+    else:
+        assert datatypes <= {RDF.langString}, datatypes
 
 
 def test_description_and_name_language_from_the_data_graph(
