@@ -70,3 +70,8 @@
   sh:datatype rdf:langString;
   sh:description "A human-readable name for the subject."@en;
   ns1:showAlways true .
+
+<http://docker.localhost/my-persons-shapes> ns1:managedClasses
+  sh:NodeShape, sh:PrefixDeclaration, sh:PropertyGroup, sh:PropertyShape,
+  sh:SPARQLConstraint, ns1:ChartVisualization, ns1:TableReport,
+  ns1:WidgetIntegration, ns1:WorkflowTrigger .

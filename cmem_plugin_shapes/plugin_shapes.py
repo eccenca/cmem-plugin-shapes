@@ -26,14 +26,13 @@ from cmem_plugin_base.dataintegration.parameter.multiline import MultilineString
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import BoolParameterType, StringParameterType
-from rdflib import DCTERMS, FOAF, OWL, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
+from rdflib import DCTERMS, FOAF, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
 
 from . import __path__
 
 SHUI = Namespace("https://vocab.eccenca.com/shui/")
 PREFIX_CC = "https://prefix.cc/popular/all.file.json"
-QUERY_CATALOG = URIRef("https://ns.eccenca.com/data/queries/")
 MANAGED_CLASSES = (
     SH.NodeShape,
     SH.PrefixDeclaration,
@@ -105,8 +104,10 @@ it is defined, so a vocabulary graph counts as well as the data graph. A class o
 property that nothing describes gets no `sh:description`.
 
 Every property shape carries `shui:showAlways`, and a shape for the object ← subject
-direction carries `shui:inversePath` as well. The catalog itself records the data graph it
-was generated from and when it was written.
+direction carries `shui:inversePath` as well. A node shape carries the `foaf:depiction` of
+its target class wherever the data graph or the class's own vocabulary offers one. The
+catalog itself records the data graph it was generated from, when it was written, and the
+classes it manages.
 
 ## Caveats
 
@@ -202,8 +203,8 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
             name="import_shapes",
             label="Import into the central shape catalog",
             description="If enabled, the generated catalog is imported into the central shape "
-            "catalog by adding an `owl:imports` statement to it. Shapes in a catalog that is not "
-            "imported are never activated and never used.",
+            "catalog by adding an `owl:imports` statement to it. Shapes in a catalog the "
+            "central one does not import are not picked up.",
         ),
         PluginParameter(
             param_type=BoolParameterType(),
@@ -252,20 +253,14 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
         ),
         PluginParameter(
             param_type=BoolParameterType(),
-            name="query_catalog",
-            label="Import the query catalog",
-            description="If enabled, the shape catalog imports the query catalog with an "
-            "`owl:imports` statement, so the stored queries are visible from it.",
-            advanced=True,
-        ),
-        PluginParameter(
-            param_type=BoolParameterType(),
             name="depictions",
             label="Add depictions to node shapes",
             description="If enabled, a node shape is given the `foaf:depiction` of its target "
             "class, where one can be found. The class is looked up in the data graph and in the "
             "graph named by its own namespace, tried both with and without the trailing "
-            "separator, because the graph a vocabulary was loaded into is not recorded anywhere.",
+            "separator, because the graph a vocabulary was loaded into is not recorded anywhere. "
+            "A class depicted more than once contributes one of its depictions, the same one on "
+            "every run.",
             advanced=True,
         ),
         PluginParameter(
@@ -296,9 +291,8 @@ class ShapesPlugin(WorkflowPlugin):
         ignore_types: str = "",
         plugin_provenance: bool = False,
         omit_namespace_addon: bool = False,
-        managed_classes: bool = False,
-        query_catalog: bool = False,
-        depictions: bool = False,
+        managed_classes: bool = True,
+        depictions: bool = True,
     ) -> None:
         if not validators.url(data_graph_iri):
             raise ValueError("Invalid value for parameter 'Input data graph'")
@@ -342,7 +336,6 @@ class ShapesPlugin(WorkflowPlugin):
         self.plugin_provenance = plugin_provenance
         self.omit_namespace_addon = omit_namespace_addon
         self.managed_classes = managed_classes
-        self.query_catalog = query_catalog
         self.depictions = depictions
 
         self.shapes_count = 0
@@ -449,8 +442,6 @@ class ShapesPlugin(WorkflowPlugin):
                 URIRef(self.data_graph_iri),
             )
         )
-        if self.query_catalog:
-            shapes_graph.add((URIRef(self.shapes_graph_iri), OWL.imports, QUERY_CATALOG))
         if self.managed_classes:
             for managed_class in MANAGED_CLASSES:
                 shapes_graph.add(

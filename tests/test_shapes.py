@@ -10,7 +10,7 @@ import pytest
 from cmem_client.client import Client
 from cmem_client.repositories.graphs import GraphExportConfig, GraphsRepository
 from cmem_plugin_base.testing import TestExecutionContext
-from rdflib import DCTERMS, FOAF, OWL, RDF, RDFS, SH, SKOS, Graph, Literal, URIRef
+from rdflib import DCTERMS, FOAF, RDF, RDFS, SH, SKOS, Graph, Literal, URIRef
 from rdflib.compare import isomorphic
 from rdflib.term import Node
 
@@ -24,7 +24,6 @@ from cmem_plugin_shapes.plugin_shapes import (
     EXISTING_GRAPH_REPLACE,
     EXISTING_GRAPH_STOP,
     MANAGED_CLASSES,
-    QUERY_CATALOG,
     SHUI,
     ShapesPlugin,
 )
@@ -160,15 +159,15 @@ def graph_setup(add_to_graph: bool) -> Generator[GraphSetupFixture, Any]:
 def normalize(graph: Graph) -> Graph:
     """Drop everything in a shape graph that the deployment rather than the plugin decides
 
-    `sh:description`, and the language tag on a name or label, come from the description
-    and title helpers of whichever deployment the tests run against, so they follow the
+    `sh:description` and `foaf:depiction`, and the language tag on a name or label, are
+    resolved against whichever deployment the tests run against, so they follow the
     vocabularies that deployment happens to have loaded. Comparing them would pin these
     fixtures to one instance. What the plugin itself decides - the shapes, their IRIs,
     paths, node kinds and the name strings - is compared in full.
     """
     normalized = Graph()
     for subject, predicate, object_ in graph:
-        if predicate == SH.description:
+        if predicate in (SH.description, FOAF.depiction):
             continue
         if predicate in (SH.name, RDFS.label) and isinstance(object_, Literal) and object_.language:
             object_ = Literal(str(object_))  # noqa: PLW2901
@@ -588,31 +587,10 @@ def test_namespace_graphs_skips_an_unsplittable_iri() -> None:
     assert ShapesPlugin.namespace_graphs([]) == []
 
 
-def test_managed_classes_and_query_catalog(graph_setup: GraphSetupFixture, client: Client) -> None:
-    """Test the catalog declares its managed classes and imports the query catalog"""
-    plugin = ShapesPlugin(
-        data_graph_iri=graph_setup.dataset_iri,
-        shapes_graph_iri=graph_setup.shapes_iri,
-        existing_graph=EXISTING_GRAPH_REPLACE,
-        import_shapes=False,
-        prefix_cc=False,
-        managed_classes=True,
-        query_catalog=True,
-    )
-    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
-    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
-
-    catalog = URIRef(graph_setup.shapes_iri)
-    assert set(result_graph.objects(subject=catalog, predicate=SHUI.managedClasses)) == set(
-        MANAGED_CLASSES
-    )
-    assert set(result_graph.objects(subject=catalog, predicate=OWL.imports)) == {QUERY_CATALOG}
-
-
-def test_managed_classes_and_query_catalog_are_off_by_default(
+def test_managed_classes_are_declared_by_default(
     graph_setup: GraphSetupFixture, client: Client
 ) -> None:
-    """Test neither catalog statement is written unless it is asked for"""
+    """Test the catalog declares the classes it manages without being asked to"""
     ShapesPlugin(
         data_graph_iri=graph_setup.dataset_iri,
         shapes_graph_iri=graph_setup.shapes_iri,
@@ -622,13 +600,30 @@ def test_managed_classes_and_query_catalog_are_off_by_default(
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
 
-    catalog = URIRef(graph_setup.shapes_iri)
-    assert not set(result_graph.objects(subject=catalog, predicate=SHUI.managedClasses))
-    assert not set(result_graph.objects(subject=catalog, predicate=OWL.imports))
+    assert set(
+        result_graph.objects(subject=URIRef(graph_setup.shapes_iri), predicate=SHUI.managedClasses)
+    ) == set(MANAGED_CLASSES)
+
+
+def test_managed_classes_can_be_turned_off(graph_setup: GraphSetupFixture, client: Client) -> None:
+    """Test no managed class is declared when the option is switched off"""
+    ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+        managed_classes=False,
+    ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+
+    assert not set(
+        result_graph.objects(subject=URIRef(graph_setup.shapes_iri), predicate=SHUI.managedClasses)
+    )
 
 
 def test_depiction_from_the_data_graph(graph_setup: GraphSetupFixture, client: Client) -> None:
-    """Test a node shape is given the foaf:depiction of its target class
+    """Test a node shape is given the foaf:depiction of its target class, without being asked
 
     The class is owned by this test, and a second class without a depiction is typed
     alongside it to show that a node shape only gets one where there is something to find.
@@ -653,7 +648,6 @@ def test_depiction_from_the_data_graph(graph_setup: GraphSetupFixture, client: C
         existing_graph=EXISTING_GRAPH_REPLACE,
         import_shapes=False,
         prefix_cc=False,
-        depictions=True,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
 
@@ -668,8 +662,8 @@ def test_depiction_from_the_data_graph(graph_setup: GraphSetupFixture, client: C
     assert not set(result_graph.objects(subject=gadget_shape, predicate=FOAF.depiction))
 
 
-def test_depictions_are_off_by_default(graph_setup: GraphSetupFixture, client: Client) -> None:
-    """Test no depiction is written unless it is asked for"""
+def test_depictions_can_be_turned_off(graph_setup: GraphSetupFixture, client: Client) -> None:
+    """Test no depiction is written when the option is switched off"""
     insert_query = f"""
     PREFIX ex: <http://example.com/shapes-test/>
     PREFIX foaf: <http://xmlns.com/foaf/0.1/>
@@ -688,6 +682,7 @@ def test_depictions_are_off_by_default(graph_setup: GraphSetupFixture, client: C
         existing_graph=EXISTING_GRAPH_REPLACE,
         import_shapes=False,
         prefix_cc=False,
+        depictions=False,
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
     assert not set(result_graph.subject_objects(predicate=FOAF.depiction))
