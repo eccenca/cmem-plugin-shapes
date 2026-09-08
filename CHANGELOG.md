@@ -22,7 +22,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Changed
 
-- Updated project template to v9.7.0 (cmem-client 1.1.0, ruff 0.16.5)
+- Updated project template to v9.7.0 (cmem-client 1.1.0, ruff 0.16.6)
 - Labels and descriptions are now resolved with one batched request each instead of one
   request per class and property, so generating shapes for a large graph is faster
 - Task documentation rewritten: it now says what is generated, what each shape carries, and

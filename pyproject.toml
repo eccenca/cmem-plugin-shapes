@@ -30,6 +30,8 @@ version = "^4.20.0"
 allow-prereleases = false
 
 [tool.poetry.group.dev.dependencies.cmem-cmemc]
+# not ^25: cmemc 25 passes an empty string as a click colour, which click 8.5
+# rejects with `ValueError: Unknown color ''`. cmemc 26 maps it to None.
 version = ">=24.2.0"
 
 [tool.poetry.group.dev.dependencies]
