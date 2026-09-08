@@ -4,7 +4,6 @@ import os
 import re
 from collections.abc import Generator
 from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
@@ -15,6 +14,8 @@ from rdflib import DCTERMS, RDF, RDFS, SH, SKOS, Graph, Literal, URIRef
 from rdflib.compare import isomorphic
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from rdflib.query import ResultRow
 
 from cmem_plugin_shapes.plugin_shapes import (
@@ -104,23 +105,52 @@ def add_to_graph() -> bool:
     return False
 
 
+def remove_test_assets(setup: GraphSetupFixture) -> None:
+    """Remove what these tests create and nothing else
+
+    Run before a test as well as after it. A crashed run leaves its project and graphs
+    behind, and without the call up front every later run would fail at setup on the
+    leftovers.
+    """
+    run_without_assertion(["graph", "delete", setup.dataset_iri])
+    run_without_assertion(["graph", "delete", setup.shapes_iri])
+    run_without_assertion(["project", "delete", setup.project_name])
+    # The central shape catalog is a shared graph that exists independently of these
+    # tests, so it is never deleted - only the one import statement test_import_shapes
+    # has the plugin add to it.
+    Client.from_env().store.sparql.update(
+        query=f"""
+        PREFIX owl: <http://www.w3.org/2002/07/owl#>
+        DELETE DATA {{
+            GRAPH <{setup.catalog_iri}> {{
+                <{setup.catalog_iri}> owl:imports <{setup.shapes_iri}> .
+            }}
+        }}"""
+    )
+
+
 @pytest.fixture
-def graph_setup(tmp_path: Path, add_to_graph: bool) -> Generator[GraphSetupFixture, Any]:
-    """Graph setup fixture"""
+def graph_setup(add_to_graph: bool) -> Generator[GraphSetupFixture, Any]:
+    """Graph setup fixture
+
+    Creates the data graph, the project and, for the "add to graph" tests, a shape
+    catalog to add to - then removes exactly those again.
+
+    This deliberately does not snapshot and restore the whole store, which is what it
+    used to do. That worked, but it reverted the deployment to the state it had when the
+    test started, discarding whatever anything else had written in the meantime. On the
+    shared instance the pipeline uses, that is a large blast radius for a test suite.
+    """
     if os.environ.get("CMEM_BASE_URI", "") == "":
         pytest.skip("Needs CMEM configuration")
-    # make backup and delete all GRAPHS
     _ = GraphSetupFixture()
-    export_zip = str(tmp_path / "export.store.zip")
-    run(["admin", "store", "export", export_zip])
+    remove_test_assets(_)
     run(["graph", "import", "--replace", _.dataset_file, _.dataset_iri])
     if add_to_graph:
         run(["graph", "import", "--replace", _.shapes_file_add_init, _.shapes_iri])
-    run_without_assertion(["project", "delete", _.project_name])
     run(["project", "create", _.project_name])
     yield _
-    # remove test GRAPHS
-    run(["admin", "store", "import", export_zip])
+    remove_test_assets(_)
 
 
 def normalize(graph: Graph) -> Graph:
