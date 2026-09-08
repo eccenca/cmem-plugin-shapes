@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 from cmem_client.client import Client
 from cmem_client.repositories.graphs import GraphExportConfig, GraphsRepository
-from cmem_plugin_base.testing import TestExecutionContext
+from cmem_plugin_base.testing import TestExecutionContext, TestPluginContext
 from rdflib import DCTERMS, FOAF, RDF, RDFS, SH, SKOS, Graph, Literal, URIRef
 from rdflib.compare import isomorphic
 from rdflib.term import Node
@@ -686,6 +686,50 @@ def test_depictions_can_be_turned_off(graph_setup: GraphSetupFixture, client: Cl
     ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
     result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
     assert not set(result_graph.subject_objects(predicate=FOAF.depiction))
+
+
+def test_get_classes_and_get_properties_actions(graph_setup: GraphSetupFixture) -> None:
+    """Test both actions list what the data graph holds, ready for the ignore parameters
+
+    Neither ignore list is applied: rdf:type is the default of Properties to ignore and
+    still has to be offered, or the action could not explain the default it is up against.
+    """
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    context = TestPluginContext(project_id=graph_setup.project_name)
+
+    classes = plugin.get_classes(context)
+    assert "http://xmlns.com/foaf/0.1/Person" in classes
+    assert "http://rdfs.org/ns/void#Dataset" in classes
+    assert "```" in classes, "the listing has to be a code block to survive Markdown rendering"
+
+    properties = plugin.get_properties(context)
+    for iri in (
+        "http://xmlns.com/foaf/0.1/knows",
+        "http://xmlns.com/foaf/0.1/familyName",
+        "http://www.w3.org/2000/01/rdf-schema#label",
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+    ):
+        assert iri in properties, iri
+
+
+def test_actions_report_an_empty_graph(graph_setup: GraphSetupFixture) -> None:
+    """Test an action says so rather than returning an empty code block"""
+    plugin = ShapesPlugin(
+        data_graph_iri="http://example.com/shapes-test/a-graph-that-holds-nothing",
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    context = TestPluginContext(project_id=graph_setup.project_name)
+    assert plugin.get_classes(context).startswith("No class found")
+    assert plugin.get_properties(context).startswith("No property found")
 
 
 def test_ignore_types_and_properties() -> None:

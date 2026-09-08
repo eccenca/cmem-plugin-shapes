@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Node and property shapes now get `sh:description` from the description Corporate Memory resolves for the class or property - its `rdfs:comment`, `dcterms:description` or `skos:definition`, wherever the class or property is defined, so descriptions from a vocabulary graph are picked up as well as those in the data graph
 - Property shapes now get `sh:datatype rdf:langString` when the data graph uses the property with a language-tagged literal
 - Parameter to omit the trailing namespace prefix (e.g. `(rdfs:)`) from property shape names
+- Actions "Get classes" and "Get properties", which list what the input data graph holds as
+  one IRI per line, to be pasted into the two ignore parameters
 - The shape catalog now declares with `shui:managedClasses` which classes it manages, which
   a new parameter can switch off
 - A node shape now gets the `foaf:depiction` of its target class, looked up in the data graph

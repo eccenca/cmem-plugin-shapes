@@ -17,8 +17,18 @@ from uuid import NAMESPACE_URL, uuid5
 import validators.url
 from cmem_client.client import Client
 from cmem_client.repositories.graphs import ImportConflictPolicy
-from cmem_plugin_base.dataintegration.context import ExecutionContext, ExecutionReport
-from cmem_plugin_base.dataintegration.description import Icon, Plugin, PluginParameter
+from cmem_plugin_base.dataintegration.client import get_client
+from cmem_plugin_base.dataintegration.context import (
+    ExecutionContext,
+    ExecutionReport,
+    PluginContext,
+)
+from cmem_plugin_base.dataintegration.description import (
+    Icon,
+    Plugin,
+    PluginAction,
+    PluginParameter,
+)
 from cmem_plugin_base.dataintegration.entity import Entities
 from cmem_plugin_base.dataintegration.parameter.choice import ChoiceParameterType
 from cmem_plugin_base.dataintegration.parameter.graph import GraphParameterType
@@ -273,6 +283,20 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
             advanced=True,
         ),
     ],
+    actions=[
+        PluginAction(
+            name="get_classes",
+            label="Get classes",
+            description="Lists the classes used in the input data graph, one IRI per line, "
+            "ready to paste into Classes to ignore.",
+        ),
+        PluginAction(
+            name="get_properties",
+            label="Get properties",
+            description="Lists the properties used in the input data graph, one IRI per line, "
+            "ready to paste into Properties to ignore.",
+        ),
+    ],
 )
 class ShapesPlugin(WorkflowPlugin):
     """SHACL shapes generation plugin"""
@@ -431,6 +455,49 @@ class ShapesPlugin(WorkflowPlugin):
         """
         lang = title_record.get("lang")
         return Literal(name, lang=lang) if lang else Literal(name)
+
+    def _iri_list(self, context: PluginContext, query: str, name: str) -> str:
+        """Run a SELECT returning one variable of IRIs and render it for the action panel
+
+        The result is a fenced code block rather than a plain list: the panel renders
+        Markdown, which would run bare lines together into one paragraph, and a block is
+        what a user can copy into one of the two ignore parameters unchanged.
+        """
+        # An action is handed its own context, and execute() has not run, so there is no
+        # client on the instance yet.
+        self.client = get_client(context)
+        bindings = json.loads(self._post_sparql(query=query))["results"]["bindings"]
+        iris = sorted({binding[name]["value"] for binding in bindings})
+        if not iris:
+            return f"No {name} found in <{self.data_graph_iri}>."
+        listing = "\n".join(iris)
+        return f"{len(iris)} {name} found in <{self.data_graph_iri}>:\n\n```\n{listing}\n```"
+
+    def get_classes(self, context: PluginContext) -> str:
+        """List the classes used in the input data graph"""
+        query = f"""
+        SELECT DISTINCT ?class
+        FROM <{self.data_graph_iri}> {{
+            ?subject a ?class .
+        }}"""  # noqa: S608
+        return self._iri_list(context, query, "class")
+
+    def get_properties(self, context: PluginContext) -> str:
+        """List the properties used in the input data graph
+
+        The two alternatives are the ones get_class_dict draws property shapes from - a
+        property of a typed subject, and a property pointing at a typed object - so what is
+        listed is what the ignore parameter can actually act on. Neither ignore list is
+        applied, since the point is to find out what to put in them.
+        """
+        query = f"""
+        SELECT DISTINCT ?property
+        FROM <{self.data_graph_iri}> {{
+            {{ ?subject a ?class . ?subject ?property ?object }}
+        UNION
+            {{ ?object a ?class . ?subject ?property ?object }}
+        }}"""  # noqa: S608
+        return self._iri_list(context, query, "property")
 
     def init_shapes_graph(self) -> Graph:
         """Initialize SHACL shapes graph"""
