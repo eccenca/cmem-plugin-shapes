@@ -62,4 +62,5 @@
   sh:nodeKind sh:Literal;
   sh:path rdfs:label;
   sh:datatype rdf:langString;
+  sh:description "A human-readable name for the subject."@en;
   ns1:showAlways true .

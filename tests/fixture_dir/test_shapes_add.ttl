@@ -63,6 +63,7 @@
   sh:nodeKind sh:Literal;
   sh:path rdfs:label;
   sh:datatype rdf:langString;
+  sh:description "A human-readable name for the subject."@en;
   ns1:showAlways true .
 
 <http://docker.localhost/my-persons-shapes/da1b0b28-9c51-55c3-a963-2337006693de> a

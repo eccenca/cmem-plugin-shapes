@@ -25,14 +25,13 @@ from cmem_plugin_base.dataintegration.parameter.multiline import MultilineString
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import BoolParameterType, StringParameterType
-from rdflib import DCTERMS, RDF, RDFS, SH, SKOS, XSD, Graph, Literal, Namespace, URIRef
+from rdflib import DCTERMS, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
 
 from . import __path__
 
 SHUI = Namespace("https://vocab.eccenca.com/shui/")
 PREFIX_CC = "https://prefix.cc/popular/all.file.json"
-DESCRIPTION_PREDICATES = (RDFS.comment, DCTERMS.description, SKOS.definition)
 PLUGIN_LABEL = "Generate SHACL shapes from data"
 TRUE_SET = {"yes", "true", "t", "y", "1"}
 FALSE_SET = {"no", "false", "f", "n", "0"}
@@ -92,12 +91,21 @@ The generated shapes are written to a shape catalog graph with:
 
 - Unique URIs based on UUIDs (UUID5 derived from class/property IRIs)
 - Human-readable labels and names (using namespace prefixes when available)
-- `sh:description` on a property shape, taken from the property's `rdfs:comment`,
-  `dcterms:description` or `skos:definition` in the data graph, when present
+- `sh:description` on a property shape, taken from the description eccenca Corporate
+  Memory resolves for that property - its `rdfs:comment`, `dcterms:description` or
+  `skos:definition`, looked up wherever the property is defined, so a vocabulary graph
+  counts as well as the data graph. A property nothing describes anywhere gets no
+  `sh:description`.
 - `sh:datatype rdf:langString` on a property shape, when the data graph uses the
   property with a language-tagged literal
 - Metadata including source data graph reference and timestamps
 - Optional plugin provenance information (see advanced options)
+
+Labels, names and descriptions are requested in English. Where a vocabulary offers no
+English text, Corporate Memory answers in whatever language it does have. A description
+then carries that language as its tag, but a label is written with an `@en` tag
+regardless, so a vocabulary described only in German produces German labels tagged as
+English.
 
 ## Example
 
@@ -318,14 +326,27 @@ class ShapesPlugin(WorkflowPlugin):
 
         return {k: tuple(v) for k, v in prefixes.items()}
 
-    def get_name(self, iri: str, *, include_namespace: bool = True) -> str:
-        """Generate shape name from IRI"""
-        url = self.client.config.url_explore_api / f"/api/explore/title?resource={quote_plus(iri)}"
-        headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        response = self.client.http.get(url=url, headers=headers)
-        response.raise_for_status()
-        results = response.json()
+    def resolve(self, endpoint: str, iris: list[str]) -> dict[str, dict]:
+        """Resolve IRIs with one of the explore API helpers
 
+        ``endpoint`` is "titles" or "descriptions". Both take a JSON array of IRIs
+        and answer with a mapping of IRI to a record carrying "title" (the resolved
+        text), "lang" and "fromIri". No langPrefs is sent, so the deployment answers
+        in its default language, English. The descriptions helper leaves an IRI out
+        of the mapping entirely when it knows no description for it, while the titles
+        helper always answers, falling back to a title built from the IRI itself.
+        """
+        if not iris:
+            return {}
+        url = self.client.config.url_explore_api / f"/api/explore/{endpoint}"
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        response = self.client.http.post(url=url, headers=headers, json=iris)
+        response.raise_for_status()
+        return cast("dict[str, dict]", response.json())
+
+    def get_name(self, iri: str, title_record: dict, *, include_namespace: bool = True) -> str:
+        """Generate shape name from IRI and its resolved title"""
+        results = title_record
         title: str = results["title"]
         try:
             namespace, _ = split_uri(iri)
@@ -360,24 +381,6 @@ class ShapesPlugin(WorkflowPlugin):
             )
         )
         return shapes_graph
-
-    @staticmethod
-    def select_description(values_by_predicate: dict[str, list[dict]]) -> Literal | None:
-        """Pick a description from grouped rdfs:comment/dcterms:description/skos:definition values
-
-        ``values_by_predicate`` maps a predicate IRI (str) to the list of SPARQL JSON
-        binding value dicts found for it (each with a "value" key and an optional
-        "xml:lang" key). Predicates are tried in `DESCRIPTION_PREDICATES` order; within
-        a predicate's values, an "en"-tagged value is preferred, otherwise the first
-        value found is used.
-        """
-        for predicate in DESCRIPTION_PREDICATES:
-            values = values_by_predicate.get(str(predicate))
-            if not values:
-                continue
-            chosen = next((v for v in values if v.get("xml:lang") == "en"), values[0])
-            return Literal(chosen["value"], lang=chosen.get("xml:lang"))
-        return None
 
     @staticmethod
     def properties_with_lang_string(class_dict: dict) -> set[str]:
@@ -445,31 +448,12 @@ class ShapesPlugin(WorkflowPlugin):
             )
         return class_dict
 
-    def get_descriptions(self) -> dict[str, Literal]:
-        """Fetch property descriptions from rdfs:comment, dcterms:description, skos:definition"""
-        predicates = " UNION ".join(
-            f"{{ ?property <{predicate}> ?value . BIND(<{predicate}> AS ?predicate) }}"
-            for predicate in DESCRIPTION_PREDICATES
-        )
-        query = f"""
-        SELECT ?property ?predicate ?value
-        FROM <{self.data_graph_iri}> {{
-            {predicates}
-            FILTER(isLiteral(?value))
-        }}"""  # noqa: S608
-
-        results = json.loads(self._post_sparql(query=query))
-
-        by_property: dict[str, dict[str, list[dict]]] = {}
-        for binding in results["results"]["bindings"]:
-            by_predicate = by_property.setdefault(binding["property"]["value"], {})
-            by_predicate.setdefault(binding["predicate"]["value"], []).append(binding["value"])
-
+    def get_descriptions(self, iris: list[str]) -> dict[str, Literal]:
+        """Fetch property descriptions with the description helper of the explore API"""
         descriptions = {}
-        for property_iri, values_by_predicate in by_property.items():
-            description = self.select_description(values_by_predicate)
-            if description is not None:
-                descriptions[property_iri] = description
+        for iri, record in self.resolve("descriptions", iris).items():
+            lang = record.get("lang") or "en"
+            descriptions[iri] = Literal(record["title"], lang=lang)
         return descriptions
 
     def create_shapes(self) -> None:
@@ -478,7 +462,14 @@ class ShapesPlugin(WorkflowPlugin):
         prop_uuids = set()
         class_dict = self.get_class_dict()
         lang_string_properties = self.properties_with_lang_string(class_dict)
-        descriptions = self.get_descriptions()
+        property_iris = sorted(
+            {prop["property"] for properties in class_dict.values() for prop in properties}
+        )
+        # One batched helper call each, rather than one request per IRI from inside
+        # the loop below. Titles are needed for classes as well, descriptions only
+        # for properties, since a node shape carries no sh:description.
+        titles = self.resolve("titles", sorted(set(class_dict)) + property_iris)
+        descriptions = self.get_descriptions(property_iris)
         for cls, properties in class_dict.items():
             class_uuid = uuid5(NAMESPACE_URL, cls)
             node_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{class_uuid}")
@@ -487,7 +478,7 @@ class ShapesPlugin(WorkflowPlugin):
                 self.shapes_count += 1
                 self.shapes_graph.add((node_shape_uri, RDF.type, SH.NodeShape))
                 self.shapes_graph.add((node_shape_uri, SH.targetClass, URIRef(cls)))
-                name = self.get_name(cls)
+                name = self.get_name(cls, titles[cls])
                 self.shapes_graph.add((node_shape_uri, SH.name, Literal(name, lang="en")))
                 self.shapes_graph.add((node_shape_uri, RDFS.label, Literal(name, lang="en")))
                 class_uuids.add(class_uuid)
@@ -500,7 +491,9 @@ class ShapesPlugin(WorkflowPlugin):
                 if prop_uuid not in prop_uuids:
                     self.shapes_count += 1
                     name = self.get_name(
-                        prop["property"], include_namespace=not self.omit_namespace_addon
+                        prop["property"],
+                        titles[prop["property"]],
+                        include_namespace=not self.omit_namespace_addon,
                     )
                     self.shapes_graph.add((property_shape_uri, RDF.type, SH.PropertyShape))
                     self.shapes_graph.add((property_shape_uri, SH.path, URIRef(prop["property"])))

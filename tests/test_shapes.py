@@ -348,49 +348,6 @@ def test_filter_creation() -> None:
         ShapesPlugin.iri_list_to_filter(iris=[rdf_type, rdfs_label], filter_="XX")
 
 
-def test_select_description_prefers_comment_over_description() -> None:
-    """Test select_description prefers rdfs:comment over dcterms:description"""
-    values_by_predicate = {
-        str(RDFS.comment): [{"value": "A comment"}],
-        str(DCTERMS.description): [{"value": "A description"}],
-    }
-    assert ShapesPlugin.select_description(values_by_predicate) == Literal("A comment")
-
-
-def test_select_description_falls_back_through_predicate_priority() -> None:
-    """Test select_description falls back to dcterms:description, then skos:definition"""
-    assert ShapesPlugin.select_description(
-        {str(DCTERMS.description): [{"value": "A description"}]}
-    ) == Literal("A description")
-    assert ShapesPlugin.select_description(
-        {str(SKOS.definition): [{"value": "A definition"}]}
-    ) == Literal("A definition")
-
-
-def test_select_description_prefers_en_language() -> None:
-    """Test select_description prefers an @en value when multiple languages exist"""
-    values_by_predicate = {
-        str(RDFS.comment): [
-            {"value": "Ein Kommentar", "xml:lang": "de"},
-            {"value": "A comment", "xml:lang": "en"},
-        ]
-    }
-    assert ShapesPlugin.select_description(values_by_predicate) == Literal("A comment", lang="en")
-
-
-def test_select_description_falls_back_to_any_language_when_no_en() -> None:
-    """Test select_description falls back to the first value when no @en is present"""
-    values_by_predicate = {str(RDFS.comment): [{"value": "Ein Kommentar", "xml:lang": "de"}]}
-    assert ShapesPlugin.select_description(values_by_predicate) == Literal(
-        "Ein Kommentar", lang="de"
-    )
-
-
-def test_select_description_returns_none_when_no_values() -> None:
-    """Test select_description returns None when nothing matches"""
-    assert ShapesPlugin.select_description({}) is None
-
-
 def test_properties_with_lang_string_detects_any_tagged_value() -> None:
     """Test properties_with_lang_string flags a property with at least one langString value"""
     class_dict = {

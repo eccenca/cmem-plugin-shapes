@@ -9,13 +9,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Added
 
-- Property shapes now get `sh:description` from the property's `rdfs:comment`, `dcterms:description` or `skos:definition` in the data graph, when present
+- Property shapes now get `sh:description` from the description Corporate Memory resolves for the property - its `rdfs:comment`, `dcterms:description` or `skos:definition`, wherever the property is defined, so descriptions from a vocabulary graph are picked up as well as those in the data graph
 - Property shapes now get `sh:datatype rdf:langString` when the data graph uses the property with a language-tagged literal
 - Parameter to omit the namespace addon (e.g. `(rdfs:)`) from property shape labels
 
 ### Changed
 
 - Updated project template to v9.7.0 (cmem-client 1.1.0, ruff 0.16.5)
+- Labels and descriptions are now resolved with one batched request each instead of one
+  request per class and property, so generating shapes for a large graph is faster
 - Task documentation now notes it has no input or output port, and parameter descriptions
   follow the eccenca Corporate Memory naming convention instead of the "CMEM" abbreviation
 
