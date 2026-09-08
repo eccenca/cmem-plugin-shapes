@@ -632,7 +632,8 @@ class ShapesPlugin(WorkflowPlugin):
                 BIND("false" AS ?data)
                 BIND("true" AS ?inverse)
             }}
-        }}"""  # noqa: S608
+        }}
+        ORDER BY ?class ?property ?inverse ?data ?lang"""  # noqa: S608
 
         results = json.loads(self._post_sparql(query=query))
 

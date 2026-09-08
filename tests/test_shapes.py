@@ -509,11 +509,11 @@ def test_node_kind_of_a_property_used_both_ways(
     node_kinds = set(result_graph.objects(subject=shape, predicate=SH.nodeKind))
     datatypes = set(result_graph.objects(subject=shape, predicate=SH.datatype))
 
-    assert node_kinds in ({SH.IRI}, {SH.Literal}), node_kinds
-    if node_kinds == {SH.IRI}:
-        assert not datatypes, f"sh:IRI cannot carry a datatype, got {datatypes}"
-    else:
-        assert datatypes <= {RDF.langString}, datatypes
+    # ex:Note sorts before ex:Widget and holds the literal, so the query's ORDER BY makes
+    # the literal use the one that decides the shape - the point being that it is decided
+    # by the data rather than by whatever order the store happened to answer in.
+    assert node_kinds == {SH.Literal}, node_kinds
+    assert datatypes == {RDF.langString}, datatypes
 
 
 def test_description_and_name_language_from_the_data_graph(
