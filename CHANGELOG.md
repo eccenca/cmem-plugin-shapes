@@ -13,6 +13,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Property shapes now get `sh:datatype rdf:langString` when the data graph uses the property with a language-tagged literal
 - Parameter to omit the namespace addon (e.g. `(rdfs:)`) from property shape labels
 
+### Fixed
+
+- Shape labels and names are tagged with the language they were actually resolved in.
+  They were tagged `@en` whatever came back, so a vocabulary with no English label
+  produced a foreign-language label claiming to be English. A name derived from the IRI,
+  which has no language, is now written without a tag
+
 ### Changed
 
 - Updated project template to v9.7.0 (cmem-client 1.1.0, ruff 0.16.5)

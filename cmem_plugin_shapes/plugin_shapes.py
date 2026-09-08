@@ -102,10 +102,10 @@ The generated shapes are written to a shape catalog graph with:
 - Optional plugin provenance information (see advanced options)
 
 Labels, names and descriptions are requested in English. Where a vocabulary offers no
-English text, Corporate Memory answers in whatever language it does have. A description
-then carries that language as its tag, but a label is written with an `@en` tag
-regardless, so a vocabulary described only in German produces German labels tagged as
-English.
+English text, Corporate Memory answers in whatever language it does have, and the
+generated literal carries that language as its tag rather than claiming to be English.
+A class or property the deployment knows nothing about falls back to a name derived
+from its IRI, which has no language at all and is written without a tag.
 
 ## Example
 
@@ -370,6 +370,19 @@ class ShapesPlugin(WorkflowPlugin):
                 title += f" ({prefix})"
         return title
 
+    @staticmethod
+    def name_literal(name: str, title_record: dict) -> Literal:
+        """Build the label literal for a name, tagged with the language it was found in
+
+        The titles helper reports the language of the text it resolved, and reports
+        none at all for a title it synthesized from the IRI itself (``fromIri``) or
+        for a vocabulary that left its label untagged. Neither of those has a
+        language, so they are written as plain literals rather than claimed to be
+        English.
+        """
+        lang = title_record.get("lang")
+        return Literal(name, lang=lang) if lang else Literal(name)
+
     def init_shapes_graph(self) -> Graph:
         """Initialize SHACL shapes graph"""
         shapes_graph = Graph().add((URIRef(self.shapes_graph_iri), RDF.type, SHUI.ShapeCatalog))
@@ -478,9 +491,9 @@ class ShapesPlugin(WorkflowPlugin):
                 self.shapes_count += 1
                 self.shapes_graph.add((node_shape_uri, RDF.type, SH.NodeShape))
                 self.shapes_graph.add((node_shape_uri, SH.targetClass, URIRef(cls)))
-                name = self.get_name(cls, titles[cls])
-                self.shapes_graph.add((node_shape_uri, SH.name, Literal(name, lang="en")))
-                self.shapes_graph.add((node_shape_uri, RDFS.label, Literal(name, lang="en")))
+                class_name = self.name_literal(self.get_name(cls, titles[cls]), titles[cls])
+                self.shapes_graph.add((node_shape_uri, SH.name, class_name))
+                self.shapes_graph.add((node_shape_uri, RDFS.label, class_name))
                 class_uuids.add(class_uuid)
 
             for prop in properties:
@@ -521,10 +534,9 @@ class ShapesPlugin(WorkflowPlugin):
                             )
                         )
                         name = "← " + name
-                    self.shapes_graph.add((property_shape_uri, SH.name, Literal(name, lang="en")))
-                    self.shapes_graph.add(
-                        (property_shape_uri, RDFS.label, Literal(name, lang="en"))
-                    )
+                    name_literal = self.name_literal(name, titles[prop["property"]])
+                    self.shapes_graph.add((property_shape_uri, SH.name, name_literal))
+                    self.shapes_graph.add((property_shape_uri, RDFS.label, name_literal))
                     prop_uuids.add(prop_uuid)
                 self.shapes_graph.add((node_shape_uri, SH.property, property_shape_uri))
 
