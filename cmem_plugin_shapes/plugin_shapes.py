@@ -636,8 +636,12 @@ class ShapesPlugin(WorkflowPlugin):
         """Fetch property descriptions with the description helper of the explore API"""
         descriptions = {}
         for iri, record in self.resolve("descriptions", iris).items():
-            lang = record.get("lang") or "en"
-            descriptions[iri] = Literal(record["title"], lang=lang)
+            # No language means the vocabulary left the text untagged, which is not the
+            # same as it being English - name_literal makes the same distinction.
+            lang = record.get("lang")
+            descriptions[iri] = (
+                Literal(record["title"], lang=lang) if lang else Literal(record["title"])
+            )
         return descriptions
 
     def create_shapes(self) -> None:

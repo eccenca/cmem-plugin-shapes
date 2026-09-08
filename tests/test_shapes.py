@@ -557,6 +557,29 @@ def test_description_and_name_language_from_the_data_graph(
         Literal("Wie schwer das Ding ist.", lang="de")
     }
 
+    # an untagged comment stays untagged rather than being asserted as English
+    client.store.sparql.update(
+        query=f"""
+        PREFIX ex: <http://example.com/shapes-test/>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        INSERT DATA {{
+            GRAPH <{graph_setup.dataset_iri}> {{
+                ex:widget1 a ex:Widget ; ex:size "3" .
+                ex:size rdfs:comment "How big the thing is." .
+            }}
+        }}"""
+    )
+    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+    size_shape = next(
+        result_graph.subjects(
+            predicate=SH.path, object=URIRef("http://example.com/shapes-test/size")
+        )
+    )
+    assert set(result_graph.objects(subject=size_shape, predicate=SH.description)) == {
+        Literal("How big the thing is.")
+    }
+
 
 def test_namespace_graphs_offers_both_spellings() -> None:
     """Test namespace_graphs offers a vocabulary graph name with and without its separator"""
