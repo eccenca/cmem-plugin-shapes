@@ -651,6 +651,46 @@ def test_project_prefixes_keep_precedence_over_the_database() -> None:
     assert both[XSD_NAMESPACE][0] == "mine:"
 
 
+def test_a_blank_node_class_is_ignored(graph_setup: GraphSetupFixture, client: Client) -> None:
+    """Test an anonymous class expression does not reach the shape generation
+
+    Instance data sharing a graph with an OWL ontology types things with anonymous
+    class expressions. A blank node has no namespace, so it used to reach split_uri
+    and abort the run with "Invalid class or property (b0)." after every query had
+    already been paid for.
+    """
+    client.store.sparql.update(
+        query=f"""
+        PREFIX ex: <http://example.com/shapes-test/>
+        PREFIX owl: <http://www.w3.org/2002/07/owl#>
+        INSERT DATA {{
+            GRAPH <{graph_setup.dataset_iri}> {{
+                ex:thing1 a ex:Thing , [ a owl:Restriction ; owl:onProperty ex:weight ] ;
+                    ex:weight "12" .
+            }}
+        }}"""
+    )
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    )
+    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+
+    target_classes = set(result_graph.objects(predicate=SH.targetClass))
+    assert URIRef("http://example.com/shapes-test/Thing") in target_classes
+    assert all(isinstance(target, URIRef) for target in target_classes), target_classes
+
+    # and the action does not offer something the parameter would reject
+    listed = plugin.get_classes(TestPluginContext(project_id=graph_setup.project_name))
+    body = listed.split("```")[1].strip().splitlines()
+    assert "http://example.com/shapes-test/Thing" in body
+    assert all(line.startswith("http") for line in body), body
+
+
 def test_get_name_falls_back_to_the_local_name() -> None:
     """Test a synthesized title is not taken apart on an underscore
 

@@ -502,6 +502,7 @@ class ShapesPlugin(WorkflowPlugin):
         SELECT DISTINCT ?class
         FROM <{self.data_graph_iri}> {{
             ?subject a ?class .
+            FILTER(isIRI(?class))
         }}"""  # noqa: S608
         return self._iri_list(context, query, "class", "classes")
 
@@ -519,6 +520,7 @@ class ShapesPlugin(WorkflowPlugin):
             {{ ?subject a ?class . ?subject ?property ?object }}
         UNION
             {{ ?object a ?class . ?subject ?property ?object }}
+            FILTER(isIRI(?property))
         }}"""  # noqa: S608
         return self._iri_list(context, query, "property", "properties")
 
@@ -619,6 +621,7 @@ class ShapesPlugin(WorkflowPlugin):
                 ?subject ?property ?object .
                 {self.iri_list_to_filter(self.ignore_properties)}
                 {self.iri_list_to_filter(self.ignore_types, name="class")}
+                FILTER(isIRI(?class) && isIRI(?property))
                 BIND(isLiteral(?object) AS ?data)
                 BIND("false" AS ?inverse)
                 BIND(LANG(?object) AS ?lang)
@@ -629,6 +632,7 @@ class ShapesPlugin(WorkflowPlugin):
                 ?subject ?property ?object .
                 {self.iri_list_to_filter(self.ignore_properties)}
                 {self.iri_list_to_filter(self.ignore_types, name="class")}
+                FILTER(isIRI(?class) && isIRI(?property))
                 BIND("false" AS ?data)
                 BIND("true" AS ?inverse)
             }}
