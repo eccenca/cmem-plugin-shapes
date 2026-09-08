@@ -10,8 +10,9 @@ import pytest
 from cmem_client.client import Client
 from cmem_client.repositories.graphs import GraphExportConfig, GraphsRepository
 from cmem_plugin_base.testing import TestExecutionContext
-from rdflib import DCTERMS, RDF, RDFS, SH, SKOS, Graph, Literal, URIRef
+from rdflib import DCTERMS, FOAF, OWL, RDF, RDFS, SH, SKOS, Graph, Literal, URIRef
 from rdflib.compare import isomorphic
+from rdflib.term import Node
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -22,6 +23,9 @@ from cmem_plugin_shapes.plugin_shapes import (
     EXISTING_GRAPH_ADD,
     EXISTING_GRAPH_REPLACE,
     EXISTING_GRAPH_STOP,
+    MANAGED_CLASSES,
+    QUERY_CATALOG,
+    SHUI,
     ShapesPlugin,
 )
 from tests import FIXTURE_DIR
@@ -553,6 +557,140 @@ def test_description_and_name_language_from_the_data_graph(
     assert set(result_graph.objects(subject=shape, predicate=SH.description)) == {
         Literal("Wie schwer das Ding ist.", lang="de")
     }
+
+
+def test_namespace_graphs_offers_both_spellings() -> None:
+    """Test namespace_graphs offers a vocabulary graph name with and without its separator"""
+    assert ShapesPlugin.namespace_graphs(["http://example.com/vocab/Widget"]) == [
+        "http://example.com/vocab",
+        "http://example.com/vocab/",
+    ]
+    assert ShapesPlugin.namespace_graphs(["http://example.com/vocab#Widget"]) == [
+        "http://example.com/vocab",
+        "http://example.com/vocab#",
+    ]
+
+
+def test_namespace_graphs_splits_a_urn_too() -> None:
+    """Test a urn: class IRI is split on its last colon like any other IRI"""
+    assert ShapesPlugin.namespace_graphs(["urn:example:widget"]) == [
+        "urn:example",
+        "urn:example:",
+    ]
+
+
+def test_namespace_graphs_skips_an_unsplittable_iri() -> None:
+    """Test namespace_graphs ignores what it cannot split, leaving get_name to report it
+
+    Only an IRI with no separator at all is unsplittable - a urn: IRI is not one of them.
+    """
+    assert ShapesPlugin.namespace_graphs(["12345"]) == []
+    assert ShapesPlugin.namespace_graphs([]) == []
+
+
+def test_managed_classes_and_query_catalog(graph_setup: GraphSetupFixture, client: Client) -> None:
+    """Test the catalog declares its managed classes and imports the query catalog"""
+    plugin = ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+        managed_classes=True,
+        query_catalog=True,
+    )
+    plugin.execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+
+    catalog = URIRef(graph_setup.shapes_iri)
+    assert set(result_graph.objects(subject=catalog, predicate=SHUI.managedClasses)) == set(
+        MANAGED_CLASSES
+    )
+    assert set(result_graph.objects(subject=catalog, predicate=OWL.imports)) == {QUERY_CATALOG}
+
+
+def test_managed_classes_and_query_catalog_are_off_by_default(
+    graph_setup: GraphSetupFixture, client: Client
+) -> None:
+    """Test neither catalog statement is written unless it is asked for"""
+    ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+
+    catalog = URIRef(graph_setup.shapes_iri)
+    assert not set(result_graph.objects(subject=catalog, predicate=SHUI.managedClasses))
+    assert not set(result_graph.objects(subject=catalog, predicate=OWL.imports))
+
+
+def test_depiction_from_the_data_graph(graph_setup: GraphSetupFixture, client: Client) -> None:
+    """Test a node shape is given the foaf:depiction of its target class
+
+    The class is owned by this test, and a second class without a depiction is typed
+    alongside it to show that a node shape only gets one where there is something to find.
+    """
+    insert_query = f"""
+    PREFIX ex: <http://example.com/shapes-test/>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    INSERT DATA {{
+        GRAPH <{graph_setup.dataset_iri}> {{
+            ex:widget1 a ex:Widget ;
+                ex:name "a widget" .
+            ex:gadget1 a ex:Gadget ;
+                ex:name "a gadget" .
+            ex:Widget foaf:depiction <http://example.com/shapes-test/widget.png> .
+        }}
+    }}"""
+    client.store.sparql.update(query=insert_query)
+
+    ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+        depictions=True,
+    ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+
+    def node_shape_of(class_iri: str) -> Node:
+        return next(result_graph.subjects(predicate=SH.targetClass, object=URIRef(class_iri)))
+
+    widget_shape = node_shape_of("http://example.com/shapes-test/Widget")
+    gadget_shape = node_shape_of("http://example.com/shapes-test/Gadget")
+    assert set(result_graph.objects(subject=widget_shape, predicate=FOAF.depiction)) == {
+        URIRef("http://example.com/shapes-test/widget.png")
+    }
+    assert not set(result_graph.objects(subject=gadget_shape, predicate=FOAF.depiction))
+
+
+def test_depictions_are_off_by_default(graph_setup: GraphSetupFixture, client: Client) -> None:
+    """Test no depiction is written unless it is asked for"""
+    insert_query = f"""
+    PREFIX ex: <http://example.com/shapes-test/>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    INSERT DATA {{
+        GRAPH <{graph_setup.dataset_iri}> {{
+            ex:widget1 a ex:Widget ;
+                ex:name "a widget" .
+            ex:Widget foaf:depiction <http://example.com/shapes-test/widget.png> .
+        }}
+    }}"""
+    client.store.sparql.update(query=insert_query)
+
+    ShapesPlugin(
+        data_graph_iri=graph_setup.dataset_iri,
+        shapes_graph_iri=graph_setup.shapes_iri,
+        existing_graph=EXISTING_GRAPH_REPLACE,
+        import_shapes=False,
+        prefix_cc=False,
+    ).execute(inputs=[], context=TestExecutionContext(project_id=graph_setup.project_name))
+    result_graph = Graph().parse(data=get_graph_content(client, graph_setup.shapes_iri))
+    assert not set(result_graph.subject_objects(predicate=FOAF.depiction))
 
 
 def test_ignore_types_and_properties() -> None:
