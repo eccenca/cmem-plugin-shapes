@@ -40,9 +40,9 @@ EXISTING_GRAPH_REPLACE = "replace"
 EXISTING_GRAPH_STOP = "stop"
 EXISTING_GRAPH_PARAMETER_CHOICES = OrderedDict(
     {
-        EXISTING_GRAPH_ADD: "add result to graph",
-        EXISTING_GRAPH_REPLACE: "replace existing graph with result",
-        EXISTING_GRAPH_STOP: "stop workflow if output graph exists",
+        EXISTING_GRAPH_ADD: "Add - insert the generated shapes into the existing graph",
+        EXISTING_GRAPH_REPLACE: "Replace - overwrite the existing graph with the generated shapes",
+        EXISTING_GRAPH_STOP: "Stop - abort the workflow when the output graph already exists",
     }
 )
 
@@ -67,32 +67,58 @@ def str2bool(value: str) -> bool:
     label=PLUGIN_LABEL,
     icon=Icon(file_name="shapes.svg", package=__package__),
     description="Generate SHACL node and property shapes from a data graph",
-    documentation="""This workflow task generates SHACL (Shapes Constraint Language)
-node and property shapes by analyzing instance data from a knowledge graph. The generated
-shapes describe the structure and properties of the classes used in the data graph.
+    documentation="""This workflow task generates SHACL (Shapes Constraint Language) node
+and property shapes by analyzing the instance data of a knowledge graph. The generated
+shapes describe the classes the data uses and the properties each class is used with.
 
-## Usage
+The data graph and the shape catalog are both chosen by IRI parameter rather than by
+workflow connection, so the task has neither an input nor an output port. It is a
+terminal step: it reads and writes graphs directly and hands nothing on to a following
+task.
 
-The plugin analyzes an input data graph and creates:
+## What is generated
 
-- **Node shapes**: One for each class (`rdf:type`) used in the data graph
-- **Property shapes**: For all properties associated with each class, including:
-  - Regular object properties (subject → object relationships)
-  - Inverse object properties (object ← subject relationships, marked with ← prefix)
-  - Datatype properties (literal values)
+- A **node shape** for every class that instances are typed with.
+- A **property shape** for every property those instances use: object properties in the
+  subject → object direction, object properties in the object ← subject direction, whose
+  names carry a `←` prefix, and datatype properties, whose values are literals.
 
-## Output
+Every shape gets an IRI derived from a UUID5 of the class or property it describes, so
+within one catalog the same class or property always maps to the same shape. Names and
+labels come from the title eccenca Corporate Memory resolves for that class or property.
+A description follows wherever one can be resolved - the `rdfs:comment`,
+`dcterms:description` or `skos:definition` of the class or property, looked up wherever
+it is defined, so a vocabulary graph counts as well as the data graph. A class or
+property that nothing describes gets no `sh:description`.
 
-The generated shapes are written to a shape catalog graph with:
+Every property shape carries `shui:showAlways`, and a shape for the object ← subject
+direction carries `shui:inversePath` as well. The catalog itself records the data graph it
+was generated from and when it was written.
 
-- Unique URIs based on UUIDs (UUID5 derived from class/property IRIs)
-- Human-readable labels and names (using namespace prefixes when available)
-- Metadata including source data graph reference and timestamps
-- Optional plugin provenance information (see advanced options)
+## Caveats
+
+Names, labels and descriptions are requested in English. Where a vocabulary offers no
+English text, Corporate Memory answers in whatever language it does have, and the
+literal carries that language rather than claiming to be English. A class or property
+the deployment knows nothing about falls back to a name built from its IRI, which has
+no language at all and is written without a tag.
+
+A property used by several classes gets one property shape, shared by every node shape
+that uses it. Its `sh:nodeKind` is decided by the first use the store returns, so a
+property carrying IRI values under one class and literal values under another is
+described as only one of the two.
+
+`sh:datatype rdf:langString` is added as soon as any value of a property carries a
+language tag, however few of them do. A property whose values mix tagged and untagged
+literals
+therefore gets a shape that its own source data does not satisfy.
+
+Adding to an existing catalog inserts triples and deletes none, so shapes written by an
+earlier run stay alongside the new ones.
 
 ## Example
 
-Given a data graph with:
+Given a data graph typing instances with a vocabulary the deployment knows:
 
 ``` turtle
 ex:Person123 a ex:Person ;
@@ -100,21 +126,21 @@ ex:Person123 a ex:Person ;
     ex:knows ex:Person456 .
 ```
 
-The plugin generates:
-
-- A node shape for `ex:Person` with `sh:targetClass ex:Person`
+the task generates a node shape for `ex:Person`
 
 ``` turtle
 graph:90ee6e27-59b1-5ac8-9d7a-116c60c6791a a sh:NodeShape ;
   rdfs:label "Person (ex:)"@en ;
   sh:name "Person (ex:)"@en ;
+  sh:description "A person."@en ;
   sh:property
     graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 ,
     graph:dd5c6728-75a2-5215-8a5d-f9cd4077aaea ;
   sh:targetClass ex:Person .
 ```
 
-- Property shapes for `ex:name` (datatype property) and `ex:knows` (object property)
+together with a property shape for each of `ex:knows` and `ex:name`, of which the first
+reads
 
 ``` turtle
 graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
@@ -131,8 +157,7 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
             param_type=GraphParameterType(allow_only_autocompleted_values=False),
             name="data_graph_iri",
             label="Input data graph",
-            description="The knowledge graph containing the instance data to "
-            "be analyzed for the SHACL shapes generation.",
+            description="The knowledge graph holding the instance data to analyze.",
         ),
         PluginParameter(
             param_type=GraphParameterType(
@@ -141,64 +166,74 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
             ),
             name="shapes_graph_iri",
             label="Output shape catalog",
-            description="The knowledge graph the generated shapes will be added to.",
+            description="The graph the generated shapes are written to.",
         ),
         PluginParameter(
             param_type=ChoiceParameterType(EXISTING_GRAPH_PARAMETER_CHOICES),
             name="existing_graph",
-            label="Handle existing output graph",
-            description="Add result to the existing graph (add result to graph), overwrite the "
-            "existing graph with the result (replace existing graph with result), or stop the "
-            "workflow if the output graph already exists (stop workflow if output graph exists).",
+            label="Handle an existing shape catalog",
+            description="What to do when the output shape catalog already exists.",
         ),
         PluginParameter(
             param_type=StringParameterType(),
             name="label",
             label="Output shape catalog label",
-            description="The label for the shape catalog graph. If no label is specified for a new "
-            "shapes graph, a label will be generated. If no label is specified when adding to a "
-            "shapes graph, the original label will be kept, or, if the existing graph does not "
-            'have a label, a label will be generated. Only labels with language tag "en" or '
-            "without language tag are considered.",
+            description="The label of the shape catalog. Left empty, a new catalog gets a "
+            "generated label and an existing one keeps the label it has, so this is only worth "
+            'setting to title a catalog yourself. Only a label tagged "en" or carrying no '
+            "language tag counts as an existing label, and only such a label is replaced.",
+            advanced=True,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="import_shapes",
-            label="Import the output graph into the central shapes catalog",
-            description="Import the SHACL shapes graph in the CMEM shapes catalog by adding an "
-            "`owl:imports` statement to the central CMEM shapes catalog. If the graph is not "
-            "imported, the new shapes are not activated and used.",
+            label="Import into the central shape catalog",
+            description="If enabled, the generated catalog is imported into the central shape "
+            "catalog by adding an `owl:imports` statement to it. Shapes in a catalog that is not "
+            "imported are never activated and never used.",
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="prefix_cc",
             label="Fetch namespace prefixes from prefix.cc",
-            description="Fetch the list of namespace prefixes from https://prefix.cc instead of "
-            "using the local prefix database. If unavailable, fall back to the local database. "
-            "Prefixes defined in the Corporate Memory project override database prefixes. Enabling "
-            "this option exposes your IP address to prefix.cc but no other data is shared. If "
-            "unsure, keep this option disabled. See https://prefix.cc/about.",
+            description="If enabled, the namespace prefix list is fetched from "
+            "https://prefix.cc instead of the local prefix database, falling back to the local "
+            "database when the service cannot be reached. Prefixes defined in the project win "
+            "over both. Enabling this exposes your IP address to prefix.cc; no other data is "
+            "shared. If unsure, leave it disabled. See https://prefix.cc/about.",
             advanced=True,
         ),
         PluginParameter(
             param_type=MultilineStringParameterType(),
             name="ignore_properties",
             label="Properties to ignore",
-            description="Provide the list of properties (as IRIs) to ignore.",
+            description="The properties to leave out of the generated shapes, as IRIs, one "
+            "per line.",
             advanced=True,
         ),
         PluginParameter(
             param_type=MultilineStringParameterType(),
             name="ignore_types",
-            label="Types to ignore",
-            description="Provide the list of types (as IRIs) to ignore.",
+            label="Classes to ignore",
+            description="The classes to leave out of the generated shapes, as IRIs, one per line.",
             advanced=True,
         ),
         PluginParameter(
             param_type=BoolParameterType(),
             name="plugin_provenance",
-            label="Include plugin provenance",
-            description="Add information about the plugin and plugin settings to the shapes graph.",
+            label="Include task provenance",
+            description="If enabled, the shape catalog also records the task that generated "
+            "it and the parameter values it ran with. Where the type of the task cannot be "
+            "determined, nothing is recorded and the run continues with a warning in the log.",
+            advanced=True,
+        ),
+        PluginParameter(
+            param_type=BoolParameterType(),
+            name="omit_namespace_addon",
+            label="Omit the namespace prefix from property names",
+            description="If enabled, property shape names and labels leave off the trailing "
+            'namespace prefix, reading "label" rather than "label (rdfs:)". Node shape names '
+            "always keep it.",
             advanced=True,
         ),
     ],
@@ -206,7 +241,9 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
 class ShapesPlugin(WorkflowPlugin):
     """SHACL shapes generation plugin"""
 
-    def __init__(  # noqa: PLR0913 PLR0917
+    # A plugin constructor takes one argument per PluginParameter, so its arity is
+    # fixed by the plugin's configuration surface, not by a style choice here.
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         data_graph_iri: str,
         shapes_graph_iri: str,
@@ -217,6 +254,7 @@ class ShapesPlugin(WorkflowPlugin):
         ignore_properties: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
         ignore_types: str = "",
         plugin_provenance: bool = False,
+        omit_namespace_addon: bool = False,
     ) -> None:
         if not validators.url(data_graph_iri):
             raise ValueError("Invalid value for parameter 'Input data graph'")
@@ -258,6 +296,7 @@ class ShapesPlugin(WorkflowPlugin):
             self.ignore_types.append(_)
 
         self.plugin_provenance = plugin_provenance
+        self.omit_namespace_addon = omit_namespace_addon
 
         self.shapes_count = 0
         self.input_ports = FixedNumberOfInputs([])
@@ -296,14 +335,27 @@ class ShapesPlugin(WorkflowPlugin):
 
         return {k: tuple(v) for k, v in prefixes.items()}
 
-    def get_name(self, iri: str) -> str:
-        """Generate shape name from IRI"""
-        url = self.client.config.url_explore_api / f"/api/explore/title?resource={quote_plus(iri)}"
-        headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        response = self.client.http.get(url=url, headers=headers)
-        response.raise_for_status()
-        results = response.json()
+    def resolve(self, endpoint: str, iris: list[str]) -> dict[str, dict]:
+        """Resolve IRIs with one of the explore API helpers
 
+        ``endpoint`` is "titles" or "descriptions". Both take a JSON array of IRIs
+        and answer with a mapping of IRI to a record carrying "title" (the resolved
+        text), "lang" and "fromIri". No langPrefs is sent, so the deployment answers
+        in its default language, English. The descriptions helper leaves an IRI out
+        of the mapping entirely when it knows no description for it, while the titles
+        helper always answers, falling back to a title built from the IRI itself.
+        """
+        if not iris:
+            return {}
+        url = self.client.config.url_explore_api / f"/api/explore/{endpoint}"
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        response = self.client.http.post(url=url, headers=headers, json=iris)
+        response.raise_for_status()
+        return cast("dict[str, dict]", response.json())
+
+    def get_name(self, iri: str, title_record: dict, *, include_namespace: bool = True) -> str:
+        """Generate shape name from IRI and its resolved title"""
+        results = title_record
         title: str = results["title"]
         try:
             namespace, _ = split_uri(iri)
@@ -323,8 +375,22 @@ class ShapesPlugin(WorkflowPlugin):
                         title = title.split("_", 1)[1]
                     except IndexError as exc:
                         raise IndexError(f"{results['title']} {prefixes}") from exc
-            title += f" ({prefix})"
+            if include_namespace:
+                title += f" ({prefix})"
         return title
+
+    @staticmethod
+    def name_literal(name: str, title_record: dict) -> Literal:
+        """Build the label literal for a name, tagged with the language it was found in
+
+        The titles helper reports the language of the text it resolved, and reports
+        none at all for a title it synthesized from the IRI itself (``fromIri``) or
+        for a vocabulary that left its label untagged. Neither of those has a
+        language, so they are written as plain literals rather than claimed to be
+        English.
+        """
+        lang = title_record.get("lang")
+        return Literal(name, lang=lang) if lang else Literal(name)
 
     def init_shapes_graph(self) -> Graph:
         """Initialize SHACL shapes graph"""
@@ -337,6 +403,16 @@ class ShapesPlugin(WorkflowPlugin):
             )
         )
         return shapes_graph
+
+    @staticmethod
+    def properties_with_lang_string(class_dict: dict) -> set[str]:
+        """Return property IRIs that have at least one language-tagged literal value"""
+        return {
+            prop["property"]
+            for properties in class_dict.values()
+            for prop in properties
+            if prop.get("lang")
+        }
 
     @staticmethod
     def iri_list_to_filter(iris: list[str], name: str = "property", filter_: str = "NOT IN") -> str:
@@ -355,7 +431,7 @@ class ShapesPlugin(WorkflowPlugin):
         """Retrieve classes and associated properties"""
         query = f"""
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-        SELECT DISTINCT ?class ?property ?data ?inverse
+        SELECT DISTINCT ?class ?property ?data ?inverse ?lang
         FROM <{self.data_graph_iri}> {{
             {{
                 ?subject a ?class .
@@ -364,6 +440,7 @@ class ShapesPlugin(WorkflowPlugin):
                 {self.iri_list_to_filter(self.ignore_types, name="class")}
                 BIND(isLiteral(?object) AS ?data)
                 BIND("false" AS ?inverse)
+                BIND(LANG(?object) AS ?lang)
             }}
         UNION
             {{
@@ -388,15 +465,34 @@ class ShapesPlugin(WorkflowPlugin):
                     "property": binding["property"]["value"],
                     "data": str2bool(binding["data"]["value"]),
                     "inverse": str2bool(binding["inverse"]["value"]),
+                    "lang": binding.get("lang", {}).get("value", ""),
                 }
             )
         return class_dict
+
+    def get_descriptions(self, iris: list[str]) -> dict[str, Literal]:
+        """Fetch property descriptions with the description helper of the explore API"""
+        descriptions = {}
+        for iri, record in self.resolve("descriptions", iris).items():
+            lang = record.get("lang") or "en"
+            descriptions[iri] = Literal(record["title"], lang=lang)
+        return descriptions
 
     def create_shapes(self) -> None:
         """Create SHACL node and property shapes"""
         class_uuids = set()
         prop_uuids = set()
-        for cls, properties in self.get_class_dict().items():
+        class_dict = self.get_class_dict()
+        lang_string_properties = self.properties_with_lang_string(class_dict)
+        property_iris = sorted(
+            {prop["property"] for properties in class_dict.values() for prop in properties}
+        )
+        # One batched helper call each, rather than one request per IRI from inside
+        # the loop below.
+        iris = sorted(set(class_dict)) + property_iris
+        titles = self.resolve("titles", iris)
+        descriptions = self.get_descriptions(iris)
+        for cls, properties in class_dict.items():
             class_uuid = uuid5(NAMESPACE_URL, cls)
             node_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{class_uuid}")
 
@@ -404,9 +500,12 @@ class ShapesPlugin(WorkflowPlugin):
                 self.shapes_count += 1
                 self.shapes_graph.add((node_shape_uri, RDF.type, SH.NodeShape))
                 self.shapes_graph.add((node_shape_uri, SH.targetClass, URIRef(cls)))
-                name = self.get_name(cls)
-                self.shapes_graph.add((node_shape_uri, SH.name, Literal(name, lang="en")))
-                self.shapes_graph.add((node_shape_uri, RDFS.label, Literal(name, lang="en")))
+                class_name = self.name_literal(self.get_name(cls, titles[cls]), titles[cls])
+                self.shapes_graph.add((node_shape_uri, SH.name, class_name))
+                self.shapes_graph.add((node_shape_uri, RDFS.label, class_name))
+                class_description = descriptions.get(cls)
+                if class_description is not None:
+                    self.shapes_graph.add((node_shape_uri, SH.description, class_description))
                 class_uuids.add(class_uuid)
 
             for prop in properties:
@@ -416,12 +515,21 @@ class ShapesPlugin(WorkflowPlugin):
                 property_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{prop_uuid}")
                 if prop_uuid not in prop_uuids:
                     self.shapes_count += 1
-                    name = self.get_name(prop["property"])
+                    name = self.get_name(
+                        prop["property"],
+                        titles[prop["property"]],
+                        include_namespace=not self.omit_namespace_addon,
+                    )
                     self.shapes_graph.add((property_shape_uri, RDF.type, SH.PropertyShape))
                     self.shapes_graph.add((property_shape_uri, SH.path, URIRef(prop["property"])))
                     self.shapes_graph.add(
                         (property_shape_uri, SH.nodeKind, SH.Literal if prop["data"] else SH.IRI)
                     )
+                    if prop["data"] and prop["property"] in lang_string_properties:
+                        self.shapes_graph.add((property_shape_uri, SH.datatype, RDF.langString))
+                    description = descriptions.get(prop["property"])
+                    if description is not None:
+                        self.shapes_graph.add((property_shape_uri, SH.description, description))
                     self.shapes_graph.add(
                         (
                             property_shape_uri,
@@ -438,10 +546,9 @@ class ShapesPlugin(WorkflowPlugin):
                             )
                         )
                         name = "← " + name
-                    self.shapes_graph.add((property_shape_uri, SH.name, Literal(name, lang="en")))
-                    self.shapes_graph.add(
-                        (property_shape_uri, RDFS.label, Literal(name, lang="en"))
-                    )
+                    name_literal = self.name_literal(name, titles[prop["property"]])
+                    self.shapes_graph.add((property_shape_uri, SH.name, name_literal))
+                    self.shapes_graph.add((property_shape_uri, RDFS.label, name_literal))
                     prop_uuids.add(prop_uuid)
                 self.shapes_graph.add((node_shape_uri, SH.property, property_shape_uri))
 

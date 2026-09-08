@@ -7,9 +7,37 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased]
 
+### Added
+
+- Node and property shapes now get `sh:description` from the description Corporate Memory resolves for the class or property - its `rdfs:comment`, `dcterms:description` or `skos:definition`, wherever the class or property is defined, so descriptions from a vocabulary graph are picked up as well as those in the data graph
+- Property shapes now get `sh:datatype rdf:langString` when the data graph uses the property with a language-tagged literal
+- Parameter to omit the trailing namespace prefix (e.g. `(rdfs:)`) from property shape names
+
+### Fixed
+
+- Shape labels and names are tagged with the language they were actually resolved in.
+  They were tagged `@en` whatever came back, so a vocabulary with no English label
+  produced a foreign-language label claiming to be English. A name derived from the IRI,
+  which has no language, is now written without a tag
+
 ### Changed
 
-- updated dependencies and template
+- Updated project template to v9.7.0 (cmem-client 1.1.0, ruff 0.16.6)
+- Labels and descriptions are now resolved with one batched request each instead of one
+  request per class and property, so generating shapes for a large graph is faster
+- Task documentation rewritten: it now says what is generated, what each shape carries, and
+  the four caveats a user meets - the language a name is tagged with, one property shape
+  shared by every class using that property, `sh:datatype rdf:langString` added on a single
+  tagged value, and shapes accumulating when adding to an existing catalog
+- Parameter descriptions and labels reworded to speak of one shape catalog throughout, to
+  say what each parameter controls without repeating the dropdown, and to follow the
+  eccenca Corporate Memory naming convention instead of the "CMEM" abbreviation
+- The provenance option is now named after what it records - the task that generated the
+  catalog, not the plugin - and says that it records nothing, without failing the run, when
+  the type of the task cannot be determined
+- The shape catalog label is now an advanced parameter, since leaving it empty names a new
+  catalog and preserves the name of an existing one
+- The choices for handling an existing catalog explain themselves in the dropdown
 
 ## [4.4.0] 2026-08-20
 
