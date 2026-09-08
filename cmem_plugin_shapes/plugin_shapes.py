@@ -828,7 +828,11 @@ class ShapesPlugin(WorkflowPlugin):
             }}
         }}"""
 
-        new_plugin_iri = f"{'_'.join(plugin_iri.split('_')[:-1])}_{token_hex(8)}"
+        # A fresh subject per run, derived from the task IRI. Only a suffix this method
+        # added itself is replaced: splitting on every underscore ate the task segment
+        # whenever the project id contained one, and produced the bare relative reference
+        # "_<hex>" when neither id did.
+        new_plugin_iri = f"{re.sub(r'_[0-9a-f]{16}$', '', plugin_iri)}_{token_hex(8)}"
         label = f"{PLUGIN_LABEL} plugin"
         result = json.loads(self._post_sparql(query=parameter_query))
 

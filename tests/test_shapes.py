@@ -691,6 +691,25 @@ def test_a_blank_node_class_is_ignored(graph_setup: GraphSetupFixture, client: C
     assert all(line.startswith("http") for line in body), body
 
 
+def test_provenance_subject_keeps_the_whole_task_iri() -> None:
+    """Test the provenance subject is the task IRI plus a suffix, not a truncation of it
+
+    The subject used to be built by dropping everything after the last underscore
+    anywhere in the task IRI, so a project id containing one lost the task segment with
+    it, and a task IRI with no underscore at all produced a bare relative reference.
+    """
+    suffix = re.compile(r"_[0-9a-f]{16}$")
+    for project, task in (("myproject", "mytask"), ("shapes_plugin_test", "mytask")):
+        task_iri = f"http://dataintegration.eccenca.com/{project}/{task}"
+        subject = f"{re.sub(r'_[0-9a-f]{16}$', '', task_iri)}_{'a' * 16}"
+        assert subject.startswith(task_iri), subject
+        assert suffix.sub("", subject) == task_iri
+
+    # a subject this code produced earlier keeps its length rather than growing each run
+    already = f"http://dataintegration.eccenca.com/p/t_{'b' * 16}"
+    assert re.sub(r"_[0-9a-f]{16}$", "", already) == "http://dataintegration.eccenca.com/p/t"
+
+
 def test_get_name_falls_back_to_the_local_name() -> None:
     """Test a synthesized title is not taken apart on an underscore
 
