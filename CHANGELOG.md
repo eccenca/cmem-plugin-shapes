@@ -12,6 +12,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Node and property shapes now get `sh:description` from the description Corporate Memory resolves for the class or property - its `rdfs:comment`, `dcterms:description` or `skos:definition`, wherever the class or property is defined, so descriptions from a vocabulary graph are picked up as well as those in the data graph
 - Property shapes now get `sh:datatype rdf:langString` when the data graph uses the property with a language-tagged literal
 - Parameter to omit the trailing namespace prefix (e.g. `(rdfs:)`) from property shape names
+- Parameter to declare with `shui:managedClasses` which classes the shape catalog manages
+- Parameter to import the query catalog into the shape catalog with `owl:imports`
+- Parameter to add the `foaf:depiction` of a target class to its node shape, looked up in the
+  data graph and in the graph named by the class namespace, with and without its trailing
+  separator
 
 ### Fixed
 

@@ -5,6 +5,7 @@ import re
 import tempfile
 from collections import OrderedDict
 from collections.abc import Sequence
+from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
 from secrets import token_hex
@@ -25,13 +26,25 @@ from cmem_plugin_base.dataintegration.parameter.multiline import MultilineString
 from cmem_plugin_base.dataintegration.plugins import WorkflowPlugin
 from cmem_plugin_base.dataintegration.ports import FixedNumberOfInputs
 from cmem_plugin_base.dataintegration.types import BoolParameterType, StringParameterType
-from rdflib import DCTERMS, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
+from rdflib import DCTERMS, FOAF, OWL, RDF, RDFS, SH, XSD, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import split_uri
 
 from . import __path__
 
 SHUI = Namespace("https://vocab.eccenca.com/shui/")
 PREFIX_CC = "https://prefix.cc/popular/all.file.json"
+QUERY_CATALOG = URIRef("https://ns.eccenca.com/data/queries/")
+MANAGED_CLASSES = (
+    SH.NodeShape,
+    SH.PrefixDeclaration,
+    SH.PropertyGroup,
+    SH.PropertyShape,
+    SH.SPARQLConstraint,
+    SHUI.ChartVisualization,
+    SHUI.TableReport,
+    SHUI.WidgetIntegration,
+    SHUI.WorkflowTrigger,
+)
 PLUGIN_LABEL = "Generate SHACL shapes from data"
 TRUE_SET = {"yes", "true", "t", "y", "1"}
 FALSE_SET = {"no", "false", "f", "n", "0"}
@@ -229,6 +242,34 @@ graph:0fcf371d-f99a-5eeb-ab50-6e6b5fbb0e06 a sh:PropertyShape ;
         ),
         PluginParameter(
             param_type=BoolParameterType(),
+            name="managed_classes",
+            label="Declare the classes the catalog manages",
+            description="If enabled, the shape catalog states with `shui:managedClasses` which "
+            "classes it manages: node shapes, property shapes, property groups, SPARQL "
+            "constraints, prefix declarations, chart visualizations, table reports, widget "
+            "integrations and workflow triggers.",
+            advanced=True,
+        ),
+        PluginParameter(
+            param_type=BoolParameterType(),
+            name="query_catalog",
+            label="Import the query catalog",
+            description="If enabled, the shape catalog imports the query catalog with an "
+            "`owl:imports` statement, so the stored queries are visible from it.",
+            advanced=True,
+        ),
+        PluginParameter(
+            param_type=BoolParameterType(),
+            name="depictions",
+            label="Add depictions to node shapes",
+            description="If enabled, a node shape is given the `foaf:depiction` of its target "
+            "class, where one can be found. The class is looked up in the data graph and in the "
+            "graph named by its own namespace, tried both with and without the trailing "
+            "separator, because the graph a vocabulary was loaded into is not recorded anywhere.",
+            advanced=True,
+        ),
+        PluginParameter(
+            param_type=BoolParameterType(),
             name="omit_namespace_addon",
             label="Omit the namespace prefix from property names",
             description="If enabled, property shape names and labels leave off the trailing "
@@ -255,6 +296,9 @@ class ShapesPlugin(WorkflowPlugin):
         ignore_types: str = "",
         plugin_provenance: bool = False,
         omit_namespace_addon: bool = False,
+        managed_classes: bool = False,
+        query_catalog: bool = False,
+        depictions: bool = False,
     ) -> None:
         if not validators.url(data_graph_iri):
             raise ValueError("Invalid value for parameter 'Input data graph'")
@@ -297,6 +341,9 @@ class ShapesPlugin(WorkflowPlugin):
 
         self.plugin_provenance = plugin_provenance
         self.omit_namespace_addon = omit_namespace_addon
+        self.managed_classes = managed_classes
+        self.query_catalog = query_catalog
+        self.depictions = depictions
 
         self.shapes_count = 0
         self.input_ports = FixedNumberOfInputs([])
@@ -402,7 +449,60 @@ class ShapesPlugin(WorkflowPlugin):
                 URIRef(self.data_graph_iri),
             )
         )
+        if self.query_catalog:
+            shapes_graph.add((URIRef(self.shapes_graph_iri), OWL.imports, QUERY_CATALOG))
+        if self.managed_classes:
+            for managed_class in MANAGED_CLASSES:
+                shapes_graph.add(
+                    (URIRef(self.shapes_graph_iri), SHUI.managedClasses, managed_class)
+                )
         return shapes_graph
+
+    @staticmethod
+    def namespace_graphs(classes: list[str]) -> list[str]:
+        """Graph names to look in for the vocabulary that defines a class
+
+        Which graph a vocabulary was loaded into is recorded nowhere, so the namespace of
+        the class IRI is used as the graph name, both as it is and without its trailing
+        separator, since either spelling is in use. A class whose IRI cannot be split into
+        a namespace and a name contributes nothing here and fails later in get_name, which
+        reports it properly.
+        """
+        graphs: set[str] = set()
+        for class_iri in classes:
+            with suppress(ValueError):
+                namespace, _ = split_uri(class_iri)
+                graphs.update((namespace, namespace[:-1]))
+        return sorted(graphs)
+
+    def get_depictions(self, classes: list[str]) -> dict[str, URIRef]:
+        """Fetch a foaf:depiction for each class that has one
+
+        A FROM naming a graph that does not exist contributes nothing rather than failing,
+        which is what makes guessing at the vocabulary graph name safe.
+        """
+        if not classes:
+            return {}
+        graphs = "\n".join(
+            f"FROM <{graph}>" for graph in [self.data_graph_iri, *self.namespace_graphs(classes)]
+        )
+        values = " ".join(f"<{class_iri}>" for class_iri in classes)
+        query = f"""
+        PREFIX foaf: <{FOAF}>
+        SELECT ?class ?depiction
+        {graphs}
+        WHERE {{
+            VALUES ?class {{ {values} }}
+            ?class foaf:depiction ?depiction
+        }}
+        ORDER BY ?class ?depiction"""
+
+        depictions: dict[str, URIRef] = {}
+        for binding in json.loads(self._post_sparql(query=query))["results"]["bindings"]:
+            # a class with several depictions keeps one, and the ordering makes it the same
+            # one on every run
+            depictions.setdefault(binding["class"]["value"], URIRef(binding["depiction"]["value"]))
+        return depictions
 
     @staticmethod
     def properties_with_lang_string(class_dict: dict) -> set[str]:
@@ -492,6 +592,7 @@ class ShapesPlugin(WorkflowPlugin):
         iris = sorted(set(class_dict)) + property_iris
         titles = self.resolve("titles", iris)
         descriptions = self.get_descriptions(iris)
+        depictions = self.get_depictions(sorted(class_dict)) if self.depictions else {}
         for cls, properties in class_dict.items():
             class_uuid = uuid5(NAMESPACE_URL, cls)
             node_shape_uri = URIRef(f"{format_namespace(self.shapes_graph_iri)}{class_uuid}")
@@ -506,6 +607,9 @@ class ShapesPlugin(WorkflowPlugin):
                 class_description = descriptions.get(cls)
                 if class_description is not None:
                     self.shapes_graph.add((node_shape_uri, SH.description, class_description))
+                depiction = depictions.get(cls)
+                if depiction is not None:
+                    self.shapes_graph.add((node_shape_uri, FOAF.depiction, depiction))
                 class_uuids.add(class_uuid)
 
             for prop in properties:
