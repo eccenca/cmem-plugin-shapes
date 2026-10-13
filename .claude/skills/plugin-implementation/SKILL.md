@@ -98,7 +98,12 @@ formatted string. The `logging` idiom
 `self.log.info("Fetched %s records", count)` raises `TypeError` at runtime, so
 an f-string is the form to use - the ruff rule
 `G004` (logging statement uses f-string) is in the `ignore` list accordingly.
-The same gap is why `self.log` cannot be passed as a `logger` argument.
+There is no `exception()` either, so a failure logged inside an `except` block
+uses `error()` - ruff's `TRY400` asks for `logging.exception` there, and is in
+the `ignore` list for the same reason as `G004`. Do not downgrade the call to
+`warning()` to quieten the rule: that understates a failure that is usually
+about to be re-raised. The same gap is why `self.log` cannot be passed as a
+`logger` argument.
 
 ## The icon
 
@@ -272,6 +277,54 @@ context.report.update(
   the work is finished shows a user nothing while the task is running, which is
   exactly when they are looking.
 
+## The constructor decides the form, not the decorator list
+
+The `parameters=[...]` list in `@Plugin` reads as the order a user sees on the
+task form. It is not. The descriptor is built by walking
+`inspect.signature(__init__)` and looking each argument name up in the decorator
+list, so the **constructor's argument order is the form's field order** and the
+decorator list is only a lookup table for labels, descriptions and types.
+
+Two things follow:
+
+- Reordering the decorator list changes nothing a user can see, which is
+  unpleasant to debug because the file you edited is the one that looks
+  authoritative. Keep the two lists in the same order and reorder them together,
+  so the source reads the way the form does.
+- A decorator entry whose name matches no constructor argument is **dropped
+  without an error**. A renamed argument therefore silently takes its label and
+  description with it, and the field appears bare rather than missing.
+
+Order the constructor the way the decision reads: a parameter goes before the
+ones that depend on it, and above the flag that switches it on. Reordering is
+safe because the framework instantiates by keyword - but check that nothing
+constructs the class positionally first, which tests often do.
+
+## The one parameter name the task form claims
+
+Do not name a parameter `tags`. Every task dialog carries a "Tags" field for the
+item's own tags, and that widget's value arrives on a plugin parameter of the
+same name in place of the string the parameter declares, so saving the task - or
+any other task action - fails with:
+
+```text
+Invalid value for plugin parameter 'tags' of plugin '<package>-<Task>'.
+Got a nested object with the keys createdItems, selectedItems, but expected a string.
+```
+
+An empty tag list fails just as well, because the widget still posts both keys
+as empty lists. Nothing local catches it: discovery succeeds, the descriptors
+show the parameter present, labelled and typed as a string, and `task check` is
+green - the failure exists only against a deployment, in the dialog.
+
+Name the parameter for what it carries - `notification_tags`, `issue_tags` - and
+keep the user-visible wording in the `label`, which can still read "Tags".
+
+`label` and `description` are **not** claimed, although the dialog shows the
+item's own fields under those names as well. `cmem-plugin-shapes`,
+`cmem-plugin-metadata` and `cmem-plugin-vocab` all ship a parameter called
+`label`, and `cmem-plugin-metadata` one called `description`.
+
 ## A constructor with six or more parameters
 
 Ruff's `PLR0913` and `PLR0917` both complain about a long argument list, and a
@@ -314,6 +367,57 @@ PluginParameter(
 The value arrives as a `Password`; call `.decrypt()` only where it is used.
 Typing it as `str` puts the secret in plain text in the task configuration and
 in the project export.
+
+An **empty secret field is still truthy**. A blank parameter arrives as a
+`Password` wrapping an empty value, and `Password` defines neither `__bool__`
+nor `__len__`, so the obvious guard never fires:
+
+```python
+if self.api_key:  # True even when the field was left blank
+    ...
+```
+
+A plugin whose behaviour depends on whether a secret was supplied takes the
+wrong branch, and the failure surfaces much later - as a library error deep
+inside whatever consumes the secret, or as a request sent with an empty
+credential. Ask the question against the decrypted value, through a helper that
+also accepts the plain `str` that a default value or a test supplies, and keep
+the answer rather than the plaintext:
+
+```python
+def _secret(value: Password | str) -> str:
+    return value if isinstance(value, str) else value.decrypt()
+
+self.signing = bool(_secret(private_key))  # keep the answer, not the secret
+```
+
+Tests hide this rather than catching it: a test passing a plain `str` exercises
+the naive guard correctly, so the mistake only appears against a deployment,
+where DataIntegration hands over a `Password`.
+
+## Validating an IRI the user types
+
+A knowledge graph IRI **is not necessarily a URL**. `urn:example:data` and
+`urn:uuid:...` are ordinary ways to name a graph, and the store imports into and
+queries one without complaint - so `validators.url()`, the obvious import,
+rejects a graph that works. The trap is quiet: the check looks right, and the
+resulting *Invalid value for parameter ...* never mentions that the scheme was
+what failed.
+
+`GraphParameterType` covers the case where the user picks a graph. Hand-written
+validation is for the ones they type - an ignore list, a target graph that does
+not exist yet, a class or property filter - and it has to accept a URN as well:
+
+```python
+URN = re.compile(r"^urn:[a-z0-9][a-z0-9-]{1,31}:\S+$", re.IGNORECASE)
+
+if not validators.url(iri) and not URN.match(iri):
+    raise ValueError(f"{iri} is neither a URL nor a URN.")
+```
+
+The namespace identifier is two to thirty-two characters starting with an
+alphanumeric one, and the namespace specific string must be non-empty
+(RFC 8141).
 
 ## Custom parameter types
 
@@ -377,6 +481,43 @@ class CollectionParameterType(StringParameterType):
   on whitespace.
 - Return a **stable order**. Sort at the end; do not deduplicate with `set()`
   after sorting, because that throws the ordering away again.
+
+### A choice dropdown is not shown in its declared order
+
+`ChoiceParameterType` does the very thing that last bullet warns against, so
+the `OrderedDict` it takes is **not** the order the user sees: `autocomplete()`
+sorts by label and then returns `list(set(result))`, and `Autocompletion` is a
+frozen dataclass, so the set reorders by hash bucket and discards the sort.
+Python randomizes string hashing per process, so the dropdown comes out
+differently after every restart of DataIntegration - which also means one run in
+three looks plausible enough to miss. Nothing local shows it: the `OrderedDict`
+is intact in the source and in the descriptors, and `task check` is green.
+
+So for a choice whose order carries meaning - priorities, log levels, sizes,
+compression levels, conflict policies - subclass it until
+<https://github.com/eccenca/cmem-plugin-base/issues/49> is released:
+
+```python
+class OrderedChoiceParameterType(ChoiceParameterType):
+    """A choice whose dropdown keeps the order the choices were declared in."""
+
+    def autocomplete(
+        self,
+        query_terms: list[str],
+        depend_on_parameter_values: list[Any],
+        context: PluginContext,
+    ) -> list[Autocompletion]:
+        """Return the choices matching all query terms, in their declared order."""
+        terms = [term.lower() for term in query_terms]
+        return [
+            Autocompletion(value=value, label=label)
+            for value, label in self.choice_list.items()
+            if all(term in label.lower() for term in terms)
+        ]
+```
+
+Numbering the labels does not rescue it - `(1)` to `(5)` only feeds the sort
+that is thrown away.
 
 ### The flags
 
